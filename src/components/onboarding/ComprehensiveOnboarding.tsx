@@ -52,12 +52,12 @@ const EXPERIENCE_LEVELS = [
 ];
 
 const ROLE_TYPES = [
+  { id: 'student', name: 'Student', description: 'Learning AI/ML concepts and applications', icon: '🎓' },
   { id: 'developer', name: 'Developer', description: 'Software developer interested in AI tools', icon: '💻' },
   { id: 'researcher', name: 'Researcher', description: 'Academic or industry researcher', icon: '🔬' },
+  { id: 'enthusiast', name: 'Enthusiast', description: 'Passionate about AI developments', icon: '❤️' },
   { id: 'executive', name: 'Executive', description: 'Business leader exploring AI opportunities', icon: '👔' },
-  { id: 'student', name: 'Student', description: 'Learning AI/ML concepts and applications', icon: '🎓' },
-  { id: 'entrepreneur', name: 'Entrepreneur', description: 'Building AI-powered products or services', icon: '🚀' },
-  { id: 'enthusiast', name: 'Enthusiast', description: 'Passionate about AI developments', icon: '❤️' }
+  { id: 'entrepreneur', name: 'Entrepreneur', description: 'Building AI-powered products or services', icon: '🚀' }
 ];
 
 interface ComprehensiveOnboardingProps {
@@ -83,6 +83,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
   // Step 4: Notification Preferences
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [breakingNewsAlerts, setBreakingNewsAlerts] = useState(false);
+  const [pushNotifications, setPushNotifications] = useState(false);
+  const [mobileNumber, setMobileNumber] = useState('');
 
   const { updatePreferences } = useAuth();
 
@@ -165,6 +167,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
         newsletter_frequency: newsletterFrequency,
         email_notifications: emailNotifications,
         breaking_news_alerts: breakingNewsAlerts,
+        push_notifications: pushNotifications,
+        mobile_number: pushNotifications ? mobileNumber : null,
         experience_level: selectedExperience,
         role_type: selectedRole,
         onboarding_completed: true // Use snake_case to match backend
@@ -185,11 +189,11 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
       case 1:
         return selectedExperience && selectedRole;
       case 2:
-        return selectedTopics.length > 0;
+        return selectedTopics.length >= 3; // At least 3 topics must be selected per spec
       case 3:
-        return selectedContentTypes.length > 0;
+        return selectedContentTypes.length >= 3; // At least 3 content types must be selected per spec
       case 4:
-        return true;
+        return !pushNotifications || (pushNotifications && mobileNumber.trim().length > 0);
       default:
         return false;
     }
@@ -374,6 +378,41 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
             <span className="toggle-slider"></span>
           </label>
         </div>
+
+        <div className="notification-item">
+          <div className="notification-info">
+            <Bell className="notification-icon" size={20} />
+            <div>
+              <h4>Push Notifications</h4>
+              <p>Receive mobile notifications for breaking AI news</p>
+            </div>
+          </div>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={pushNotifications}
+              onChange={(e) => setPushNotifications(e.target.checked)}
+            />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
+
+        {pushNotifications && (
+          <div className="mobile-input-section">
+            <label htmlFor="mobile-number" className="mobile-label">
+              Mobile Number (for push notifications)
+            </label>
+            <input
+              id="mobile-number"
+              type="tel"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value)}
+              placeholder="Enter your mobile number"
+              className="mobile-input"
+              required={pushNotifications}
+            />
+          </div>
+        )}
 
       </div>
     </div>

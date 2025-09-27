@@ -54,3 +54,4 @@ complete-signup-flow.js
 final-deployment-test.js
 frontend-login-fix.js
 verify-2day-scraping.cjs
+.vercel
