@@ -1,0 +1,21 @@
+{
+  "name": "Vidyagam AI News - Intelligence at Light Speed",
+  "short_name": "Vidyagam",
+  "description": "Get personalized AI news, events, and learning resources curated by artificial intelligence",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "categories": ["news", "education", "technology", "artificial intelligence"],
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "prefer_related_applications": false
+}

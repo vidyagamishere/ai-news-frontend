@@ -1,0 +1,222 @@
+/* Topic Labels Component Styles */
+.topic-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.topic-labels.medium {
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.topic-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  cursor: default;
+  transition: all 0.2s ease;
+}
+
+.topic-labels.medium .topic-label {
+  padding: 3px 8px;
+  font-size: 11px;
+  border-radius: 10px;
+}
+
+/* Topic category colors */
+.topic-label.research {
+  background-color: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #bbdefb;
+}
+
+.topic-label.language {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+  border: 1px solid #e1bee7;
+}
+
+.topic-label.platform {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.topic-label.robotics {
+  background-color: #fff3e0;
+  color: #ef6c00;
+  border: 1px solid #ffcc02;
+}
+
+.topic-label.company {
+  background-color: #fce4ec;
+  color: #c2185b;
+  border: 1px solid #f8bbd9;
+}
+
+.topic-label.startup {
+  background-color: #f1f8e9;
+  color: #558b2f;
+  border: 1px solid #dcedc8;
+}
+
+.topic-label.policy {
+  background-color: #fff8e1;
+  color: #f57f17;
+  border: 1px solid #fff176;
+}
+
+.topic-label.hardware {
+  background-color: #fafafa;
+  color: #424242;
+  border: 1px solid #e0e0e0;
+}
+
+.topic-label.automotive {
+  background-color: #e0f2f1;
+  color: #00695c;
+  border: 1px solid #b2dfdb;
+}
+
+.topic-label.healthcare {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+
+.topic-label.finance {
+  background-color: #f9fbe7;
+  color: #827717;
+  border: 1px solid #f0f4c3;
+}
+
+.topic-label.gaming {
+  background-color: #ede7f6;
+  color: #512da8;
+  border: 1px solid #d1c4e9;
+}
+
+.topic-label.creative {
+  background-color: #fce4ec;
+  color: #ad1457;
+  border: 1px solid #f8bbd9;
+}
+
+.topic-label.cloud {
+  background-color: #e1f5fe;
+  color: #0277bd;
+  border: 1px solid #b3e5fc;
+}
+
+.topic-label.events {
+  background-color: #fff9c4;
+  color: #f9a825;
+  border: 1px solid #fff59d;
+}
+
+.topic-label.learning {
+  background-color: #e8eaf6;
+  color: #3f51b5;
+  border: 1px solid #c5cae9;
+}
+
+.topic-label.news {
+  background-color: #f3e5f5;
+  color: #8e24aa;
+  border: 1px solid #e1bee7;
+}
+
+.topic-label.international {
+  background-color: #e0f7fa;
+  color: #00838f;
+  border: 1px solid #b2ebf2;
+}
+
+.topic-label.general {
+  background-color: #f5f5f5;
+  color: #616161;
+  border: 1px solid #e0e0e0;
+}
+
+/* More topics indicator */
+.topic-label.more {
+  background-color: #f0f0f0;
+  color: #666;
+  border: 1px solid #ddd;
+  font-size: 9px;
+  opacity: 0.8;
+}
+
+.topic-labels.medium .topic-label.more {
+  font-size: 10px;
+}
+
+/* Hover effects */
+.topic-label:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .topic-label.research {
+    background-color: rgba(33, 150, 243, 0.2);
+    color: #90caf9;
+    border-color: rgba(33, 150, 243, 0.3);
+  }
+  
+  .topic-label.language {
+    background-color: rgba(156, 39, 176, 0.2);
+    color: #ce93d8;
+    border-color: rgba(156, 39, 176, 0.3);
+  }
+  
+  .topic-label.platform {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: #a5d6a7;
+    border-color: rgba(76, 175, 80, 0.3);
+  }
+  
+  .topic-label.robotics {
+    background-color: rgba(255, 152, 0, 0.2);
+    color: #ffcc02;
+    border-color: rgba(255, 152, 0, 0.3);
+  }
+  
+  .topic-label.general {
+    background-color: rgba(158, 158, 158, 0.2);
+    color: #bdbdbd;
+    border-color: rgba(158, 158, 158, 0.3);
+  }
+  
+  .topic-label.more {
+    background-color: rgba(97, 97, 97, 0.2);
+    color: #aaa;
+    border-color: rgba(97, 97, 97, 0.3);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .topic-labels {
+    gap: 3px;
+  }
+  
+  .topic-label {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+  
+  .topic-labels.medium .topic-label {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+}

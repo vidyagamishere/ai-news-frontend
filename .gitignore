@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+/coverage
+test-reports/
+tests/
+test*.js
+test*.cjs
+test*.html
+
+# Production
+/build
+/dist
+
+# Misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Debug files
+debug*.js
+*.log
+
+# Documentation (except README)
+ADSENSE_SEO_GUIDE.md
+DEPLOYMENT.md
+FEDCM_MIGRATION_COMPLETED.md
+GOOGLE_OAUTH_STATUS.md
+LOCAL_TESTING.md
+MODULE_LOADING_FIX.md
+SEO_IMPLEMENTATION_STEPS.md
+SETUP.md
+TESTING_CHECKLIST.md
+TESTING_READY.md
+github-vercel-deploy.md
+
+# Development scripts
+run*.sh
+deploy*.sh
+check-user-status.js
+clear-cache-solution.html
+complete-signup-flow.js
+final-deployment-test.js
+frontend-login-fix.js
+verify-2day-scraping.cjs

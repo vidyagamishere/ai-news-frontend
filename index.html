@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <style>
+      /* Touch-friendly mobile optimizations */
+      * { 
+        -webkit-tap-highlight-color: transparent; 
+        touch-action: manipulation;
+      }
+      body { 
+        -webkit-text-size-adjust: 100%; 
+        -moz-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+      @media (max-width: 768px) {
+        button, input[type="button"], input[type="submit"] {
+          min-height: 44px;
+          min-width: 44px;
+        }
+      }
+    </style>
+    
+    <!-- SEO Optimized Title and Meta Tags -->
+    <title>Vidyagam AI News | Intelligence at Light Speed</title>
+    <meta name="description" content="Get personalized AI news, events, and learning resources curated by AI. Daily digest of artificial intelligence breakthroughs, conferences, courses, and industry insights." />
+    <meta name="keywords" content="AI news, artificial intelligence, machine learning, AI events, AI courses, AI conferences, AI learning, tech news, AI industry updates, personalized news" />
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Vidyagam AI News | Intelligence at Light Speed" />
+    <meta property="og:description" content="Get personalized AI news, events, and learning resources curated by AI. Daily digest of artificial intelligence breakthroughs and industry insights." />
+    <meta property="og:site_name" content="Vidyagam" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Vidyagam AI News | Intelligence at Light Speed" />
+    <meta name="twitter:description" content="Get personalized AI news, events, and learning resources curated by AI." />
+    
+    <!-- Additional SEO -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="language" content="English" />
+    <meta name="author" content="Vidyagam" />
+    <meta name="theme-color" content="#3b82f6" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="AI News" />
+    
+    <!-- Google AdSense -->
+    <meta name="google-adsense-account" content="ca-pub-1971460159522427">
+    
+    <!-- Performance and Security -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups" />
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none" />
+    
+    <!-- Canonical URL will be set dynamically by React -->
+    
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-1YQ7YS3EYQ"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-1YQ7YS3EYQ');
+    </script>
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
+    <link rel="dns-prefetch" href="//www.googletagmanager.com" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Structured Data for Search Engines -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Vidyagam",
+      "alternateName": "AI News Digest",
+      "url": "",
+      "description": "Personalized AI news, events, and learning resources curated by artificial intelligence",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Vidyagam"
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      },
+      "sameAs": [],
+      "audience": {
+        "@type": "Audience",
+        "audienceType": "AI professionals, researchers, students, and enthusiasts"
+      },
+      "about": {
+        "@type": "Thing",
+        "name": "Artificial Intelligence News and Learning"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    
+    <!-- Dynamic URL configuration -->
+    <script>
+      // Ensure dynamic imports work correctly regardless of domain
+      if (window.location.hostname !== 'localhost') {
+        // Set the current origin for dynamic imports
+        window.__VITE_BASE_URL__ = window.location.origin + '/';
+      }
+    </script>
+    
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

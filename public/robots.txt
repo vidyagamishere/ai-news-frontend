@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /auth/
+
+# Specific AI crawler optimizations
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+# SEO optimization
+Sitemap: https://ai-news-digest.com/sitemap.xml
+
+# Crawl delay to be respectful
+Crawl-delay: 1

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- Homepage -->
+  <url>
+    <loc>https://ai-news-digest.com/</loc>
+    <lastmod>2025-08-30</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  
+  <!-- All Sources Section -->
+  <url>
+    <loc>https://ai-news-digest.com/all-sources</loc>
+    <lastmod>2025-08-31</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Blogs Section -->
+  <url>
+    <loc>https://ai-news-digest.com/blogs</loc>
+    <lastmod>2025-08-31</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Podcasts Section -->
+  <url>
+    <loc>https://ai-news-digest.com/podcasts</loc>
+    <lastmod>2025-08-31</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Videos Section -->
+  <url>
+    <loc>https://ai-news-digest.com/videos</loc>
+    <lastmod>2025-08-31</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Events Section -->
+  <url>
+    <loc>https://ai-news-digest.com/events</loc>
+    <lastmod>2025-08-31</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Learning Section -->
+  <url>
+    <loc>https://ai-news-digest.com/learn</loc>
+    <lastmod>2025-08-31</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- About Pages -->
+  <url>
+    <loc>https://ai-news-digest.com/about</loc>
+    <lastmod>2025-08-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Subscription -->
+  <url>
+    <loc>https://ai-news-digest.com/pricing</loc>
+    <lastmod>2025-08-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+</urlset>

@@ -1,0 +1,123 @@
+/* AdUnit.css - Professional Ad Integration */
+
+.ad-container {
+  margin: 24px 0;
+  padding: 16px;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  text-align: center;
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.ad-label {
+  font-size: 10px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.adsbygoogle {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Development placeholder */
+.ad-placeholder {
+  margin: 24px 0;
+  padding: 20px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+  border: 2px dashed #f59e0b;
+  border-radius: 12px;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.ad-placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ad-placeholder-content span:first-child {
+  font-size: 24px;
+}
+
+.ad-placeholder-text {
+  font-size: 12px;
+  color: #92400e;
+  font-weight: 500;
+}
+
+/* Strategic placement styles */
+.ad-container.header-ad {
+  margin: 16px 0;
+  padding: 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.ad-container.sidebar-ad {
+  position: sticky;
+  top: 20px;
+  margin: 20px 0;
+  max-width: 300px;
+}
+
+.ad-container.content-ad {
+  margin: 32px auto;
+  max-width: 728px;
+}
+
+.ad-container.footer-ad {
+  margin: 20px 0 0 0;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+/* Responsive ad sizing */
+@media (max-width: 1200px) {
+  .ad-container.sidebar-ad {
+    position: static;
+    max-width: 100%;
+    margin: 20px auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .ad-container {
+    margin: 16px 0;
+    padding: 12px;
+    border-radius: 8px;
+  }
+  
+  .ad-container.content-ad {
+    max-width: 100%;
+  }
+  
+  .ad-label {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ad-container {
+    margin: 12px 0;
+    padding: 8px;
+  }
+  
+  .ad-placeholder {
+    padding: 16px;
+  }
+  
+  .ad-placeholder-content span:first-child {
+    font-size: 20px;
+  }
+  
+  .ad-placeholder-text {
+    font-size: 11px;
+  }
+}
