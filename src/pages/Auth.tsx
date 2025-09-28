@@ -60,6 +60,13 @@ const Auth: React.FC = () => {
       return;
     }
     
+    // Check if this is admin email - redirect to admin login directly
+    if (formData.email.toLowerCase() === 'admin@vidyagam.com') {
+      console.log('🔑 Admin email detected in Auth page, redirecting to admin login');
+      navigate('/admin/login');
+      return;
+    }
+    
     try {
       console.log('🔍 Auth Debug:', { mode, email: formData.email, name: formData.name });
       

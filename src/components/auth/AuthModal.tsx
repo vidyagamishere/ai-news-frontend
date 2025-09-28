@@ -91,6 +91,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if this is admin email - redirect to admin login directly
+    if (formData.email.toLowerCase() === 'admin@vidyagam.com') {
+      console.log('🔑 Admin email detected, redirecting to admin login');
+      handleClose();
+      navigate('/admin/login');
+      return;
+    }
+    
     // For signup, only validate email and name (no password validation for OTP flow)
     if (mode === 'signup') {
       const errors: Record<string, string> = {};
