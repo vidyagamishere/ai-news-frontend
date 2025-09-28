@@ -46,7 +46,7 @@ const Admin: React.FC = () => {
 
   const handleAdd = async () => {
     try {
-      const response = await apiService.callEndpoint('admin/sources/add', 'POST', newSource, true);
+      await apiService.callEndpoint('admin/sources/add', 'POST', newSource, true);
       
       await fetchSources();
       setNewSource({ name: '', rss_url: '', website: '', enabled: true, priority: 5, category: 'other' });
@@ -60,7 +60,7 @@ const Admin: React.FC = () => {
 
   const handleUpdate = async (index: number, updatedSource: AISource) => {
     try {
-      const response = await apiService.callEndpoint('admin/sources/update', 'POST', { index, ...updatedSource }, true);
+      await apiService.callEndpoint('admin/sources/update', 'POST', { index, ...updatedSource }, true);
       
       await fetchSources();
       setEditingIndex(null);
@@ -75,7 +75,7 @@ const Admin: React.FC = () => {
     if (!confirm('Are you sure you want to delete this source?')) return;
     
     try {
-      const response = await apiService.callEndpoint('admin/sources/delete', 'POST', { index }, true);
+      await apiService.callEndpoint('admin/sources/delete', 'POST', { index }, true);
       
       await fetchSources();
       alert('Source deleted successfully!');
