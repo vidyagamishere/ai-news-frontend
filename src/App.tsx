@@ -50,6 +50,14 @@ const AuthRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
   
   if (isAuthenticated) {
+    // Debug: Log admin check in ProtectedRoute
+    console.log('🔍 ProtectedRoute Admin Check:', {
+      isAuthenticated,
+      userEmail: user?.email,
+      userIsAdmin: user?.is_admin,
+      userObject: user
+    });
+    
     // Admin users go to admin interface
     if (user?.is_admin) {
       console.log('🔑 Authenticated admin user detected, redirecting to admin interface');
@@ -72,6 +80,14 @@ const HomeRoute: React.FC = () => {
   }
   
   if (isAuthenticated) {
+    // Debug: Log admin check in HomeRoute
+    console.log('🔍 HomeRoute Admin Check:', {
+      isAuthenticated,
+      userEmail: user?.email,
+      userIsAdmin: user?.is_admin,
+      userObject: user
+    });
+    
     // Admin users go directly to admin interface
     if (user?.is_admin) {
       console.log('🔑 Admin user detected, redirecting to admin interface');

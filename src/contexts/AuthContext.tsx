@@ -379,6 +379,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('onboardingComplete');
       }
       
+      // Debug: Log the user object being set
+      console.log('🔍 OTP Verification: Setting user in auth state:', {
+        email: user.email,
+        is_admin: user.is_admin,
+        userObject: user
+      });
+      
       setAuthState({
         isAuthenticated: true,
         user,

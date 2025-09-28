@@ -124,14 +124,21 @@ const Admin: React.FC = () => {
     }
   };
 
-  const testScraping = async () => {
+  const initiateAdminScraping = async () => {
     try {
-      const response = await apiService.get('/api/test-scraping');
-      console.log('Scraping test result:', response);
-      alert(`Scraping test completed. Found ${response.articles_found || 0} articles. Check console for details.`);
+      // Use the correct admin scraping endpoint with authentication 
+      const response = await apiService.request('admin/scrape', 'POST', {}, true);
+      console.log('Admin scraping result:', response);
+      
+      if (response.success) {
+        const articlesProcessed = response.data?.articles_processed || 0;
+        alert(`✅ Admin scraping completed successfully!\n${articlesProcessed} articles processed.`);
+      } else {
+        alert(`❌ Scraping failed: ${response.message || 'Unknown error'}`);
+      }
     } catch (error) {
-      console.error('Scraping test error:', error);
-      alert('Scraping test failed');
+      console.error('Admin scraping error:', error);
+      alert('❌ Admin scraping failed. Please check console for details.');
     }
   };
 
@@ -222,9 +229,9 @@ const Admin: React.FC = () => {
             <RefreshCw size={16} />
             Validate All Feeds
           </button>
-          <button onClick={testScraping} className="btn btn-secondary">
+          <button onClick={initiateAdminScraping} className="btn btn-secondary">
             <RefreshCw size={16} />
-            Test Scraping
+            Admin Scraping
           </button>
           <button 
             onClick={() => setShowAddForm(true)} 
