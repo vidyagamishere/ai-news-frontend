@@ -7,6 +7,7 @@ import Header from '../components/Header';
 import TopStories from '../components/TopStories';
 import Loading from '../components/Loading';
 import SEO from '../components/SEO';
+import DebugLogger from '../utils/debug';
 
 // Lazy load heavy components
 const MetricsDashboard = lazy(() => import('../components/MetricsDashboard'));
@@ -15,6 +16,8 @@ const ComprehensiveOnboarding = lazy(() => import('../components/onboarding/Comp
 const AdUnit = lazy(() => import('../components/ads/AdUnit'));
 
 const Dashboard: React.FC = () => {
+  const debug = new DebugLogger('Dashboard');
+  
   const [digest, setDigest] = useState<DigestResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [digestLoading, setDigestLoading] = useState(true);
@@ -200,7 +203,25 @@ const Dashboard: React.FC = () => {
   };
 
   useEffect(() => {
+    debug.enter('useEffect[user_onboarding_check]', { 
+      hasUser: !!user, 
+      userEmail: user?.email,
+      isAuthenticated,
+      authLoading 
+    });
+    
     if (user) {
+      debug.step('useEffect[user_onboarding_check]', 'user_exists', {
+        userEmail: user.email,
+        isAdmin: user.is_admin,
+        createdAt: user.createdAt,
+        preferences: {
+          onboarding_completed: user.preferences?.onboarding_completed,
+          topics_length: user.preferences?.topics?.length,
+          user_roles_length: user.preferences?.user_roles?.length
+        }
+      });
+      
       // Skip email verification check for now to avoid redirect loops
       // if (!user.emailVerified && new Date(user.createdAt).getTime() > Date.now() - (24 * 60 * 60 * 1000)) {
       //   navigate('/verify-email?email=' + encodeURIComponent(user.email));
@@ -241,8 +262,13 @@ const Dashboard: React.FC = () => {
       
       // Redirect admin users to admin interface
       if (isAdmin) {
+        debug.step('useEffect[user_onboarding_check]', 'admin_redirect', {
+          userEmail: user.email,
+          isAdmin: true
+        });
         console.log('🔑 Admin user detected in Dashboard, redirecting to admin interface');
         navigate('/admin');
+        debug.exit('useEffect[user_onboarding_check]', { action: 'admin_redirect' });
         return;
       }
 

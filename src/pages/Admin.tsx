@@ -46,7 +46,7 @@ const Admin: React.FC = () => {
 
   const handleAdd = async () => {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE || 'https://ai-news-scraper-production.up.railway.app';
+      const apiBaseUrl = import.meta.env.VITE_API_BASE ;
       const response = await fetch(`${apiBaseUrl}/api/admin/sources/add`, {
         method: 'POST',
         headers: {

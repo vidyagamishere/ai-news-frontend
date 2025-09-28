@@ -1,6 +1,7 @@
 // UPDATED API service - Modular FastAPI Architecture Integration  
 // All API calls now go to direct FastAPI endpoints with modular routing
 import axios from 'axios';
+import DebugLogger from '../utils/debug';
 
 // Modular FastAPI backend URL - Direct endpoints with APIRouter
 const API_BASE_URL = import.meta.env.VITE_API_BASE || 'https://ai-news-scraper-production.up.railway.app';
@@ -26,6 +27,9 @@ const contentApi = axios.create({
   },
 });
 
+// Initialize debug logger for API service
+const debug = new DebugLogger('APIService');
+
 // Direct modular endpoint request function - calls FastAPI endpoints directly
 async function makeModularRequest(
   endpoint: string, 
@@ -35,9 +39,13 @@ async function makeModularRequest(
   headers: any = {},
   useContentApi: boolean = false
 ) {
+  debug.enter('makeModularRequest', { endpoint, method, params, hasData: !!data, headers: Object.keys(headers) });
+  const startTime = Date.now();
+  
   try {
     const apiInstance = useContentApi ? contentApi : api;
     
+    debug.step('makeModularRequest', 'sending_request', { endpoint, method });
     console.log(`📡 Modular Request: ${method} /${endpoint}`);
     
     // Build request configuration
@@ -62,9 +70,26 @@ async function makeModularRequest(
     
     const response = await apiInstance.request(config);
     
+    debug.step('makeModularRequest', 'received_response', { 
+      endpoint, 
+      status: response.status, 
+      hasData: !!response.data 
+    });
+    
     console.log(`✅ Modular Response: /${endpoint} - ${response.status}`);
+    
+    const executionTime = Date.now() - startTime;
+    debug.exit('makeModularRequest', { 
+      status: response.status, 
+      endpoint,
+      dataType: typeof response.data 
+    }, executionTime);
+    
     return response.data;
   } catch (error: any) {
+    const executionTime = Date.now() - startTime;
+    debug.error('makeModularRequest', error, executionTime);
+    
     console.error(`❌ Modular request failed for /${endpoint}:`, error);
     
     // Handle authentication errors

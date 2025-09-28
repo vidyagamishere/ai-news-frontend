@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User, AuthState, LoginCredentials, SignupCredentials } from '../types/auth';
 import { authService } from '../services/authService';
 import apiService from '../services/api';
+import DebugLogger from '../utils/debug';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -25,6 +26,8 @@ export const useAuth = (): AuthContextType => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const debug = new DebugLogger('AuthContext');
+  
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
@@ -48,18 +51,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [authState]);
 
   const initializeAuth = async () => {
+    debug.enter('initializeAuth');
+    const startTime = Date.now();
+    
     setAuthState(prev => ({ ...prev, loading: true }));
     try {
       const token = localStorage.getItem('authToken');
       const cachedUser = localStorage.getItem('cachedUser');
+      
+      debug.step('initializeAuth', 'checking_storage', { 
+        hasToken: !!token, 
+        hasCachedUser: !!cachedUser 
+      });
+      
       console.log('🔑 Auth initialization - Token found:', !!token, 'Cached user found:', !!cachedUser);
       
       if (token) {
         // If we have cached user data, use it immediately while validating in background
         if (cachedUser) {
           try {
+            debug.step('initializeAuth', 'parsing_cached_user');
             const parsedUser = JSON.parse(cachedUser);
             console.log('📦 Using cached user data while validating...');
+            
+            debug.step('initializeAuth', 'setting_cached_auth_state', { 
+              userEmail: parsedUser?.email,
+              isAdmin: parsedUser?.is_admin 
+            });
+            
             setAuthState({
               isAuthenticated: true,
               user: parsedUser,
@@ -122,6 +141,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading: false,
         error: null
       });
+    } finally {
+      const executionTime = Date.now() - startTime;
+      debug.exit('initializeAuth', { 
+        isAuthenticated: authState.isAuthenticated,
+        hasUser: !!authState.user 
+      }, executionTime);
     }
   };
 
@@ -359,9 +384,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const verifyOTP = async (email: string, otp: string, userData: any) => {
+    debug.enter('verifyOTP', { email, otp: '[REDACTED]', userData });
+    const startTime = Date.now();
+    
     try {
+      debug.step('verifyOTP', 'calling_auth_service');
       const response = await authService.verifyOTP(email, otp, userData) as any;
       const { user, token: authToken, isUserExist } = response;
+      
+      debug.step('verifyOTP', 'received_response', { 
+        hasUser: !!user, 
+        hasToken: !!authToken, 
+        isUserExist,
+        userEmail: user?.email,
+        isAdmin: user?.is_admin 
+      });
       
       localStorage.setItem('authToken', authToken);
       localStorage.setItem('cachedUser', JSON.stringify(user));
@@ -392,7 +429,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading: false,
         error: null
       });
+      
+      const executionTime = Date.now() - startTime;
+      debug.exit('verifyOTP', { 
+        success: true,
+        userEmail: user?.email,
+        isAdmin: user?.is_admin,
+        shouldSkipOnboarding 
+      }, executionTime);
+      
     } catch (error) {
+      const executionTime = Date.now() - startTime;
+      debug.error('verifyOTP', error, executionTime);
+      
       setAuthState(prev => ({
         ...prev,
         error: error instanceof Error ? error.message : 'OTP verification failed'

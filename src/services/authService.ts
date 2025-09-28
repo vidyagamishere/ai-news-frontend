@@ -1,4 +1,5 @@
 import type { User, LoginCredentials, SignupCredentials, AITopic } from '../types/auth';
+import DebugLogger from '../utils/debug';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'https://ai-news-scraper-production.up.railway.app';
 
@@ -17,7 +18,12 @@ interface OTPResponse {
 }
 
 class AuthService {
+  private debug = new DebugLogger('AuthService');
+  
   private async request(endpoint: string, options: RequestInit = {}) {
+    this.debug.enter('request', { endpoint, method: options.method || 'GET' });
+    const startTime = Date.now();
+    
     const token = localStorage.getItem('authToken');
     
     const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -40,10 +46,19 @@ class AuthService {
       (enhancedError as any).redirect_to_signup = errorData.redirect_to_signup;
       (enhancedError as any).detailed_instructions = errorData.detailed_instructions;
       
+      this.debug.error('request', enhancedError, Date.now() - startTime);
       throw enhancedError;
     }
 
-    return response.json();
+    const data = await response.json();
+    const executionTime = Date.now() - startTime;
+    this.debug.exit('request', { 
+      endpoint, 
+      status: response.status, 
+      hasData: !!data 
+    }, executionTime);
+    
+    return data;
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -155,7 +170,13 @@ class AuthService {
   }
 
   async verifyOTP(email: string, otp: string, userData: any): Promise<AuthResponse> {
-    return this.request('/auth/verify-otp', {
+    this.debug.enter('verifyOTP', { 
+      email, 
+      otp: '[REDACTED]', 
+      userData 
+    });
+    
+    const result = await this.request('/auth/verify-otp', {
       method: 'POST',
       body: JSON.stringify({
         email,
@@ -163,6 +184,16 @@ class AuthService {
         userData
       }),
     });
+    
+    this.debug.exit('verifyOTP', { 
+      hasUser: !!result.user, 
+      hasToken: !!result.token,
+      userEmail: result.user?.email,
+      isAdmin: result.user?.is_admin,
+      isUserExist: result.isUserExist 
+    });
+    
+    return result;
   }
 }
 
