@@ -35,7 +35,7 @@ const Admin: React.FC = () => {
   const fetchSources = async () => {
     try {
       setLoading(true);
-      const response = await apiService.get('/api/admin/sources');
+      const response = await apiService.callEndpoint('admin/sources', 'GET', {}, true);
       setSources(response.sources || []);
     } catch (error) {
       console.error('Failed to fetch sources:', error);
@@ -46,25 +46,12 @@ const Admin: React.FC = () => {
 
   const handleAdd = async () => {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE ;
-      const response = await fetch(`${apiBaseUrl}/api/admin/sources/add`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer admin-token'
-        },
-        body: JSON.stringify(newSource)
-      });
+      const response = await apiService.callEndpoint('admin/sources/add', 'POST', newSource, true);
       
-      if (response.ok) {
-        await fetchSources();
-        setNewSource({ name: '', rss_url: '', website: '', enabled: true, priority: 5, category: 'other' });
-        setShowAddForm(false);
-        alert('Source added successfully!');
-      } else {
-        const error = await response.json();
-        alert(`Failed to add source: ${error.error}`);
-      }
+      await fetchSources();
+      setNewSource({ name: '', rss_url: '', website: '', enabled: true, priority: 5, category: 'other' });
+      setShowAddForm(false);
+      alert('Source added successfully!');
     } catch (error) {
       console.error('Add error:', error);
       alert('Failed to add source');
@@ -73,24 +60,11 @@ const Admin: React.FC = () => {
 
   const handleUpdate = async (index: number, updatedSource: AISource) => {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE ;
-      const response = await fetch(`${apiBaseUrl}/api/admin/sources/update`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer admin-token'
-        },
-        body: JSON.stringify({ index, ...updatedSource })
-      });
+      const response = await apiService.callEndpoint('admin/sources/update', 'POST', { index, ...updatedSource }, true);
       
-      if (response.ok) {
-        await fetchSources();
-        setEditingIndex(null);
-        alert('Source updated successfully!');
-      } else {
-        const error = await response.json();
-        alert(`Failed to update source: ${error.error}`);
-      }
+      await fetchSources();
+      setEditingIndex(null);
+      alert('Source updated successfully!');
     } catch (error) {
       console.error('Update error:', error);
       alert('Failed to update source');
@@ -101,23 +75,10 @@ const Admin: React.FC = () => {
     if (!confirm('Are you sure you want to delete this source?')) return;
     
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE ;
-      const response = await fetch(`${apiBaseUrl}/api/admin/sources/delete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer admin-token'
-        },
-        body: JSON.stringify({ index })
-      });
+      const response = await apiService.callEndpoint('admin/sources/delete', 'POST', { index }, true);
       
-      if (response.ok) {
-        await fetchSources();
-        alert('Source deleted successfully!');
-      } else {
-        const error = await response.json();
-        alert(`Failed to delete source: ${error.error}`);
-      }
+      await fetchSources();
+      alert('Source deleted successfully!');
     } catch (error) {
       console.error('Delete error:', error);
       alert('Failed to delete source');
@@ -145,31 +106,18 @@ const Admin: React.FC = () => {
   const validateAllFeeds = async () => {
     try {
       setLoading(true);
-      const apiBaseUrl = import.meta.env.VITE_API_BASE ;
-      const response = await fetch(`${apiBaseUrl}/api/admin/validate-all-feeds`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer admin-token'
-        }
-      });
+      const result = await apiService.callEndpoint('admin/validate-all-feeds', 'POST', {}, true);
       
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Feed validation results:', result);
-        
-        const invalidCount = result.invalid_feeds || 0;
-        const validCount = result.valid_feeds || 0;
-        const totalCount = result.total_feeds || 0;
-        
-        alert(`Feed Validation Complete!\n\nTotal Feeds: ${totalCount}\nValid: ${validCount}\nInvalid: ${invalidCount}\n\nCheck console for detailed results.`);
-        
-        // Optionally refresh sources to show validation status
-        await fetchSources();
-      } else {
-        const error = await response.json();
-        alert(`Feed validation failed: ${error.error}`);
-      }
+      console.log('Feed validation results:', result);
+      
+      const totalChecked = result.total_checked || 0;
+      const validCount = result.results?.filter((r: any) => r.status === 'valid').length || 0;
+      const invalidCount = result.results?.filter((r: any) => r.status === 'invalid').length || 0;
+      
+      alert(`Feed Validation Complete!\n\nTotal Feeds: ${totalChecked}\nValid: ${validCount}\nInvalid: ${invalidCount}\n\nCheck console for detailed results.`);
+      
+      // Optionally refresh sources to show validation status
+      await fetchSources();
     } catch (error) {
       console.error('Feed validation error:', error);
       alert('Feed validation failed');
@@ -180,32 +128,18 @@ const Admin: React.FC = () => {
 
   const validateSingleFeed = async (feedUrl: string, sourceName: string) => {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE ;
-      const response = await fetch(`${apiBaseUrl}/api/admin/validate-feed`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer admin-token'
-        },
-        body: JSON.stringify({ feed_url: feedUrl })
-      });
+      const result = await apiService.callEndpoint('admin/validate-feed', 'POST', { feed_url: feedUrl }, true);
       
-      if (response.ok) {
-        const result = await response.json();
-        const validation = result.validation;
-        
-        if (validation.valid) {
-          alert(`✅ ${sourceName} Feed Valid!\n\nEntries: ${validation.total_entries}\nRecent: ${validation.recent_entries}\nLast Updated: ${validation.last_updated}`);
-        } else {
-          alert(`❌ ${sourceName} Feed Invalid!\n\nError: ${validation.error}\nStatus: ${validation.status_code || 'Unknown'}`);
-        }
+      const validation = result.result;
+      
+      if (validation.status === 'valid') {
+        alert(`✅ ${sourceName} Feed Valid!\n\nMessage: ${validation.message}`);
       } else {
-        const error = await response.json();
-        alert(`Validation failed: ${error.error}`);
+        alert(`❌ ${sourceName} Feed Invalid!\n\nMessage: ${validation.message}`);
       }
     } catch (error) {
       console.error('Single feed validation error:', error);
-      alert('Single feed validation failed');
+      alert('Feed validation failed');
     }
   };
 
