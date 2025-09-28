@@ -241,7 +241,7 @@ const AdminLogin: React.FC = () => {
             Password: <code style={{ background: '#e5e7eb', padding: '2px 4px', borderRadius: '3px' }}>Vidyagam@Success</code>
           </p>
           <p style={{ margin: '0.5rem 0 0', textAlign: 'center', fontSize: '0.7rem' }}>
-            💡 <strong>Tip:</strong> Entering <code style={{ background: '#e5e7eb', padding: '2px 4px', borderRadius: '3px' }}>admin@vidyagam.com</code> on the main sign-in page will automatically redirect you here!
+            💡 <strong>Tip:</strong> You can also sign in with <code style={{ background: '#e5e7eb', padding: '2px 4px', borderRadius: '3px' }}>admin@vidyagam.com</code> through the main sign-in page (with OTP verification)!
           </p>
         </div>
 
