@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import DebugLogger from '../utils/debug';
 
 interface AdminAuthContextType {
   isAdminAuthenticated: boolean;
@@ -14,11 +15,13 @@ const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefin
 // Admin credentials (in production, these should be environment variables)
 const ADMIN_CREDENTIALS = {
   username: 'admin@vidyagam.com',
-  password: 'admin123', // Change this to a secure password
-  apiKey: process.env.REACT_APP_ADMIN_API_KEY || 'admin-api-key-2024'
+  password: 'Vidyagam@Success', // Updated to match UI display
+  apiKey: import.meta.env.VITE_ADMIN_API_KEY || 'admin-api-key-2024'
 };
 
 export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const debug = new DebugLogger('AdminAuthContext');
+  
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [adminApiKey, setAdminApiKey] = useState<string | null>(null);
   const [adminUser, setAdminUser] = useState<any | null>(null);
@@ -56,15 +59,26 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const adminLogin = async (username: string, password: string): Promise<boolean> => {
+    debug.enter('adminLogin', { username, password: '[REDACTED]' });
+    const startTime = Date.now();
+    
     setIsLoading(true);
     
     try {
+      debug.step('adminLogin', 'checking_credentials', { 
+        providedUsername: username,
+        expectedUsername: ADMIN_CREDENTIALS.username,
+        passwordMatch: password === ADMIN_CREDENTIALS.password
+      });
+      
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Check credentials (support both email and old username format)
       if ((username === ADMIN_CREDENTIALS.username || username === 'admin') && 
           password === ADMIN_CREDENTIALS.password) {
+        
+        debug.step('adminLogin', 'credentials_valid', { success: true });
         
         // Create admin user object
         const adminUserData = {
@@ -94,12 +108,25 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setAdminApiKey(ADMIN_CREDENTIALS.apiKey);
         setAdminUser(adminUserData);
         setIsLoading(false);
+        
+        const executionTime = Date.now() - startTime;
+        debug.exit('adminLogin', { success: true, adminUser: adminUserData.email }, executionTime);
         return true;
       } else {
+        debug.step('adminLogin', 'credentials_invalid', { 
+          usernameMatch: (username === ADMIN_CREDENTIALS.username || username === 'admin'),
+          passwordMatch: password === ADMIN_CREDENTIALS.password
+        });
+        
         setIsLoading(false);
+        const executionTime = Date.now() - startTime;
+        debug.exit('adminLogin', { success: false, reason: 'invalid_credentials' }, executionTime);
         return false;
       }
     } catch (error) {
+      const executionTime = Date.now() - startTime;
+      debug.error('adminLogin', error, executionTime);
+      
       console.error('Admin login error:', error);
       setIsLoading(false);
       return false;

@@ -237,7 +237,7 @@ const AdminLogin: React.FC = () => {
         }}>
           <p style={{ margin: 0, textAlign: 'center' }}>
             <strong>Admin Credentials:</strong><br />
-            Username: <code style={{ background: '#e5e7eb', padding: '2px 4px', borderRadius: '3px' }}>admin@vidygam.com</code><br />
+            Username: <code style={{ background: '#e5e7eb', padding: '2px 4px', borderRadius: '3px' }}>admin@vidyagam.com</code><br />
             Password: <code style={{ background: '#e5e7eb', padding: '2px 4px', borderRadius: '3px' }}>Vidyagam@Success</code>
           </p>
           <p style={{ margin: '0.5rem 0 0', textAlign: 'center', fontSize: '0.7rem' }}>
