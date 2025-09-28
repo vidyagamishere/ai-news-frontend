@@ -216,23 +216,36 @@ const Dashboard: React.FC = () => {
       const hasPersonalizationData = (user.preferences?.topics?.length || 0) > 0 ||
                                      (user.preferences?.user_roles?.length || 0) > 0;
       
+      // Admin users should never go through onboarding
+      const isAdmin = user.is_admin === true;
+      
       // Show onboarding for users without personalization data OR if forced via URL parameter
-      const needsOnboarding = forceOnboarding || (!hasCompletedOnboarding && !hasPersonalizationData);
+      // BUT never for admin users
+      const needsOnboarding = !isAdmin && (forceOnboarding || (!hasCompletedOnboarding && !hasPersonalizationData));
       
       // Debug logging for onboarding decision
       console.log('🧪 Onboarding decision debug:', {
         forceOnboarding,
         hasCompletedOnboarding,
         hasPersonalizationData,
+        isAdmin,
         needsOnboarding,
         onboarding_completed: user.preferences?.onboarding_completed,
         topics_length: user.preferences?.topics?.length,
         user_roles_length: user.preferences?.user_roles?.length,
         topics_array: user.preferences?.topics,
         user_roles_array: user.preferences?.user_roles,
-        showOnboarding_state: showOnboarding
+        showOnboarding_state: showOnboarding,
+        userEmail: user.email
       });
       
+      // Redirect admin users to admin interface
+      if (isAdmin) {
+        console.log('🔑 Admin user detected in Dashboard, redirecting to admin interface');
+        navigate('/admin');
+        return;
+      }
+
       if (needsOnboarding) {
         console.log('✅ Setting showOnboarding to true');
         setShowOnboarding(true);
