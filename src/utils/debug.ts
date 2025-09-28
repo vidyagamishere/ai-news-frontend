@@ -43,7 +43,6 @@ export class DebugLogger {
     if (!this.enabled) return;
     
     const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
-    const paramsStr = params ? this.sanitizeParams(params) : 'no params';
     
     console.log(`🟢 [${timestamp}] ${this.context}.${functionName}() ENTER`, {
       function: functionName,
