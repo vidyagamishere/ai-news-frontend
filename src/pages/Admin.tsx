@@ -127,7 +127,7 @@ const Admin: React.FC = () => {
   const initiateAdminScraping = async () => {
     try {
       // Use the correct admin scraping endpoint with authentication 
-      const response = await apiService.request('admin/scrape', 'POST', {}, true);
+      const response = await apiService.callEndpoint('admin/scrape', 'POST', {}, true);
       console.log('Admin scraping result:', response);
       
       if (response.success) {
