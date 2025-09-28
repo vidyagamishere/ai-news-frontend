@@ -14,7 +14,32 @@ const Onboarding: React.FC = () => {
     // Redirect if user is not authenticated
     if (!user) {
       navigate('/auth');
+      return;
     }
+
+    // Debug: Admin check in onboarding
+    console.log('🧪 Onboarding decision debug:', {
+      userEmail: user.email,
+      isAdmin: user.is_admin,
+      userObject: user
+    });
+
+    // Redirect admin users to admin interface
+    if (user.is_admin) {
+      console.log('✅ Admin user detected in onboarding, redirecting to admin interface');
+      navigate('/admin');
+      return;
+    }
+
+    // Check if user has already completed onboarding
+    const onboardingComplete = localStorage.getItem('onboardingComplete');
+    if (onboardingComplete === 'true') {
+      console.log('✅ User has completed onboarding, redirecting to dashboard');
+      navigate('/dashboard');
+      return;
+    }
+
+    console.log('✅ Setting showOnboarding to true');
   }, [user, navigate]);
 
   const handleComplete = () => {

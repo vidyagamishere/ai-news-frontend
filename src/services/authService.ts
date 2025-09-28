@@ -106,7 +106,7 @@ class AuthService {
   }
 
   async getAvailableTopics(): Promise<AITopic[]> {
-    const response = await this.request('/topics');
+    const response = await this.request('/ai-topics');
     // Handle new API structure with topics, user_roles, and content_types
     if (response.topics && Array.isArray(response.topics)) {
       return response.topics.map((topic: any) => ({
@@ -123,7 +123,7 @@ class AuthService {
     topics: AITopic[];
     content_types: any[];
   }> {
-    const response = await this.request('/topics');
+    const response = await this.request('/ai-topics');
     return {
       user_roles: response.user_roles || [],
       topics: response.topics || [],
