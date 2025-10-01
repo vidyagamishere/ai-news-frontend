@@ -4,7 +4,7 @@ import axios from 'axios';
 import DebugLogger from '../utils/debug';
 
 // Modular FastAPI backend URL - Direct endpoints with APIRouter
-const API_BASE_URL = import.meta.env.VITE_API_BASE || 'https://ai-news-scraper-production.up.railway.app';
+const API_BASE_URL = import.meta.env.VITE_API_BASE || 'https://mindful-adventure-production-50fa.up.railway.app';
 
 console.log('🏗️ API Service: Using Modular FastAPI Architecture with PostgreSQL');
 console.log('🔗 Backend URL:', API_BASE_URL);

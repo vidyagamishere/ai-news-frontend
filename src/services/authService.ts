@@ -1,7 +1,7 @@
 import type { User, LoginCredentials, SignupCredentials, AITopic } from '../types/auth';
 import DebugLogger from '../utils/debug';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://ai-news-scraper-production.up.railway.app';
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://mindful-adventure-production-50fa.up.railway.app';
 
 interface AuthResponse {
   user: User;
