@@ -567,6 +567,52 @@ export const apiService = {
     // Remove any leading slashes and api prefixes
     const cleanEndpoint = endpoint.replace(/^\/?(api\/)?/, '');
     return await makeModularRequest(cleanEndpoint, 'GET', params);
+  },
+
+  // ===============================
+  // PERSONALIZED FEED ENDPOINTS
+  // ===============================
+
+  // Get personalized feed with advanced filtering
+  getPersonalizedFeed: async (filterRequest: {
+    interests?: string[];
+    content_types?: string[];
+    publishers?: string[];
+    time_filter?: string;
+    search_query?: string;
+    limit?: number;
+  }): Promise<any> => {
+    console.log('📱 Fetching personalized feed with filters:', filterRequest);
+    return await makeModularRequest('api/v1/personalized-feed', 'POST', {}, filterRequest, {}, true);
+  },
+
+  // Get available interests/topics
+  getAvailableInterests: async (): Promise<{ interests: string[]; count: number }> => {
+    return await makeModularRequest('api/v1/available-interests', 'GET');
+  },
+
+  // Get available publishers
+  getAvailablePublishers: async (): Promise<{ publishers: string[]; count: number }> => {
+    return await makeModularRequest('api/v1/available-publishers', 'GET');
+  },
+
+  // Get available content types
+  getAvailableContentTypes: async (): Promise<{ content_types: Array<{name: string; display_name: string}>; count: number }> => {
+    return await makeModularRequest('api/v1/available-content-types', 'GET');
+  },
+
+  // Update user preferences (enhanced)
+  updateUserPreferences: async (preferences: any): Promise<any> => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('Authentication required for updating preferences');
+    }
+    
+    const headers = {
+      'Authorization': `Bearer ${token}`
+    };
+    
+    return await makeModularRequest('auth/preferences', 'PUT', {}, preferences, headers);
   }
 };
 

@@ -18,6 +18,7 @@ import Admin from './pages/Admin';
 import AdminLogin from './pages/AdminLogin';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import Loading from './components/Loading';
+import MobileDashboard from './components/MobileDashboard';
 import './App.css';
 import './pages/legal.css';
 import './pages/about.css';
@@ -112,6 +113,10 @@ function AppContent() {
       <Route 
         path="/" 
         element={<HomeRoute />} 
+      />
+      <Route 
+        path="/mobile" 
+        element={<MobileDashboard />} 
       />
       <Route 
         path="/auth" 
