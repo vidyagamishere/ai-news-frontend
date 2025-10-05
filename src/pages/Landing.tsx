@@ -196,25 +196,37 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* Breaking News Section */}
+      {/* Breaking News Ticker */}
       {breakingNews.length > 0 && (
-        <section className="breaking-section">
-          <div className="section-header">
-            <h2>🚨 Breaking: Top 5 Generative AI Stories</h2>
-            <p>Latest high-impact developments in Generative AI - Click to read full articles</p>
+        <section className="breaking-news-ticker">
+          <div className="ticker-header">
+            <span className="breaking-label">🚨 BREAKING</span>
+            <span className="ticker-subtitle">Latest Generative AI Updates</span>
           </div>
-          <div className="breaking-grid">
-            {breakingNews.map((story, index) => (
-              <div key={index} className="breaking-card" onClick={() => window.open(story.url, '_blank')}>
-                <div className="breaking-badge">Breaking</div>
-                <h3>{story.title}</h3>
-                <p>{story.summary || story.content_summary || 'Latest Generative AI development'}</p>
-                <div className="card-meta">
-                  <span className="source">{story.source}</span>
-                  <span className="impact">Generative AI</span>
+          <div className="ticker-container">
+            <div className="ticker-content">
+              {breakingNews.map((story, index) => (
+                <div 
+                  key={index} 
+                  className="ticker-item"
+                  onClick={() => window.open(story.url, '_blank')}
+                >
+                  <span className="ticker-title">{story.title}</span>
+                  <span className="ticker-separator">•</span>
                 </div>
-              </div>
-            ))}
+              ))}
+              {/* Duplicate items for seamless loop */}
+              {breakingNews.map((story, index) => (
+                <div 
+                  key={`dup-${index}`} 
+                  className="ticker-item"
+                  onClick={() => window.open(story.url, '_blank')}
+                >
+                  <span className="ticker-title">{story.title}</span>
+                  <span className="ticker-separator">•</span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}
