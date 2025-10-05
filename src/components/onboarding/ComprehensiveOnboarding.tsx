@@ -279,9 +279,6 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
                   <h4>{topic.name}</h4>
                   <p>{topic.description}</p>
                 </div>
-                {selectedTopics.includes(topic.id) && (
-                  <Check className="topic-check" size={16} />
-                )}
               </button>
             );
           })}
@@ -317,9 +314,6 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
                   <p>{contentType.description}</p>
                 </div>
               </div>
-              {selectedContentTypes.includes(contentType.name) && (
-                <Check className="content-type-check" size={16} />
-              )}
             </label>
           ))}
         </div>
@@ -348,9 +342,6 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
                 <h4>{publisher.name}</h4>
                 <p>{publisher.description}</p>
               </div>
-              {selectedPublishers.includes(publisher.id) && (
-                <Check className="publisher-check" size={16} />
-              )}
             </label>
           ))}
         </div>
