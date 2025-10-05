@@ -188,6 +188,14 @@ const MobileDashboard: React.FC = () => {
     }
   };
 
+  // Helper function to map significance to AI level
+  const getAILevel = (significance: number): string => {
+    if (significance >= 8) return 'Advanced';
+    if (significance >= 6) return 'Complex';
+    if (significance >= 4) return 'Intermediate';
+    return 'Simple';
+  };
+
   const filterContentByAllCriteria = (content: ContentItem[], profile: UserProfile): ContentItem[] => {
     // Use real content if available, fallback to mock content
     const contentToFilter = realContent.length > 0 ? realContent : content;
@@ -338,15 +346,30 @@ const MobileDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Content groups */}
+        {/* Featured Article */}
+        {allCategories.length > 0 && groupedContent[allCategories[0]] && groupedContent[allCategories[0]][0] && (
+          <div className="bg-white rounded-xl shadow-lg p-4 cursor-pointer hover:shadow-xl transition-shadow duration-300 border-t-4 border-indigo-500">
+            <p className="text-xs text-indigo-600 font-semibold mb-1 uppercase">AI Level: Complex</p>
+            <h2 className="text-xl font-extrabold text-gray-900 leading-snug">{groupedContent[allCategories[0]][0].title}</h2>
+            <p className="text-sm text-indigo-500 mt-2">Source: {groupedContent[allCategories[0]][0].publisher} | {new Date(groupedContent[allCategories[0]][0].publishDate).toLocaleTimeString()}</p>
+          </div>
+        )}
+
+        {/* Content domains with horizontal scrolling */}
         {allCategories.length > 0 ? (
           allCategories.map(category => (
-            <div key={category} className="mb-8">
-              <h2 className="text-xl font-extrabold text-indigo-700 border-b-2 border-indigo-200 pb-2 mb-4">
-                {category} ({groupedContent[category].length})
-              </h2>
-              <div className="space-y-4">
-                {groupedContent[category].map(renderContentCard)}
+            <div key={category}>
+              <h3 className="text-lg font-bold text-gray-800 mb-3 uppercase">{category} (DOMAIN)</h3>
+              <div className="flex overflow-x-scroll pb-4 space-x-3 scrollbar-hide">
+                {groupedContent[category].map((item, index) => (
+                  <div key={item.id} className="flex-none w-64 bg-white p-3 rounded-lg shadow border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
+                    <span className="text-xs text-gray-500 font-semibold mb-1 uppercase block">
+                      AI Level: {getAILevel(item.significance || 5)}
+                    </span>
+                    <h4 className="font-semibold text-gray-800 line-clamp-3 mt-1">{item.title}</h4>
+                    <p className="text-xs text-gray-500 mt-2">Source: {item.publisher} | {new Date(item.publishDate).toLocaleTimeString()}</p>
+                  </div>
+                ))}
               </div>
             </div>
           ))
@@ -524,37 +547,33 @@ const MobileDashboard: React.FC = () => {
   );
 
   const DashboardScreen = () => (
-    <div className="h-full flex flex-col">
-      <header className="bg-white border-b border-gray-200 p-4">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-xl font-extrabold text-indigo-600">Vidyagam Feed</span>
-          <select 
-            value={userProfile.timeFilter}
-            onChange={(e) => updateProfile('timeFilter', e.target.value)}
-            className="text-sm border border-gray-300 rounded-lg p-1 bg-white focus:ring-indigo-500"
-          >
-            <option value="Last 24 hours">24 Hours</option>
-            <option value="Last Week">Last Week</option>
-            <option value="Last Month">Last Month</option>
-            <option value="Last Year">Last Year</option>
-            <option value="All Time">All Time</option>
-          </select>
-        </div>
-        
-        {/* Search */}
-        <div className="relative">
-          <input 
-            type="search"
-            placeholder="Search for specific updates..."
-            value={userProfile.currentSearchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-          />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+    <div className="h-full flex flex-col bg-gray-50">
+      {/* Header - Clean design matching mockup */}
+      <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sticky top-0 z-10">
+        <span className="text-xl font-extrabold text-indigo-600">Vidyagam</span>
+        <div className="flex space-x-3">
+          {/* Filter Icon */}
+          <button className="text-gray-500 hover:text-indigo-600 p-1 rounded-full bg-gray-100">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v7l-4-4v-3.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+            </svg>
+          </button>
+          {/* Search Icon */}
+          <button className="text-gray-500 hover:text-indigo-600">
+            <Search className="w-6 h-6" />
+          </button>
+          {/* Settings Icon */}
+          <button className="text-gray-500 hover:text-indigo-600">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.526.323 1.157.485 1.788.485z"></path>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+          </button>
         </div>
       </header>
 
-      <main className="flex-1 bg-gray-50 p-4 overflow-y-auto">
+      {/* Main Content */}
+      <main className="flex-1 bg-gray-50 p-4 overflow-y-auto space-y-6">
         {loading && (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>

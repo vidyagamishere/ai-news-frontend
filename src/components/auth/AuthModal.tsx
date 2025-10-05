@@ -23,7 +23,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isVisible, setIsVisible] = useState(false);
 
-  const { login, loading, error, isAuthenticated, sendOTP, user } = useAuth();
+  const { login, signup, loading, error, isAuthenticated, user, isGmailDomain } = useAuth();
   const navigate = useNavigate();
 
   // Animation on mount
@@ -99,24 +99,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // For signup, only validate email and name (no password validation for OTP flow)
+    // Check if user is trying to use Gmail with password instead of Google One Tap
+    if (isGmailDomain(formData.email)) {
+      setFormErrors({
+        email: 'Gmail users must use Google Sign In above for security. Please click the Google Sign In button.'
+      });
+      return;
+    }
+    
+    // For signup, validate form and create account
     if (mode === 'signup') {
-      const errors: Record<string, string> = {};
-      
-      if (!formData.name.trim()) {
-        errors.name = 'Name is required';
-      }
-      
-      if (!formData.email.trim()) {
-        errors.email = 'Email is required';
-      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-        errors.email = 'Please enter a valid email';
-      }
-      
-      if (!formData.acceptTerms) {
-        errors.acceptTerms = 'Please accept the terms';
-      }
-      
+      const errors = validateForm();
       setFormErrors(errors);
       
       if (Object.keys(errors).length > 0) {
@@ -124,29 +117,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       }
       
       try {
-        // For signup, send OTP and include optional password for future logins
-        await sendOTP(formData.email, formData.name);
-        // Clear onboarding completion to trigger onboarding for new email signups
-        localStorage.removeItem('onboardingComplete');
-        
-        const userData: any = {
+        await signup({
           name: formData.name,
-          email: formData.email
-        };
-        
-        // Include password if provided for future password-based logins
-        if (formData.password && formData.password.length >= 6) {
-          userData.password = formData.password;
-        }
-        
-        navigate('/verify-otp?email=' + encodeURIComponent(formData.email) + '&userData=' + encodeURIComponent(JSON.stringify(userData)));
-      } catch (err) {
-        console.error('OTP sending error:', err);
+          email: formData.email,
+          password: formData.password
+        });
+      } catch (err: any) {
+        console.error('Signup error:', err);
       }
       return;
     }
     
-    // For signin, validate all fields
+    // For signin, validate form and login
     const errors = validateForm();
     setFormErrors(errors);
     
@@ -231,11 +213,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
           {/* Google Sign In - Primary Option */}
           <div className="auth-social-primary">
             <GoogleSignIn onSuccess={handleGoogleSuccess} />
-            <p className="social-benefit">Instant access • No email verification required</p>
+            <p className="social-benefit">For Gmail users • Instant secure access</p>
           </div>
 
           <div className="auth-divider">
-            <span>or use email</span>
+            <span>or use email & password (other domains)</span>
           </div>
 
           {/* Form */}
@@ -304,13 +286,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
             {!isSignIn && (
               <div className="form-group">
-                <label htmlFor="modal-password">Password (Optional)</label>
+                <label htmlFor="modal-password">Password</label>
                 <div className="input-wrapper">
                   <Lock className="input-icon" size={18} />
                   <input
                     id="modal-password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Set password for easy future access"
+                    placeholder="Create a secure password"
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
                   />
@@ -330,8 +312,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
             {!isSignIn && (
               <div className="signup-info">
-                <p className="otp-info">
-                  📧 We'll send a verification code to your email for secure access
+                <p className="auth-info">
+                  📧 <strong>Gmail users:</strong> Use Google Sign In above<br/>
+                  🔐 <strong>Other domains:</strong> Use email and password below
                 </p>
               </div>
             )}
@@ -373,33 +356,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
               }
             </button>
 
-            {isSignIn && (
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!formData.email.trim()) {
-                    setFormErrors({...formErrors, email: 'Email is required for email login'});
-                    return;
-                  }
-                  if (!/\S+@\S+\.\S+/.test(formData.email)) {
-                    setFormErrors({...formErrors, email: 'Please enter a valid email'});
-                    return;
-                  }
-                  try {
-                    await sendOTP(formData.email, '');
-                    navigate('/verify-otp?email=' + encodeURIComponent(formData.email) + '&isLogin=true');
-                  } catch (err: any) {
-                    console.error('Email login error:', err);
-                    // Show error in the form instead of redirecting
-                    setFormErrors({...formErrors, email: err.message || 'Failed to send verification email'});
-                  }
-                }}
-                className="auth-submit auth-submit-secondary"
-                disabled={loading}
-              >
-                📧 Continue with Email (No Password)
-              </button>
-            )}
           </form>
 
           <div className="auth-footer">

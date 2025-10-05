@@ -122,15 +122,18 @@ class AuthService {
 
   async getAvailableTopics(): Promise<AITopic[]> {
     const response = await this.request('/ai-topics');
-    // Handle new API structure with topics, user_roles, and content_types
-    if (response.topics && Array.isArray(response.topics)) {
-      return response.topics.map((topic: any) => ({
-        ...topic,
+    // Only use categories from ai_categories_master table
+    if (response.categories && Array.isArray(response.categories) && response.categories.length > 0) {
+      return response.categories.map((category: any) => ({
+        id: category.id,
+        name: category.name,
+        description: category.description,
+        category: category.category_label || 'general',
         selected: false // Add selected property for compatibility
       }));
     }
-    // Fallback for old API structure
-    return Array.isArray(response) ? response : [];
+    // Throw error if no categories found to trigger fallback in components
+    throw new Error('No categories found in ai_categories_master table');
   }
 
   async getUserRolesAndTopics(): Promise<{
@@ -139,9 +142,25 @@ class AuthService {
     content_types: any[];
   }> {
     const response = await this.request('/ai-topics');
+    
+    // Only use categories from ai_categories_master table
+    let topics = [];
+    if (response.categories && Array.isArray(response.categories) && response.categories.length > 0) {
+      topics = response.categories.map((category: any) => ({
+        id: category.id,
+        name: category.name,
+        description: category.description,
+        category: category.category_label || 'general',
+        selected: false
+      }));
+    } else {
+      // Throw error if no categories to maintain consistency
+      throw new Error('No categories found in ai_categories_master table');
+    }
+    
     return {
       user_roles: response.user_roles || [],
-      topics: response.topics || [],
+      topics: topics,
       content_types: response.content_types || []
     };
   }

@@ -90,10 +90,19 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
       setSelectedTopics(autoSelectedTopics);
       
       // Set content types from backend and auto-select all 3
-      const contentTypes = response.content_types || [];
-      setAvailableContentTypes(contentTypes);
+      const contentTypes = response.content_types || [
+        { id: 1, name: 'ARTICLE', display_name: 'Articles', description: 'News articles and blog posts', icon: '📄', selected: true },
+        { id: 2, name: 'VIDEO', display_name: 'Videos', description: 'Video content and tutorials', icon: '🎥', selected: true },
+        { id: 3, name: 'AUDIO', display_name: 'Podcasts', description: 'Podcast episodes and audio content', icon: '🎙️', selected: true }
+      ];
       
-      const autoSelectedContentTypes = contentTypes.filter(ct => ct.selected).map(ct => ct.name.toLowerCase());
+      // Deduplicate content types by id to avoid duplicates
+      const uniqueContentTypes = contentTypes.filter((ct, index, arr) => 
+        arr.findIndex(item => item.id === ct.id) === index
+      );
+      setAvailableContentTypes(uniqueContentTypes);
+      
+      const autoSelectedContentTypes = uniqueContentTypes.filter(ct => ct.selected).map(ct => ct.name.toLowerCase());
       setSelectedContentTypes(autoSelectedContentTypes);
     } catch (error) {
       console.error('Failed to load topics:', error);
@@ -284,26 +293,28 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
 
       <div className="preference-section">
         <h3>Trusted AI news sources (all pre-selected)</h3>
-        <div className="publishers-grid">
+        <div className="publishers-list">
           {[
-            { id: 'techcrunch', name: 'TechCrunch', description: 'Leading tech news and startup coverage', icon: '🚀' },
-            { id: 'arxiv', name: 'arXiv', description: 'Research papers and academic publications', icon: '📄' },
-            { id: 'venturebeat', name: 'VentureBeat', description: 'Technology and business news', icon: '💼' },
-            { id: 'airesearch', name: 'AI Research', description: 'Latest AI research and developments', icon: '🔬' },
-            { id: 'techreport', name: 'The Register', description: 'Technology industry analysis', icon: '📊' },
-            { id: 'awsblog', name: 'AWS Blog', description: 'Cloud computing and AI services', icon: '☁️' }
+            { id: 'techcrunch', name: 'TechCrunch', description: 'Leading tech news and startup coverage' },
+            { id: 'arxiv', name: 'arXiv', description: 'Research papers and academic publications' },
+            { id: 'venturebeat', name: 'VentureBeat', description: 'Technology and business news' },
+            { id: 'airesearch', name: 'AI Research', description: 'Latest AI research and developments' },
+            { id: 'techreport', name: 'The Register', description: 'Technology industry analysis' },
+            { id: 'awsblog', name: 'AWS Blog', description: 'Cloud computing and AI services' }
           ].map(publisher => (
-            <button
-              key={publisher.id}
-              className="publisher-card selected"
-            >
-              <span className="publisher-icon">{publisher.icon}</span>
-              <div className="publisher-info">
+            <label key={publisher.id} className="publisher-checkbox">
+              <input
+                type="checkbox"
+                checked={true}
+                readOnly
+                className="publisher-input"
+              />
+              <div className="publisher-content">
                 <h4>{publisher.name}</h4>
                 <p>{publisher.description}</p>
               </div>
               <Check className="publisher-check" size={16} />
-            </button>
+            </label>
           ))}
         </div>
         <p className="publisher-note">All sources are pre-selected for comprehensive AI coverage</p>

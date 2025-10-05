@@ -62,3 +62,21 @@ button:focus-visible {
 }
 
 /* Removed dark mode preferences to maintain consistent light theme */
+
+/* Custom scrollbar utilities for mobile dashboard */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Line clamp utility */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

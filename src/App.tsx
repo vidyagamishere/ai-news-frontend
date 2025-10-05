@@ -9,7 +9,6 @@ import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Archive from './pages/Archive';
 import EmailVerification from './pages/EmailVerification';
-import OTPVerification from './pages/OTPVerification';
 import Preferences from './pages/Preferences';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
@@ -145,10 +144,6 @@ function AppContent() {
       <Route 
         path="/verify-email" 
         element={<EmailVerification />}
-      />
-      <Route 
-        path="/verify-otp" 
-        element={<OTPVerification />}
       />
       <Route 
         path="/onboarding" 

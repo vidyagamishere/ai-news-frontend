@@ -11,8 +11,7 @@ interface AuthContextType extends AuthState {
   logout: () => void;
   updatePreferences: (preferences: Partial<User['preferences']>) => Promise<User>;
   upgradeSubscription: () => Promise<void>;
-  sendOTP: (email: string, name?: string, authMode?: 'signin' | 'signup') => Promise<void>;
-  verifyOTP: (email: string, otp: string, userData: any) => Promise<void>;
+  isGmailDomain: (email: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -178,18 +177,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await authService.signup(credentials);
       
-      // Check if response indicates OTP verification is required
-      if ('emailVerificationRequired' in response && response.emailVerificationRequired) {
-        setAuthState(prev => ({ ...prev, loading: false }));
-        // Throw special error to trigger OTP flow in Auth component
-        throw new Error('OTP_VERIFICATION_REQUIRED');
-      }
-      
-      // Normal signup success - user is logged in
+      // Direct signup success - user is logged in
       if ('user' in response && 'token' in response) {
         const { user, token } = response;
         localStorage.setItem('authToken', token);
         localStorage.setItem('cachedUser', JSON.stringify(user));
+        
+        // For new users, clear onboarding completion to trigger new onboarding
+        localStorage.removeItem('onboardingComplete');
+        
         setAuthState({
           isAuthenticated: true,
           user,
@@ -271,7 +267,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log(isAdmin ? '✅ Admin user - skipping onboarding' : '✅ Existing user with preferences - skipping onboarding');
         localStorage.setItem('onboardingComplete', 'true');
       } else {
-        console.log('🔄 User needs onboarding - clearing completion flag');
+        console.log('🔄 User needs comprehensive onboarding - clearing completion flag');
         localStorage.removeItem('onboardingComplete');
       }
       
@@ -375,79 +371,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const sendOTP = async (email: string, name?: string, authMode: 'signin' | 'signup' = 'signin') => {
-    try {
-      await authService.sendOTP(email, name, authMode);
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const verifyOTP = async (email: string, otp: string, userData: any) => {
-    debug.enter('verifyOTP', { email, otp: '[REDACTED]', userData });
-    const startTime = Date.now();
-    
-    try {
-      debug.step('verifyOTP', 'calling_auth_service');
-      const response = await authService.verifyOTP(email, otp, userData) as any;
-      const { user, token: authToken, isUserExist } = response;
-      
-      debug.step('verifyOTP', 'received_response', { 
-        hasUser: !!user, 
-        hasToken: !!authToken, 
-        isUserExist,
-        userEmail: user?.email,
-        isAdmin: user?.is_admin 
-      });
-      
-      localStorage.setItem('authToken', authToken);
-      localStorage.setItem('cachedUser', JSON.stringify(user));
-      
-      // Set onboarding status based on whether user exists and has completed onboarding
-      const hasCompletedOnboarding = user.preferences?.onboarding_completed === true;
-      const isAdmin = user.is_admin === true;
-      const shouldSkipOnboarding = isAdmin || (isUserExist && hasCompletedOnboarding);
-      
-      if (shouldSkipOnboarding) {
-        console.log(isAdmin ? '✅ Admin user - skipping onboarding' : '✅ Existing user with completed onboarding - skipping onboarding');
-        localStorage.setItem('onboardingComplete', 'true');
-      } else {
-        console.log('🔄 User needs onboarding - clearing completion flag');
-        localStorage.removeItem('onboardingComplete');
-      }
-      
-      // Debug: Log the user object being set
-      console.log('🔍 OTP Verification: Setting user in auth state:', {
-        email: user.email,
-        is_admin: user.is_admin,
-        userObject: user
-      });
-      
-      setAuthState({
-        isAuthenticated: true,
-        user,
-        loading: false,
-        error: null
-      });
-      
-      const executionTime = Date.now() - startTime;
-      debug.exit('verifyOTP', { 
-        success: true,
-        userEmail: user?.email,
-        isAdmin: user?.is_admin,
-        shouldSkipOnboarding 
-      }, executionTime);
-      
-    } catch (error) {
-      const executionTime = Date.now() - startTime;
-      debug.error('verifyOTP', error, executionTime);
-      
-      setAuthState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error.message : 'OTP verification failed'
-      }));
-      throw error;
-    }
+  const isGmailDomain = (email: string): boolean => {
+    return email.toLowerCase().endsWith('@gmail.com') || email.toLowerCase().endsWith('@googlemail.com');
   };
 
   const value: AuthContextType = {
@@ -458,8 +383,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     updatePreferences,
     upgradeSubscription,
-    sendOTP,
-    verifyOTP
+    isGmailDomain
   };
 
   return (

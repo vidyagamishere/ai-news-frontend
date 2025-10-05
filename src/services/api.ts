@@ -632,18 +632,19 @@ export const apiService = {
   },
 
   // Get available interests/topics
-  getAvailableInterests: async (): Promise<{ interests: string[]; count: number }> => {
-    return await makeModularRequest('api/v1/available-interests', 'GET');
+  getAvailableInterests: async (): Promise<{ categories: any[]; count: number }> => {
+    return await makeModularRequest('ai-topics', 'GET');
   },
 
-  // Get available publishers
+  // Get available publishers  
   getAvailablePublishers: async (): Promise<{ publishers: string[]; count: number }> => {
-    return await makeModularRequest('api/v1/available-publishers', 'GET');
+    // Return empty for now since we're focusing on ai-topics
+    return { publishers: [], count: 0 };
   },
 
   // Get available content types
   getAvailableContentTypes: async (): Promise<{ content_types: Array<{name: string; display_name: string}>; count: number }> => {
-    return await makeModularRequest('api/v1/available-content-types', 'GET');
+    return await makeModularRequest('content-types', 'GET');
   },
 
   // Update user preferences (enhanced)
