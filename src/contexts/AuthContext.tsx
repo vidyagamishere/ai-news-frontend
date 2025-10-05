@@ -127,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           error: null
         });
       } else {
-        console.log('❌ No token found in localStorage');
+        console.log('ℹ️ No auth token - user visiting as guest');
         localStorage.removeItem('cachedUser');
         setAuthState(prev => ({ ...prev, loading: false }));
       }

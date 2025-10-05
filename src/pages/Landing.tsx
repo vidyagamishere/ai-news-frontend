@@ -173,7 +173,7 @@ const Landing: React.FC = () => {
                 <div 
                   key={index} 
                   className="ticker-item"
-                  onClick={() => window.open(story.url, '_blank')}
+                  onClick={() => window.open(story.url, '_blank', 'noopener,noreferrer')}
                 >
                   <span className="ticker-title">{story.title}</span>
                   <span className="ticker-separator">•</span>
@@ -184,7 +184,7 @@ const Landing: React.FC = () => {
                 <div 
                   key={`dup-${index}`} 
                   className="ticker-item"
-                  onClick={() => window.open(story.url, '_blank')}
+                  onClick={() => window.open(story.url, '_blank', 'noopener,noreferrer')}
                 >
                   <span className="ticker-title">{story.title}</span>
                   <span className="ticker-separator">•</span>
