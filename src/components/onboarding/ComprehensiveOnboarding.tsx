@@ -65,7 +65,12 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
   
   // Step 3: Content Preferences
   const [availableContentTypes, setAvailableContentTypes] = useState<any[]>([]);
-  const [selectedContentTypes, setSelectedContentTypes] = useState<ContentType[]>([]);
+  const [selectedContentTypes, setSelectedContentTypes] = useState<string[]>(['ARTICLE', 'VIDEO', 'AUDIO']);
+  
+  // Step 4: Publisher Preferences
+  const [selectedPublishers, setSelectedPublishers] = useState<string[]>([
+    'techcrunch', 'arxiv', 'venturebeat', 'airesearch', 'techreport', 'awsblog'
+  ]);
 
   const { updatePreferences } = useAuth();
 
@@ -132,6 +137,28 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
     );
   };
 
+  const handleContentTypeToggle = (contentTypeName: string) => {
+    setSelectedContentTypes(prev => {
+      const newSelection = prev.includes(contentTypeName) 
+        ? prev.filter(name => name !== contentTypeName)
+        : [...prev, contentTypeName];
+      
+      // Ensure at least 1 content type is selected
+      return newSelection.length === 0 ? prev : newSelection;
+    });
+  };
+
+  const handlePublisherToggle = (publisherId: string) => {
+    setSelectedPublishers(prev => {
+      const newSelection = prev.includes(publisherId) 
+        ? prev.filter(id => id !== publisherId)
+        : [...prev, publisherId];
+      
+      // Ensure at least 3 publishers are selected
+      return newSelection.length < 3 ? prev : newSelection;
+    });
+  };
+
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -149,17 +176,26 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
     setLoading(true);
     try {
       const preferences = {
-        topics: availableTopics.filter(topic => 
-          selectedTopics.includes(topic.id)
-        ).map(topic => ({
-          ...topic,
-          selected: true
-        })),
-        user_roles: [selectedRole], // Convert single role to array for backend
-        content_types: ['ARTICLE', 'VIDEO', 'AUDIO'], // Use simple array as backend expects
-        experience_level: selectedExperience,
+        // Legacy fields (for compatibility)
+        topics: selectedTopics, // Simple array of topic IDs
+        user_roles: [selectedRole],
         role_type: selectedRole,
-        onboarding_completed: true // Use snake_case to match backend
+        experience_level: selectedExperience,
+        content_types: selectedContentTypes.map(ct => ct.toUpperCase()), // Convert to uppercase for backend
+        newsletter_frequency: "weekly",
+        email_notifications: true,
+        breaking_news_alerts: false,
+        newsletter_subscribed: true,
+        onboarding_completed: true,
+        
+        // Enhanced user profile fields matching backend schema
+        name: selectedRole, // Use role as name for now
+        role: selectedRole,
+        ai_exposure: selectedExperience,
+        interests: selectedTopics, // Same as topics for now
+        selected_content_types: selectedContentTypes.map(ct => ct.toUpperCase()),
+        selected_publishers: selectedPublishers,
+        time_filter: "Last Week"
       };
 
       await updatePreferences(preferences);
@@ -175,13 +211,9 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return selectedExperience && selectedRole;
+        return selectedExperience && selectedRole && selectedTopics.length >= 1;
       case 2:
-        return selectedTopics.length >= 1; // At least 1 topic must be selected (they're auto-selected)
-      case 3:
-        return availableContentTypes.length > 0; // Content types are auto-selected from backend
-      case 4:
-        return true; // Publisher preferences are pre-selected
+        return selectedContentTypes.length >= 1 && selectedPublishers.length >= 3;
       default:
         return false;
     }
@@ -270,29 +302,34 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
       </div>
 
       <div className="preference-section">
-        <h3>Content types (all pre-selected)</h3>
-        <div className="content-types-grid">
+        <h3>Content types (at least 1 required)</h3>
+        <div className="content-types-list">
           {availableContentTypes.map(contentType => (
-            <button
-              key={contentType.id}
-              className={`content-type-card ${contentType.selected ? 'selected' : ''}`}
-            >
-              <span className="content-type-icon">{contentType.icon || '📄'}</span>
-              <div className="content-type-info">
-                <h4>{contentType.display_name}</h4>
-                <p>{contentType.description}</p>
+            <label key={contentType.id} className="content-type-checkbox">
+              <input
+                type="checkbox"
+                checked={selectedContentTypes.includes(contentType.name)}
+                onChange={() => handleContentTypeToggle(contentType.name)}
+                className="content-type-input"
+              />
+              <div className="content-type-content">
+                <span className="content-type-icon">{contentType.icon || '📄'}</span>
+                <div>
+                  <h4>{contentType.display_name}</h4>
+                  <p>{contentType.description}</p>
+                </div>
               </div>
-              {contentType.selected && (
+              {selectedContentTypes.includes(contentType.name) && (
                 <Check className="content-type-check" size={16} />
               )}
-            </button>
+            </label>
           ))}
         </div>
-        <p className="content-note">All content types are pre-selected for comprehensive coverage</p>
+        <p className="content-note">{selectedContentTypes.length} of {availableContentTypes.length} content types selected (minimum 1 required)</p>
       </div>
 
       <div className="preference-section">
-        <h3>Trusted AI news sources (all pre-selected)</h3>
+        <h3>Trusted AI news sources (at least 3 required)</h3>
         <div className="publishers-list">
           {[
             { id: 'techcrunch', name: 'TechCrunch', description: 'Leading tech news and startup coverage' },
@@ -305,19 +342,21 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
             <label key={publisher.id} className="publisher-checkbox">
               <input
                 type="checkbox"
-                checked={true}
-                readOnly
+                checked={selectedPublishers.includes(publisher.id)}
+                onChange={() => handlePublisherToggle(publisher.id)}
                 className="publisher-input"
               />
               <div className="publisher-content">
                 <h4>{publisher.name}</h4>
                 <p>{publisher.description}</p>
               </div>
-              <Check className="publisher-check" size={16} />
+              {selectedPublishers.includes(publisher.id) && (
+                <Check className="publisher-check" size={16} />
+              )}
             </label>
           ))}
         </div>
-        <p className="publisher-note">All sources are pre-selected for comprehensive AI coverage</p>
+        <p className="publisher-note">{selectedPublishers.length} of 6 sources selected (minimum 3 required)</p>
       </div>
     </div>
   );
