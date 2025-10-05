@@ -820,6 +820,69 @@
   font-size: 0.875rem;
 }
 
+/* Content wrapper styles */
+.topic-content {
+  text-align: center;
+}
+
+.topic-content h4 {
+  font-weight: 500;
+  color: #2d3748;
+  font-size: 0.875rem;
+  margin: 0 0 0.25rem;
+}
+
+.topic-content p {
+  font-size: 0.75rem;
+  color: #4a5568;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.option-content {
+  text-align: center;
+}
+
+.option-content h4 {
+  font-weight: 500;
+  color: #2d3748;
+  font-size: 0.875rem;
+  margin: 0 0 0.25rem;
+}
+
+.option-content p {
+  font-size: 0.75rem;
+  color: #4a5568;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Content type and publisher card styles */
+.content-type-info h4,
+.publisher-info h4 {
+  font-weight: 500;
+  color: #2d3748;
+  font-size: 0.875rem;
+  margin: 0 0 0.25rem;
+}
+
+.content-type-info p,
+.publisher-info p {
+  font-size: 0.75rem;
+  color: #4a5568;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.content-note,
+.publisher-note,
+.topic-count {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #4a5568;
+  margin-top: 1rem;
+}
+
 .topic-check {
   position: absolute;
   top: 0.5rem;

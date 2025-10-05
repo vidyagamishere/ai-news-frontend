@@ -147,7 +147,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
           selected: true
         })),
         user_roles: [selectedRole], // Convert single role to array for backend
-        content_types: availableContentTypes.filter(ct => ct.selected).map(ct => ct.name),
+        content_types: ['ARTICLE', 'VIDEO', 'AUDIO'], // Use simple array as backend expects
         experience_level: selectedExperience,
         role_type: selectedRole,
         onboarding_completed: true // Use snake_case to match backend
