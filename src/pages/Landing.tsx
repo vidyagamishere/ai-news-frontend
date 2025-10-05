@@ -34,10 +34,12 @@ const Landing: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch breaking news and generative AI content from specific endpoints
+      // Data Flow: Frontend -> API Service -> Backend Endpoints -> Database Views
+      // No direct database access from frontend - all data flows through proper API layers
+      // Fetch breaking news alerts and Generative AI stories via dedicated API endpoints
       const [breakingResponse, contentResponse] = await Promise.all([
-        apiService.getBreakingNews(5),
-        apiService.getGenerativeAIContent(6)
+        apiService.getBreakingNewsAlerts(5),
+        apiService.getGenerativeAIStories(6)
       ]);
       
       if (breakingResponse && breakingResponse.articles) {

@@ -352,15 +352,49 @@ export const apiService = {
     return await makeModularRequest('sources', 'GET');
   },
 
-  // Get breaking news for landing page
-  getBreakingNews: async (limit: number = 5): Promise<any> => {
-    console.log('🚨 Fetching breaking news for landing page...');
+  // ===============================
+  // PRE-LOGIN LANDING PAGE ENDPOINTS
+  // These endpoints call backend APIs that access database views
+  // Frontend does not access database directly - all data via API
+  // ===============================
+
+  // Get breaking news alerts for pre-login users
+  // Backend endpoint: GET /breaking-news (uses breaking_news_alerts DB view)
+  getBreakingNewsAlerts: async (limit: number = 5): Promise<{
+    articles: Array<{
+      title: string;
+      summary: string;
+      url: string;
+      source: string;
+      significanceScore: number;
+      published_date: string | null;
+      content_type: string;
+      category: string;
+    }>;
+    count: number;
+    type: string;
+  }> => {
+    console.log('🚨 Fetching breaking news alerts for landing page...');
     return await makeModularRequest('breaking-news', 'GET', { limit });
   },
 
-  // Get Generative AI content for landing page
-  getGenerativeAIContent: async (limit: number = 6): Promise<any> => {
-    console.log('🤖 Fetching Generative AI content for landing page...');
+  // Get Generative AI category stories for pre-login users  
+  // Backend endpoint: GET /generative-ai-content (uses articles table with AI filters)
+  getGenerativeAIStories: async (limit: number = 6): Promise<{
+    articles: Array<{
+      title: string;
+      summary: string;
+      url: string;
+      source: string;
+      significanceScore: number;
+      published_date: string | null;
+      content_type: string;
+      category: string;
+    }>;
+    count: number;
+    type: string;
+  }> => {
+    console.log('🤖 Fetching Generative AI stories for landing page...');
     return await makeModularRequest('generative-ai-content', 'GET', { limit });
   },
 
