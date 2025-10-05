@@ -50,9 +50,9 @@ const Admin: React.FC = () => {
         'X-Admin-API-Key': adminApiKey
       });
       setSources(response.sources || []);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to fetch sources:', error);
-      if (error.message.includes('Authentication required') || error.message.includes('Admin access')) {
+      if (error instanceof Error && (error.message.includes('Authentication required') || error.message.includes('Admin access'))) {
         alert('Admin authentication required. Please sign in through admin login.');
         window.location.href = '/admin/login';
       }
@@ -129,9 +129,9 @@ const Admin: React.FC = () => {
       } else {
         alert(`❌ Scraping failed: ${response.message || 'Unknown error'}`);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Admin scraping error:', error);
-      if (error.message.includes('Authentication required')) {
+      if (error instanceof Error && error.message.includes('Authentication required')) {
         alert('Admin authentication required. Please sign in through admin login.');
         window.location.href = '/admin/login';
       } else {
