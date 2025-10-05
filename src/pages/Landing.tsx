@@ -159,44 +159,7 @@ const Landing: React.FC = () => {
         onSignUpClick={() => navigateToAuth('signup')}
       />
 
-      {/* Hero Section */}
-      <section className="landing-hero">
-        <div className="hero-content">
-          <div className="hero-badge">🚀 Latest AI Breakthroughs</div>
-          <h1>Stay Ahead of the AI Revolution</h1>
-          <p className="hero-subtitle">
-            Breaking AI news, generative AI developments, and machine learning breakthroughs 
-            from 50+ top sources. <strong>See what's happening now.</strong>
-          </p>
-          
-          <div className="hero-stats">
-            <div className="stat">
-              <span className="stat-number">Daily</span>
-              <span className="stat-label">Breaking Updates</span>
-            </div>
-            <div className="stat">
-              <span className="stat-number">50+</span>
-              <span className="stat-label">AI Sources</span>
-            </div>
-            <div className="stat">
-              <span className="stat-number">Free</span>
-              <span className="stat-label">Access</span>
-            </div>
-          </div>
-          
-          <div className="hero-cta">
-            <button 
-              onClick={() => navigateToAuth('signup')}
-              className="cta-primary"
-            >
-              🎯 Get Personalized AI Feed
-            </button>
-            <p className="cta-subtitle">Free • Personalized • Real-time updates</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Breaking News Ticker */}
+      {/* Breaking News Ticker - First Section */}
       {breakingNews.length > 0 && (
         <section className="breaking-news-ticker">
           <div className="ticker-header">
@@ -231,11 +194,11 @@ const Landing: React.FC = () => {
         </section>
       )}
 
-      {/* Top Stories Section */}
+      {/* Top Generative AI Stories Section */}
       <section className="top-stories-section">
         <div className="section-header">
-          <h2>📈 Today's Top AI Stories</h2>
-          <p>Curated from leading AI research labs, companies, and publications</p>
+          <h2>🤖 Top Generative AI Stories</h2>
+          <p>Latest developments from OpenAI, Google DeepMind, Anthropic, and leading AI research labs</p>
         </div>
         <div className="stories-grid">
           {topStories.map((story, index) => (
@@ -257,27 +220,27 @@ const Landing: React.FC = () => {
       {/* Value Proposition */}
       <section className="value-section">
         <div className="value-content">
-          <h2>🎯 Why Join Vidyagam AI News?</h2>
+          <h2>🎯 Why Join Vidyagam?</h2>
           <div className="value-grid">
             <div className="value-item">
-              <div className="value-icon">🔥</div>
-              <h3>Breaking Alerts</h3>
-              <p>Get instant notifications for high-impact AI developments (score 8.5+)</p>
+              <div className="value-icon">🚀</div>
+              <h3>Quantum-Speed Intelligence</h3>
+              <p>Real-time AI developments before they break mainstream</p>
+            </div>
+            <div className="value-item">
+              <div className="value-icon">🔬</div>
+              <h3>Research-Grade Insights</h3>
+              <p>Direct pipeline from labs to your dashboard</p>
             </div>
             <div className="value-item">
               <div className="value-icon">🎯</div>
-              <h3>Personalized Feed</h3>
-              <p>AI-curated content based on your interests: Generative AI, ML, Robotics, etc.</p>
+              <h3>Neural Personalization</h3>
+              <p>AI that learns your technical interests</p>
             </div>
             <div className="value-item">
-              <div className="value-icon">📊</div>
-              <h3>Significance Scoring</h3>
-              <p>AI-powered relevance scoring helps you focus on what matters most</p>
-            </div>
-            <div className="value-item">
-              <div className="value-icon">📧</div>
-              <h3>Smart Digests</h3>
-              <p>Daily/weekly summaries of the most important AI developments</p>
+              <div className="value-icon">🏛️</div>
+              <h3>Elite Network Access</h3>
+              <p>Trusted by DeepMind, OpenAI, and top AI labs</p>
             </div>
           </div>
         </div>
@@ -286,14 +249,13 @@ const Landing: React.FC = () => {
       {/* CTA Section */}
       <section className="final-cta-section">
         <div className="cta-content">
-          <h2>Ready to Stay Ahead?</h2>
-          <p>Join thousands of AI professionals who rely on Vidyagam for the latest developments</p>
+          <h2>Ready to Start?</h2>
           <div className="cta-buttons">
             <button 
               onClick={() => navigateToAuth('signup')}
               className="btn-cta-primary"
             >
-              Start Your AI Journey Free
+              Join Free
             </button>
             <button 
               onClick={() => navigateToAuth('signin')}

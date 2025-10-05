@@ -167,7 +167,7 @@ const Home: React.FC = () => {
     <div className="home-page">
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <SEO 
-        title="Vidyagam AI News | Intelligence at Light Speed"
+        title="Vidyagam AI News | Gaining Knowledge, Filtered for You"
         description="Stay ahead with the latest AI breakthroughs, research, and industry insights. Personalized AI news curated by advanced neural networks."
         url="/"
       />

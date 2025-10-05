@@ -183,7 +183,7 @@ const Auth: React.FC = () => {
                 <div className="neural-icon">🧠</div>
                 <h1>Vidyagam</h1>
               </div>
-              <h2>Intelligence at Light Speed</h2>
+              <h2>Gaining Knowledge, Filtered for You</h2>
               <p>Join 50,000+ AI researchers, engineers, and visionaries accessing breakthrough intelligence curated by advanced neural networks.</p>
               
               <div className="brand-features">

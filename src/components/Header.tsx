@@ -108,7 +108,7 @@ const Header: React.FC<HeaderProps> = ({ showAuthButtons = false, onSignInClick,
             
             {/* Middle Row: Subtitle */}
             <div className="desktop-subtitle-row">
-              <p className="subtitle">Intelligence at Light Speed</p>
+              <p className="subtitle">Gaining Knowledge, Filtered for You</p>
             </div>
             
             {/* Bottom Row: Social Media and Actions */}
@@ -214,7 +214,7 @@ const Header: React.FC<HeaderProps> = ({ showAuthButtons = false, onSignInClick,
             {/* Middle Row: Subtitle and User Greeting */}
             <div className="mobile-middle-row">
               <div className="mobile-subtitle-container">
-                <p className="subtitle mobile-subtitle">Intelligence at Light Speed</p>
+                <p className="subtitle mobile-subtitle">Gaining Knowledge, Filtered for You</p>
               </div>
               <div className="mobile-user-section">
                 {isAuthenticated && user && (

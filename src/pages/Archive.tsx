@@ -183,7 +183,7 @@ const Archive: React.FC = () => {
   return (
     <div className="app authenticated-app">
       <SEO 
-        title="Vidyagam Archive | Intelligence at Light Speed"
+        title="Vidyagam Archive | Gaining Knowledge, Filtered for You"
         description="Browse historical AI news digests and search through archived articles."
         url="/archive"
       />

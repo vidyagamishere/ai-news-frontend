@@ -8,7 +8,7 @@ const About: React.FC = () => {
   return (
     <div className="about-page">
       <SEO 
-        title="About Vidyagam | Intelligence at Light Speed"
+        title="About Vidyagam | Gaining Knowledge, Filtered for You"
         description="Learn how Vidyagam aggregates AI news from 500+ sources to provide personalized insights for professionals and enthusiasts."
         url="/about"
       />
