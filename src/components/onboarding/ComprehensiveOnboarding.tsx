@@ -177,11 +177,11 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
     try {
       const preferences = {
         // Legacy fields (for compatibility)
-        topics: selectedTopics, // Simple array of topic IDs
+        topics: selectedTopics, // Keep as strings per backend schema
         user_roles: [selectedRole],
         role_type: selectedRole,
         experience_level: selectedExperience,
-        content_types: selectedContentTypes.map(ct => ct.toUpperCase()), // Convert to uppercase for backend
+        content_types: selectedContentTypes.map(ct => ct.toUpperCase()),
         newsletter_frequency: "weekly",
         email_notifications: true,
         breaking_news_alerts: false,
@@ -189,15 +189,17 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
         onboarding_completed: true,
         
         // Enhanced user profile fields matching backend schema
-        name: selectedRole, // Use role as name for now
+        name: selectedRole,
         role: selectedRole,
         ai_exposure: selectedExperience,
-        interests: selectedTopics, // Same as topics for now
+        interests: selectedTopics, // Keep as strings
         selected_content_types: selectedContentTypes.map(ct => ct.toUpperCase()),
         selected_publishers: selectedPublishers,
-        time_filter: "Last Week"
+        time_filter: "Last Week",
+        current_search_query: ""
       };
 
+      console.log('🔍 Sending preferences:', JSON.stringify(preferences, null, 2));
       await updatePreferences(preferences);
       localStorage.setItem('onboardingComplete', 'true');
       onComplete();
