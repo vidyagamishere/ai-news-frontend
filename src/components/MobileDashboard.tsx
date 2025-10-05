@@ -90,15 +90,23 @@ const MobileDashboard: React.FC = () => {
   useEffect(() => {
     const loadAvailableOptions = async () => {
       try {
-        const [interestsRes, publishersRes, contentTypesRes] = await Promise.all([
+        const [interestsRes, publishersRes] = await Promise.all([
           apiService.getAvailableInterests(),
-          apiService.getAvailablePublishers(),
-          apiService.getAvailableContentTypes()
+          apiService.getAvailablePublishers()
         ]);
         
-        setAvailableInterests(interestsRes.interests || []);
+        // Handle new categories structure from ai_categories_master
+        const interests = interestsRes.categories ? 
+          interestsRes.categories.map((cat: any) => cat.name) : 
+          (interestsRes.interests || []);
+        setAvailableInterests(interests);
         setAvailablePublishers(publishersRes.publishers || []);
-        setAvailableContentTypes(contentTypesRes.content_types?.map(ct => ct.name) || ['ARTICLE', 'VIDEO', 'AUDIO']);
+        
+        // Get content types from the same ai-topics endpoint that has both categories and content_types
+        const contentTypes = interestsRes.content_types ? 
+          interestsRes.content_types.map((ct: any) => ct.name) : 
+          ['ARTICLE', 'VIDEO', 'AUDIO'];
+        setAvailableContentTypes(contentTypes);
       } catch (err) {
         console.error('Error loading available options:', err);
         // Use fallback values

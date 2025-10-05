@@ -69,7 +69,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
 
   const { updatePreferences } = useAuth();
 
-  const totalSteps = 4;
+  const totalSteps = 2;
 
   useEffect(() => {
     loadAvailableTopicsAndContentTypes();
@@ -223,55 +223,45 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
           ))}
         </div>
       </div>
+
+      <div className="preference-section">
+        <h3>Select your interests (3 are pre-selected)</h3>
+        <div className="topics-grid">
+          {availableTopics.map(topic => {
+            const IconComponent = CATEGORY_ICONS[topic.category as keyof typeof CATEGORY_ICONS] || Brain;
+            return (
+              <button
+                key={topic.id}
+                className={`topic-card ${selectedTopics.includes(topic.id) ? 'selected' : ''}`}
+                onClick={() => handleTopicToggle(topic.id)}
+              >
+                <IconComponent className="topic-icon" size={20} />
+                <div className="topic-content">
+                  <h4>{topic.name}</h4>
+                  <p>{topic.description}</p>
+                </div>
+                {selectedTopics.includes(topic.id) && (
+                  <Check className="topic-check" size={16} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <p className="topic-count">{selectedTopics.length} topics selected</p>
+      </div>
     </div>
   );
 
   const renderStep2 = () => (
     <div className="onboarding-step">
       <div className="step-header">
-        <Brain className="step-icon" size={32} />
-        <h2>Choose your AI interests</h2>
-        <p>Select topics you'd like to follow (you can change these later)</p>
-      </div>
-
-      <div className="content-types-grid">
-        {availableTopics.map(topic => {
-          const IconComponent = CATEGORY_ICONS[topic.category as keyof typeof CATEGORY_ICONS] || Brain;
-          return (
-            <button
-              key={topic.id}
-              className={`content-type-card ${selectedTopics.includes(topic.id) ? 'selected' : ''}`}
-              onClick={() => handleTopicToggle(topic.id)}
-            >
-              <IconComponent className="content-type-icon" size={24} />
-              <div className="content-type-info">
-                <h4>{topic.name}</h4>
-                <p>{topic.description}</p>
-              </div>
-              {selectedTopics.includes(topic.id) && (
-                <Check className="content-type-check" size={16} />
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="step-footer">
-        <p>{selectedTopics.length} topics selected</p>
-      </div>
-    </div>
-  );
-
-  const renderStep3 = () => (
-    <div className="onboarding-step">
-      <div className="step-header">
         <BookOpen className="step-icon" size={32} />
-        <h2>Content preferences</h2>
-        <p>Choose how you like to consume AI content</p>
+        <h2>Content & Publisher preferences</h2>
+        <p>Choose how you consume AI content and your preferred sources</p>
       </div>
 
       <div className="preference-section">
-        <h3>Content types you enjoy</h3>
+        <h3>Content types (all pre-selected)</h3>
         <div className="content-types-grid">
           {availableContentTypes.map(contentType => (
             <button
@@ -292,19 +282,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
         <p className="content-note">All content types are pre-selected for comprehensive coverage</p>
       </div>
 
-    </div>
-  );
-
-  const renderStep4 = () => (
-    <div className="onboarding-step">
-      <div className="step-header">
-        <BookOpen className="step-icon" size={32} />
-        <h2>Publisher preferences</h2>
-        <p>Select your preferred AI news sources</p>
-      </div>
-
       <div className="preference-section">
-        <h3>Choose your trusted AI news sources</h3>
+        <h3>Trusted AI news sources (all pre-selected)</h3>
         <div className="publishers-grid">
           {[
             { id: 'techcrunch', name: 'TechCrunch', description: 'Leading tech news and startup coverage', icon: '🚀' },
@@ -332,6 +311,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
     </div>
   );
 
+
   return (
     <div className="comprehensive-onboarding">
       <div className="onboarding-container">
@@ -354,8 +334,6 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
         <div className="step-content">
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
-          {currentStep === 4 && renderStep4()}
         </div>
 
         {/* Navigation */}
