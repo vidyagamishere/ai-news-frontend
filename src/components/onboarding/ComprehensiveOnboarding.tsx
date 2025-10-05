@@ -107,7 +107,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
       );
       setAvailableContentTypes(uniqueContentTypes);
       
-      const autoSelectedContentTypes = uniqueContentTypes.filter(ct => ct.selected).map(ct => ct.name.toLowerCase());
+      const autoSelectedContentTypes = uniqueContentTypes.filter(ct => ct.selected).map(ct => ct.name);
       setSelectedContentTypes(autoSelectedContentTypes);
     } catch (error) {
       console.error('Failed to load topics:', error);
@@ -175,28 +175,24 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
   const handleComplete = async () => {
     setLoading(true);
     try {
+      // Get actual category names from selected topics
+      const selectedCategoryNames = availableTopics
+        .filter(topic => selectedTopics.includes(topic.id))
+        .map(topic => topic.name);
+
       const preferences = {
-        // Legacy fields (for compatibility)
-        topics: selectedTopics, // Keep as strings per backend schema
-        user_roles: [selectedRole],
-        role_type: selectedRole,
+        // Core user_preferences table fields
         experience_level: selectedExperience,
-        content_types: selectedContentTypes.map(ct => ct.toUpperCase()),
+        professional_roles: [selectedRole],
+        categories_selected: selectedCategoryNames, // Store actual category names
+        content_types_selected: selectedContentTypes, // Already in correct format
+        publishers_selected: selectedPublishers,
+        
+        // Additional preference fields
         newsletter_frequency: "weekly",
         email_notifications: true,
         breaking_news_alerts: false,
-        newsletter_subscribed: true,
-        onboarding_completed: true,
-        
-        // Enhanced user profile fields matching backend schema
-        name: selectedRole,
-        role: selectedRole,
-        ai_exposure: selectedExperience,
-        interests: selectedTopics, // Keep as strings
-        selected_content_types: selectedContentTypes.map(ct => ct.toUpperCase()),
-        selected_publishers: selectedPublishers,
-        time_filter: "Last Week",
-        current_search_query: ""
+        onboarding_completed: true
       };
 
       console.log('🔍 Sending preferences:', JSON.stringify(preferences, null, 2));
