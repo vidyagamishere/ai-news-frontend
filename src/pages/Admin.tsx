@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Save, X, ExternalLink, RefreshCw } from 'lucide-react';
 import apiService from '../services/api';
 import AdminValidation from '../components/AdminValidation';
+import { useAdminAuth } from '../contexts/AdminAuthContext';
 
 interface AISource {
   name: string;
@@ -13,6 +14,7 @@ interface AISource {
 }
 
 const Admin: React.FC = () => {
+  const { isAdminAuthenticated, adminApiKey } = useAdminAuth();
   const [sources, setSources] = useState<AISource[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -35,10 +37,25 @@ const Admin: React.FC = () => {
   const fetchSources = async () => {
     try {
       setLoading(true);
-      const response = await apiService.callEndpoint('admin/sources', 'GET', {}, true);
+      
+      // Check if admin is authenticated
+      if (!isAdminAuthenticated || !adminApiKey) {
+        alert('Please sign in through the admin login to access admin features');
+        window.location.href = '/admin/login';
+        return;
+      }
+      
+      // Use admin API key instead of JWT token
+      const response = await apiService.callEndpoint('admin/sources', 'GET', {}, false, {
+        'X-Admin-API-Key': adminApiKey
+      });
       setSources(response.sources || []);
     } catch (error) {
       console.error('Failed to fetch sources:', error);
+      if (error.message.includes('Authentication required') || error.message.includes('Admin access')) {
+        alert('Admin authentication required. Please sign in through admin login.');
+        window.location.href = '/admin/login';
+      }
     } finally {
       setLoading(false);
     }
@@ -46,7 +63,9 @@ const Admin: React.FC = () => {
 
   const handleAdd = async () => {
     try {
-      await apiService.callEndpoint('admin/sources/add', 'POST', newSource, true);
+      await apiService.callEndpoint('admin/sources/add', 'POST', newSource, false, {
+        'X-Admin-API-Key': adminApiKey
+      });
       
       await fetchSources();
       setNewSource({ name: '', rss_url: '', website: '', enabled: true, priority: 5, category: 'other' });
@@ -60,7 +79,9 @@ const Admin: React.FC = () => {
 
   const handleUpdate = async (index: number, updatedSource: AISource) => {
     try {
-      await apiService.callEndpoint('admin/sources/update', 'POST', { index, ...updatedSource }, true);
+      await apiService.callEndpoint('admin/sources/update', 'POST', { index, ...updatedSource }, false, {
+        'X-Admin-API-Key': adminApiKey
+      });
       
       await fetchSources();
       setEditingIndex(null);
@@ -75,7 +96,9 @@ const Admin: React.FC = () => {
     if (!confirm('Are you sure you want to delete this source?')) return;
     
     try {
-      await apiService.callEndpoint('admin/sources/delete', 'POST', { index }, true);
+      await apiService.callEndpoint('admin/sources/delete', 'POST', { index }, false, {
+        'X-Admin-API-Key': adminApiKey
+      });
       
       await fetchSources();
       alert('Source deleted successfully!');
@@ -87,8 +110,17 @@ const Admin: React.FC = () => {
 
   const initiateAdminScraping = async () => {
     try {
-      // Use the correct admin scraping endpoint with authentication 
-      const response = await apiService.callEndpoint('content/admin/scrape', 'POST', {}, true);
+      // Check if admin is authenticated
+      if (!isAdminAuthenticated || !adminApiKey) {
+        alert('Please sign in through the admin login to access admin features');
+        window.location.href = '/admin/login';
+        return;
+      }
+      
+      // Use admin API key for scraping endpoint
+      const response = await apiService.callEndpoint('admin/scrape', 'POST', {}, false, {
+        'X-Admin-API-Key': adminApiKey
+      });
       console.log('Admin scraping result:', response);
       
       if (response.success) {
@@ -99,14 +131,21 @@ const Admin: React.FC = () => {
       }
     } catch (error) {
       console.error('Admin scraping error:', error);
-      alert('❌ Admin scraping failed. Please check console for details.');
+      if (error.message.includes('Authentication required')) {
+        alert('Admin authentication required. Please sign in through admin login.');
+        window.location.href = '/admin/login';
+      } else {
+        alert('❌ Admin scraping failed. Please check console for details.');
+      }
     }
   };
 
   const validateAllFeeds = async () => {
     try {
       setLoading(true);
-      const result = await apiService.callEndpoint('admin/validate-all-feeds', 'POST', {}, true);
+      const result = await apiService.callEndpoint('admin/validate-all-feeds', 'POST', {}, false, {
+        'X-Admin-API-Key': adminApiKey
+      });
       
       console.log('Feed validation results:', result);
       

@@ -72,8 +72,8 @@ const AuthRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   return <>{children}</>;
 };
 
-// Home Route Component - shows Home for non-authenticated, Dashboard for authenticated
-const HomeRoute: React.FC = () => {
+// Landing Route Component - shows Landing page for non-authenticated, Dashboard for authenticated
+const LandingRoute: React.FC = () => {
   const { isAuthenticated, loading, user } = useAuth();
   
   if (loading) {
@@ -81,8 +81,8 @@ const HomeRoute: React.FC = () => {
   }
   
   if (isAuthenticated) {
-    // Debug: Log admin check in HomeRoute
-    console.log('🔍 HomeRoute Admin Check:', {
+    // Debug: Log admin check in LandingRoute
+    console.log('🔍 LandingRoute Admin Check:', {
       isAuthenticated,
       userEmail: user?.email,
       userIsAdmin: user?.is_admin,
@@ -104,7 +104,7 @@ const HomeRoute: React.FC = () => {
     }
   }
   
-  return <Home />;
+  return <Landing />;
 };
 
 function AppContent() {
@@ -112,7 +112,11 @@ function AppContent() {
     <Routes>
       <Route 
         path="/" 
-        element={<HomeRoute />} 
+        element={<LandingRoute />} 
+      />
+      <Route 
+        path="/home" 
+        element={<Home />} 
       />
       <Route 
         path="/mobile" 
@@ -127,7 +131,7 @@ function AppContent() {
         } 
       />
       <Route 
-        path="/landing" 
+        path="/old-landing" 
         element={<Landing />} 
       />
       <Route 
