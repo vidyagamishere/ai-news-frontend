@@ -543,7 +543,7 @@ export const apiService = {
     method: string = 'GET', 
     params: any = {}, 
     requireAuth: boolean = false,
-    adminKey?: string
+    customHeaders: any = {}
   ) => {
     let headers: any = {};
     
@@ -555,9 +555,8 @@ export const apiService = {
       headers['Authorization'] = `Bearer ${token}`;
     }
     
-    if (adminKey) {
-      headers['X-Admin-Key'] = adminKey;
-    }
+    // Merge custom headers (including admin API key)
+    headers = { ...headers, ...customHeaders };
     
     return await makeModularRequest(endpoint, method, params, null, headers);
   },
