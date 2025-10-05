@@ -29,20 +29,7 @@ const CATEGORY_ICONS = {
   international: Factory
 };
 
-const CONTENT_TYPES: { id: ContentType; name: string; description: string; icon: string }[] = [
-  { id: 'blogs', name: 'Articles', description: 'In-depth analysis and news', icon: '📄' },
-  { id: 'podcasts', name: 'Podcasts', description: 'Audio content and interviews', icon: '🎙️' },
-  { id: 'videos', name: 'Videos', description: 'Visual content and tutorials', icon: '🎥' },
-  { id: 'events', name: 'Events', description: 'Conferences and webinars', icon: '📅' },
-  { id: 'learning', name: 'Learning', description: 'Courses and educational resources', icon: '🎓' },
-  { id: 'demos', name: 'Demos', description: 'Interactive demonstrations and showcases', icon: '🎮' }
-];
 
-const NEWSLETTER_FREQUENCIES = [
-  { id: 'daily', name: 'Daily', description: 'Get the latest AI news every day', icon: '📰' },
-  { id: 'weekly', name: 'Weekly', description: 'Weekly digest of top AI stories', icon: '📊' },
-  { id: 'monthly', name: 'Monthly', description: 'Monthly summary of AI trends', icon: '📈' }
-];
 
 const EXPERIENCE_LEVELS = [
   { id: 'beginner', name: 'Beginner', description: 'New to AI, want to learn basics', icon: '🌱' },
@@ -77,33 +64,37 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   
   // Step 3: Content Preferences
-  const [selectedContentTypes, setSelectedContentTypes] = useState<ContentType[]>(['blogs', 'podcasts', 'videos', 'events', 'learning', 'demos']);
-  const [newsletterFrequency, setNewsletterFrequency] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
-  
-  // Step 4: Notification Preferences
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [breakingNewsAlerts, setBreakingNewsAlerts] = useState(false);
-  const [pushNotifications, setPushNotifications] = useState(false);
-  const [mobileNumber, setMobileNumber] = useState('');
+  const [availableContentTypes, setAvailableContentTypes] = useState<any[]>([]);
+  const [selectedContentTypes, setSelectedContentTypes] = useState<ContentType[]>([]);
 
   const { updatePreferences } = useAuth();
 
   const totalSteps = 4;
 
   useEffect(() => {
-    loadAvailableTopics();
+    loadAvailableTopicsAndContentTypes();
   }, []);
 
-  const loadAvailableTopics = async () => {
+  const loadAvailableTopicsAndContentTypes = async () => {
     try {
-      const topics = await authService.getAvailableTopics();
+      // Get both categories and content types from the backend
+      const response = await authService.getUserRolesAndTopics();
+      
+      // Set topics with auto-selection for Generative AI, AI Start Ups, AI Applications
+      const topics = response.topics || [];
       setAvailableTopics(topics);
       
-      // Pre-select some popular topics based on experience level
-      const defaultTopics = topics.filter(t => 
-        ['Machine Learning', 'Deep Learning', 'Natural Language Processing'].includes(t.name)
+      const autoSelectedTopics = topics.filter(t => 
+        ['Generative AI', 'AI Start Ups', 'AI Applications'].includes(t.name)
       ).map(t => t.id);
-      setSelectedTopics(defaultTopics);
+      setSelectedTopics(autoSelectedTopics);
+      
+      // Set content types from backend and auto-select all 3
+      const contentTypes = response.content_types || [];
+      setAvailableContentTypes(contentTypes);
+      
+      const autoSelectedContentTypes = contentTypes.filter(ct => ct.selected).map(ct => ct.name.toLowerCase());
+      setSelectedContentTypes(autoSelectedContentTypes);
     } catch (error) {
       console.error('Failed to load topics:', error);
       // Provide fallback topics matching backend categories
@@ -132,13 +123,6 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
     );
   };
 
-  const handleContentTypeToggle = (contentType: ContentType) => {
-    setSelectedContentTypes(prev => 
-      prev.includes(contentType) 
-        ? prev.filter(type => type !== contentType)
-        : [...prev, contentType]
-    );
-  };
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -163,12 +147,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
           selected: true
         })),
         user_roles: [selectedRole], // Convert single role to array for backend
-        content_types: selectedContentTypes,
-        newsletter_frequency: newsletterFrequency,
-        email_notifications: emailNotifications,
-        breaking_news_alerts: breakingNewsAlerts,
-        push_notifications: pushNotifications,
-        mobile_number: pushNotifications ? mobileNumber : null,
+        content_types: availableContentTypes.filter(ct => ct.selected).map(ct => ct.name),
         experience_level: selectedExperience,
         role_type: selectedRole,
         onboarding_completed: true // Use snake_case to match backend
@@ -189,11 +168,11 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
       case 1:
         return selectedExperience && selectedRole;
       case 2:
-        return selectedTopics.length >= 3; // At least 3 topics must be selected per spec
+        return selectedTopics.length >= 1; // At least 1 topic must be selected (they're auto-selected)
       case 3:
-        return selectedContentTypes.length >= 3; // At least 3 content types must be selected per spec
+        return availableContentTypes.length > 0; // Content types are auto-selected from backend
       case 4:
-        return !pushNotifications || (pushNotifications && mobileNumber.trim().length > 0);
+        return true; // Publisher preferences are pre-selected
       default:
         return false;
     }
@@ -294,126 +273,61 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
       <div className="preference-section">
         <h3>Content types you enjoy</h3>
         <div className="content-types-grid">
-          {CONTENT_TYPES.map(contentType => (
+          {availableContentTypes.map(contentType => (
             <button
               key={contentType.id}
-              className={`content-type-card ${selectedContentTypes.includes(contentType.id) ? 'selected' : ''}`}
-              onClick={() => handleContentTypeToggle(contentType.id)}
+              className={`content-type-card ${contentType.selected ? 'selected' : ''}`}
             >
-              <span className="content-type-icon">{contentType.icon}</span>
+              <span className="content-type-icon">{contentType.icon || '📄'}</span>
               <div className="content-type-info">
-                <h4>{contentType.name}</h4>
+                <h4>{contentType.display_name}</h4>
                 <p>{contentType.description}</p>
               </div>
-              {selectedContentTypes.includes(contentType.id) && (
+              {contentType.selected && (
                 <Check className="content-type-check" size={16} />
               )}
             </button>
           ))}
         </div>
+        <p className="content-note">All content types are pre-selected for comprehensive coverage</p>
       </div>
 
-      <div className="preference-section">
-        <h3>How often would you like newsletter updates?</h3>
-        <div className="frequency-options">
-          {NEWSLETTER_FREQUENCIES.map(freq => (
-            <button
-              key={freq.id}
-              className={`frequency-card ${newsletterFrequency === freq.id ? 'selected' : ''}`}
-              onClick={() => setNewsletterFrequency(freq.id as 'daily' | 'weekly' | 'monthly')}
-            >
-              <span className="frequency-icon">{freq.icon}</span>
-              <div className="frequency-info">
-                <h4>{freq.name}</h4>
-                <p>{freq.description}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 
   const renderStep4 = () => (
     <div className="onboarding-step">
       <div className="step-header">
-        <Bell className="step-icon" size={32} />
-        <h2>Notification preferences</h2>
-        <p>Stay informed with personalized alerts</p>
+        <BookOpen className="step-icon" size={32} />
+        <h2>Publisher preferences</h2>
+        <p>Select your preferred AI news sources</p>
       </div>
 
-      <div className="notification-options">
-        <div className="notification-item">
-          <div className="notification-info">
-            <Mail className="notification-icon" size={20} />
-            <div>
-              <h4>Email Notifications</h4>
-              <p>Receive curated AI news in your inbox</p>
-            </div>
-          </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={emailNotifications}
-              onChange={(e) => setEmailNotifications(e.target.checked)}
-            />
-            <span className="toggle-slider"></span>
-          </label>
+      <div className="preference-section">
+        <h3>Choose your trusted AI news sources</h3>
+        <div className="publishers-grid">
+          {[
+            { id: 'techcrunch', name: 'TechCrunch', description: 'Leading tech news and startup coverage', icon: '🚀' },
+            { id: 'arxiv', name: 'arXiv', description: 'Research papers and academic publications', icon: '📄' },
+            { id: 'venturebeat', name: 'VentureBeat', description: 'Technology and business news', icon: '💼' },
+            { id: 'airesearch', name: 'AI Research', description: 'Latest AI research and developments', icon: '🔬' },
+            { id: 'techreport', name: 'The Register', description: 'Technology industry analysis', icon: '📊' },
+            { id: 'awsblog', name: 'AWS Blog', description: 'Cloud computing and AI services', icon: '☁️' }
+          ].map(publisher => (
+            <button
+              key={publisher.id}
+              className="publisher-card selected"
+            >
+              <span className="publisher-icon">{publisher.icon}</span>
+              <div className="publisher-info">
+                <h4>{publisher.name}</h4>
+                <p>{publisher.description}</p>
+              </div>
+              <Check className="publisher-check" size={16} />
+            </button>
+          ))}
         </div>
-
-        <div className="notification-item">
-          <div className="notification-info">
-            <TrendingUp className="notification-icon" size={20} />
-            <div>
-              <h4>Breaking News Alerts</h4>
-              <p>Get notified about major AI breakthroughs immediately</p>
-            </div>
-          </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={breakingNewsAlerts}
-              onChange={(e) => setBreakingNewsAlerts(e.target.checked)}
-            />
-            <span className="toggle-slider"></span>
-          </label>
-        </div>
-
-        <div className="notification-item">
-          <div className="notification-info">
-            <Bell className="notification-icon" size={20} />
-            <div>
-              <h4>Push Notifications</h4>
-              <p>Receive mobile notifications for breaking AI news</p>
-            </div>
-          </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={pushNotifications}
-              onChange={(e) => setPushNotifications(e.target.checked)}
-            />
-            <span className="toggle-slider"></span>
-          </label>
-        </div>
-
-        {pushNotifications && (
-          <div className="mobile-input-section">
-            <label htmlFor="mobile-number" className="mobile-label">
-              Mobile Number (for push notifications)
-            </label>
-            <input
-              id="mobile-number"
-              type="tel"
-              value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value)}
-              placeholder="Enter your mobile number"
-              className="mobile-input"
-              required={pushNotifications}
-            />
-          </div>
-        )}
-
+        <p className="publisher-note">All sources are pre-selected for comprehensive AI coverage</p>
       </div>
     </div>
   );
