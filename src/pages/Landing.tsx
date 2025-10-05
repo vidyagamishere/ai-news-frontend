@@ -34,22 +34,18 @@ const Landing: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch general digest to get top stories
-      const digest = await apiService.getDigest(false);
+      // Fetch breaking news and generative AI content from specific endpoints
+      const [breakingResponse, contentResponse] = await Promise.all([
+        apiService.getBreakingNews(5),
+        apiService.getGenerativeAIContent(6)
+      ]);
       
-      if (digest && digest.topStories) {
-        // Filter for highest significance scores (breaking news)
-        const breaking = digest.topStories
-          .filter(story => story.significanceScore && story.significanceScore >= 8.5)
-          .slice(0, 3);
-        
-        // Get top general stories
-        const top = digest.topStories
-          .filter(story => story.significanceScore && story.significanceScore >= 7.0)
-          .slice(0, 6);
-        
-        setBreakingNews(breaking);
-        setTopStories(top);
+      if (breakingResponse && breakingResponse.articles) {
+        setBreakingNews(breakingResponse.articles);
+      }
+      
+      if (contentResponse && contentResponse.articles) {
+        setTopStories(contentResponse.articles);
       }
       
     } catch (err: any) {
@@ -173,16 +169,16 @@ const Landing: React.FC = () => {
           
           <div className="hero-stats">
             <div className="stat">
-              <span className="stat-number">{breakingNews.length}</span>
-              <span className="stat-label">Breaking Stories</span>
-            </div>
-            <div className="stat">
-              <span className="stat-number">{topStories.length}</span>
-              <span className="stat-label">Top Articles</span>
+              <span className="stat-number">Daily</span>
+              <span className="stat-label">Breaking Updates</span>
             </div>
             <div className="stat">
               <span className="stat-number">50+</span>
               <span className="stat-label">AI Sources</span>
+            </div>
+            <div className="stat">
+              <span className="stat-number">Free</span>
+              <span className="stat-label">Access</span>
             </div>
           </div>
           
@@ -202,19 +198,18 @@ const Landing: React.FC = () => {
       {breakingNews.length > 0 && (
         <section className="breaking-section">
           <div className="section-header">
-            <h2>🚨 Breaking: High-Impact AI Developments</h2>
-            <p>Latest developments with significance score 8.5+ - Sign up for instant alerts</p>
+            <h2>🚨 Breaking: Top 5 Generative AI Stories</h2>
+            <p>Latest high-impact developments in Generative AI - Click to read full articles</p>
           </div>
           <div className="breaking-grid">
             {breakingNews.map((story, index) => (
               <div key={index} className="breaking-card" onClick={() => window.open(story.url, '_blank')}>
                 <div className="breaking-badge">Breaking</div>
-                <div className="significance-score">Score: {story.significanceScore?.toFixed(1)}</div>
                 <h3>{story.title}</h3>
-                <p>{story.summary || story.content_summary || 'Significant AI development with high industry impact'}</p>
+                <p>{story.summary || story.content_summary || 'Latest Generative AI development'}</p>
                 <div className="card-meta">
                   <span className="source">{story.source}</span>
-                  <span className="impact">High Impact</span>
+                  <span className="impact">Generative AI</span>
                 </div>
               </div>
             ))}
@@ -233,9 +228,7 @@ const Landing: React.FC = () => {
             <div key={index} className="story-card" onClick={() => window.open(story.url, '_blank')}>
               <div className="story-header">
                 <span className="story-source">{story.source}</span>
-                {story.significanceScore && (
-                  <span className="story-score">{story.significanceScore.toFixed(1)}</span>
-                )}
+                <span className="story-category">{story.category || 'AI'}</span>
               </div>
               <h3>{story.title}</h3>
               <p>{(story.summary || story.content_summary || '').substring(0, 150)}...</p>

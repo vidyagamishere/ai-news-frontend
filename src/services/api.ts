@@ -352,6 +352,18 @@ export const apiService = {
     return await makeModularRequest('sources', 'GET');
   },
 
+  // Get breaking news for landing page
+  getBreakingNews: async (limit: number = 5): Promise<any> => {
+    console.log('🚨 Fetching breaking news for landing page...');
+    return await makeModularRequest('breaking-news', 'GET', { limit });
+  },
+
+  // Get Generative AI content for landing page
+  getGenerativeAIContent: async (limit: number = 6): Promise<any> => {
+    console.log('🤖 Fetching Generative AI content for landing page...');
+    return await makeModularRequest('generative-ai-content', 'GET', { limit });
+  },
+
   // Get personalized digest - requires authentication
   getPersonalizedDigest: async (refresh?: boolean): Promise<DigestResponse> => {
     const token = localStorage.getItem('authToken');

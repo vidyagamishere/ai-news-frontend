@@ -175,15 +175,6 @@
   text-transform: uppercase;
 }
 
-.significance-score {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  display: inline-block;
-  margin-bottom: 16px;
-}
 
 .breaking-card h3 {
   font-size: 1.3rem;
@@ -255,7 +246,7 @@
   font-size: 0.9rem;
 }
 
-.story-score {
+.story-category {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 4px 8px;
