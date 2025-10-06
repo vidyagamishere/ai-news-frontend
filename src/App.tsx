@@ -17,7 +17,6 @@ import Admin from './pages/Admin';
 import AdminLogin from './pages/AdminLogin';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import Loading from './components/Loading';
-import MobileDashboard from './components/MobileDashboard';
 import './App.css';
 import './pages/legal.css';
 import './pages/about.css';
@@ -28,16 +27,30 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
+  
+  const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+  console.log(`🛡️ [${timestamp}] ProtectedRoute render:`, {
+    isAuthenticated,
+    loading,
+    userId: user?.id,
+    userEmail: user?.email,
+    hasChildren: !!children,
+    childrenType: children?.type?.name || typeof children,
+    stackTrace: new Error().stack?.split('\n').slice(1, 3).join('\n')
+  });
   
   if (loading) {
+    console.log(`🛡️ [${timestamp}] ProtectedRoute: Loading state, showing Loading component`);
     return <Loading message="Loading..." />;
   }
   
   if (!isAuthenticated) {
+    console.log(`🛡️ [${timestamp}] ProtectedRoute: Not authenticated, redirecting to /auth`);
     return <Navigate to="/auth" replace />;
   }
   
+  console.log(`🛡️ [${timestamp}] ProtectedRoute: Authenticated, rendering children`);
   return <>{children}</>;
 };
 
@@ -117,10 +130,7 @@ function AppContent() {
         path="/home" 
         element={<Home />} 
       />
-      <Route 
-        path="/mobile" 
-        element={<MobileDashboard />} 
-      />
+      {/* Removed direct mobile route to prevent duplicate instances */}
       <Route 
         path="/auth" 
         element={

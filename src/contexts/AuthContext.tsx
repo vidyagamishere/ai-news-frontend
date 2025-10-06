@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { User, AuthState, LoginCredentials, SignupCredentials } from '../types/auth';
 import { authService } from '../services/authService';
 import apiService from '../services/api';
@@ -38,14 +38,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
   }, []);
 
-  // Debug auth state changes
+  // Debug auth state changes with detailed tracking
   useEffect(() => {
-    console.log('🔄 Auth state changed:', {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    console.log(`🔄 [${timestamp}] Auth state changed:`, {
       isAuthenticated: authState.isAuthenticated,
       hasUser: !!authState.user,
+      userId: authState.user?.id,
       userName: authState.user?.name,
       userEmail: authState.user?.email,
-      loading: authState.loading
+      loading: authState.loading,
+      error: authState.error,
+      onboardingCompleted: authState.user?.preferences?.onboarding_completed,
+      stackTrace: new Error().stack?.split('\n').slice(1, 4).join('\n')
     });
   }, [authState]);
 
@@ -78,18 +83,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               isAdmin: parsedUser?.is_admin 
             });
             
-            setAuthState({
-              isAuthenticated: true,
-              user: parsedUser,
-              loading: false,
-              error: null
+            // Only update auth state if it has actually changed
+            setAuthState(prev => {
+              const newState = {
+                isAuthenticated: true,
+                user: parsedUser,
+                loading: false,
+                error: null
+              };
+              
+              const hasChanged = prev.isAuthenticated !== newState.isAuthenticated ||
+                                prev.user?.id !== newState.user?.id ||
+                                prev.loading !== newState.loading ||
+                                prev.error !== newState.error;
+              
+              if (hasChanged) {
+                console.log('🔄 Cached user: State changed, updating');
+                return newState;
+              } else {
+                console.log('🔄 Cached user: State unchanged, keeping existing');
+                return prev;
+              }
             });
             
             // Validate token in background and update if needed
             authService.validateToken(token).then(validatedUser => {
               console.log('✅ Background token validation successful');
               localStorage.setItem('cachedUser', JSON.stringify(validatedUser));
-              setAuthState(prev => ({ ...prev, user: validatedUser }));
+              
+              // Only update if user data has actually changed
+              setAuthState(prev => {
+                if (prev.user?.id !== validatedUser?.id) {
+                  console.log('🔄 Background validation: User changed, updating');
+                  return { ...prev, user: validatedUser };
+                } else {
+                  console.log('🔄 Background validation: User unchanged');
+                  return prev;
+                }
+              });
             }).catch(error => {
               console.warn('⚠️ Background token validation failed, keeping cached user:', error);
               // Only remove session if it's a 401 (unauthorized), keep for other errors
@@ -119,11 +150,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Cache the user data
         localStorage.setItem('cachedUser', JSON.stringify(user));
         
-        setAuthState({
-          isAuthenticated: true,
-          user,
-          loading: false,
-          error: null
+        // Only update auth state if it has actually changed
+        setAuthState(prev => {
+          const newState = {
+            isAuthenticated: true,
+            user,
+            loading: false,
+            error: null
+          };
+          
+          const hasChanged = prev.isAuthenticated !== newState.isAuthenticated ||
+                            prev.user?.id !== newState.user?.id ||
+                            prev.loading !== newState.loading ||
+                            prev.error !== newState.error;
+          
+          if (hasChanged) {
+            console.log('🔄 Auth initialization: State changed, updating');
+            return newState;
+          } else {
+            console.log('🔄 Auth initialization: State unchanged, keeping existing');
+            return prev;
+          }
         });
       } else {
         console.log('ℹ️ No auth token - user visiting as guest');
@@ -149,10 +196,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = useCallback(async (credentials: LoginCredentials) => {
     setAuthState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const { user, token } = await authService.login(credentials);
+      const { user, access_token: token } = await authService.login(credentials);
       localStorage.setItem('authToken', token);
       localStorage.setItem('cachedUser', JSON.stringify(user));
       
@@ -170,16 +217,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
       throw error;
     }
-  };
+  }, []);
 
-  const signup = async (credentials: SignupCredentials) => {
+  const signup = useCallback(async (credentials: SignupCredentials) => {
     setAuthState(prev => ({ ...prev, loading: true, error: null }));
     try {
       const response = await authService.signup(credentials);
       
       // Direct signup success - user is logged in
-      if ('user' in response && 'token' in response) {
-        const { user, token } = response;
+      if ('user' in response && 'access_token' in response) {
+        const { user, access_token: token } = response;
         localStorage.setItem('authToken', token);
         localStorage.setItem('cachedUser', JSON.stringify(user));
         
@@ -201,9 +248,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
       throw error;
     }
-  };
+  }, []);
 
-  const googleLogin = async (idToken: string) => {
+  const googleLogin = useCallback(async (idToken: string) => {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    console.log(`🔐 [${timestamp}] Google login started`);
     setAuthState(prev => ({ ...prev, loading: true, error: null }));
     try {
       // Decode the Google ID token to extract user data for logging
@@ -230,12 +279,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('No user data returned from Google login API');
       }
       
-      if (!response.token) {
-        console.error('❌ No token in response:', response);
-        throw new Error('No token returned from Google login API');
+      if (!response.access_token) {
+        console.error('❌ No access_token in response:', response);
+        throw new Error('No access_token returned from Google login API');
       }
       
-      const { user, token } = response;
+      const { user, access_token: token } = response;
       const userWithPreferences = user as any;
       
       // Validate user object structure
@@ -246,41 +295,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('✅ Google login successful - User data:', { name: user.name, email: user.email, id: user.id });
       
-      // Use backend's isUserExist flag to determine onboarding flow
+      // Use backend's isUserExist flag to determine onboarding flow (for logging purposes)
       const isExistingUser = (response as any).isUserExist === true;
-      const hasTopics = userWithPreferences.preferences?.topics && userWithPreferences.preferences.topics.length > 0;
+      console.log('🔍 User existence check:', { isExistingUser });
+      const hasCategories = userWithPreferences.preferences?.categories_selected && userWithPreferences.preferences.categories_selected.length > 0;
+      const hasContentTypes = userWithPreferences.preferences?.content_types_selected && userWithPreferences.preferences.content_types_selected.length > 0;
       const hasCompletedOnboarding = userWithPreferences.preferences?.onboarding_completed === true;
       const isAdmin = userWithPreferences.is_admin === true;
       
       console.log('🔍 User onboarding check:', {
         isExistingUser: (response as any).isUserExist,
-        hasTopics,
+        hasCategories,
+        hasContentTypes,
         hasCompletedOnboarding,
         isAdmin,
-        topicsCount: userWithPreferences.preferences?.topics?.length || 0
+        categoriesCount: userWithPreferences.preferences?.categories_selected?.length || 0,
+        contentTypesCount: userWithPreferences.preferences?.content_types_selected?.length || 0,
+        userPreferences: userWithPreferences.preferences
       });
       
-      // Admin users always skip onboarding, or existing users with topics and completed onboarding
-      const shouldSkipOnboarding = isAdmin || (isExistingUser && hasTopics && hasCompletedOnboarding);
+      // Additional detailed logging for Google login response
+      console.log('🔍 GOOGLE LOGIN RESPONSE ANALYSIS:', {
+        rawResponse: response,
+        userFromResponse: response.user,
+        userWithPreferences: userWithPreferences,
+        preferencesFromUser: userWithPreferences.preferences,
+        onboardingCompletedFromPrefs: userWithPreferences.preferences?.onboarding_completed,
+        isUserExistFlag: (response as any).isUserExist
+      });
+      
+      // Trust backend's onboarding determination completely
+      const shouldSkipOnboarding = isAdmin || hasCompletedOnboarding;
       
       if (shouldSkipOnboarding) {
-        console.log(isAdmin ? '✅ Admin user - skipping onboarding' : '✅ Existing user with preferences - skipping onboarding');
+        console.log(isAdmin ? '✅ Admin user - skipping onboarding' : '✅ Backend determined onboarding complete - skipping');
         localStorage.setItem('onboardingComplete', 'true');
       } else {
-        console.log('🔄 User needs comprehensive onboarding - clearing completion flag');
+        console.log('🔄 Backend determined onboarding needed - clearing completion flag');
         localStorage.removeItem('onboardingComplete');
       }
       
       localStorage.setItem('authToken', token);
       localStorage.setItem('cachedUser', JSON.stringify(user));
-      const newState = {
-        isAuthenticated: true,
-        user: userWithPreferences,
-        loading: false,
-        error: null
-      } as any;
-      console.log('🔄 Setting auth state after Google login:', newState);
-      setAuthState(newState);
+      
+      // Only update auth state if it has actually changed to prevent unnecessary re-renders
+      setAuthState(prev => {
+        const newState = {
+          isAuthenticated: true,
+          user: userWithPreferences,
+          loading: false,
+          error: null
+        };
+        
+        // Check if the state has actually changed
+        const hasChanged = prev.isAuthenticated !== newState.isAuthenticated ||
+                          prev.user?.id !== newState.user?.id ||
+                          prev.loading !== newState.loading ||
+                          prev.error !== newState.error;
+        
+        const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+        if (hasChanged) {
+          console.log(`🔄 [${timestamp}] Google login: Auth state CHANGED, updating:`, {
+            prevState: { isAuth: prev.isAuthenticated, userId: prev.user?.id, loading: prev.loading },
+            newState: { isAuth: newState.isAuthenticated, userId: newState.user?.id, loading: newState.loading },
+            changeReason: {
+              authChanged: prev.isAuthenticated !== newState.isAuthenticated,
+              userIdChanged: prev.user?.id !== newState.user?.id,
+              loadingChanged: prev.loading !== newState.loading,
+              errorChanged: prev.error !== newState.error
+            }
+          });
+          return newState;
+        } else {
+          console.log(`🔄 [${timestamp}] Google login: Auth state UNCHANGED, keeping existing`);
+          return prev;
+        }
+      });
     } catch (error) {
       setAuthState(prev => ({
         ...prev,
@@ -289,9 +379,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
       throw error;
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('cachedUser');
     setAuthState({
@@ -301,9 +391,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       error: null
     });
     window.location.href = '/'; // Redirect to home page to see public content
-  };
+  }, []);
 
-  const updatePreferences = async (preferences: Partial<User['preferences']>) => {
+  const updatePreferences = useCallback(async (preferences: Partial<User['preferences']>) => {
     if (!authState.user) throw new Error('User not authenticated');
     
     try {
@@ -358,9 +448,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('❌ AuthContext: updatePreferences failed:', error);
       throw error;
     }
-  };
+  }, [authState.user]);
 
-  const upgradeSubscription = async () => {
+  const upgradeSubscription = useCallback(async () => {
     if (!authState.user) throw new Error('User not authenticated');
     
     try {
@@ -369,14 +459,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       throw error;
     }
-  };
+  }, [authState.user]);
 
-  const isGmailDomain = (email: string): boolean => {
+  const isGmailDomain = useCallback((email: string): boolean => {
     return email.toLowerCase().endsWith('@gmail.com') || email.toLowerCase().endsWith('@googlemail.com');
-  };
+  }, []);
 
-  const value: AuthContextType = {
-    ...authState,
+  // Memoize the context value to prevent unnecessary re-renders
+  const value: AuthContextType = useMemo(() => {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    console.log(`🔧 [${timestamp}] AuthContext: Creating new value object (should be rare)`, {
+      isAuthenticated: authState.isAuthenticated,
+      userId: authState.user?.id,
+      loading: authState.loading
+    });
+    
+    return {
+      ...authState,
+      login,
+      signup,
+      googleLogin,
+      logout,
+      updatePreferences,
+      upgradeSubscription,
+      isGmailDomain
+    };
+  }, [
+    authState.isAuthenticated,
+    authState.user?.id, // Only track user ID, not entire user object
+    authState.loading,
+    authState.error,
     login,
     signup,
     googleLogin,
@@ -384,7 +496,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updatePreferences,
     upgradeSubscription,
     isGmailDomain
-  };
+  ]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Loading from '../components/Loading';
@@ -14,6 +14,35 @@ const Dashboard: React.FC = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   
+  // Debug Dashboard component lifecycle with detailed tracking
+  useEffect(() => {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    console.log(`🏠 [${timestamp}] Dashboard component MOUNTED:`, {
+      userId: user?.id,
+      userEmail: user?.email,
+      isAuthenticated,
+      authLoading,
+      onboardingCompleted: user?.preferences?.onboarding_completed,
+      stackTrace: new Error().stack?.split('\n').slice(1, 4).join('\n')
+    });
+    return () => {
+      const unmountTimestamp = new Date().toISOString().split('T')[1].split('.')[0];
+      console.log(`🏠 [${unmountTimestamp}] Dashboard component UNMOUNTING`);
+    };
+  }, []);
+
+  // Track when user or auth state changes
+  useEffect(() => {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    console.log(`🏠 [${timestamp}] Dashboard: User/Auth state changed:`, {
+      userId: user?.id,
+      userEmail: user?.email,
+      isAuthenticated,
+      authLoading,
+      onboardingCompleted: user?.preferences?.onboarding_completed
+    });
+  }, [user?.id, isAuthenticated, authLoading]);
+  
   // Check for force onboarding URL parameter
   const urlParams = new URLSearchParams(window.location.search);
   const forceOnboarding = urlParams.get('force-onboarding') === 'true';
@@ -28,50 +57,36 @@ const Dashboard: React.FC = () => {
   }, [isAuthenticated, authLoading, navigate]);
 
   useEffect(() => {
-    if (user) {
-      // For verified users, check onboarding status
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    console.log(`🏠 [${timestamp}] Dashboard: Onboarding logic triggered:`, {
+      hasUser: !!user,
+      hasPreferences: !!user?.preferences,
+      onboardingCompleted: user?.preferences?.onboarding_completed,
+      forceOnboarding,
+      currentShowOnboarding: showOnboarding,
+      currentShowWelcome: showWelcome
+    });
+    
+    if (user && user.preferences) {
+      // Trust backend's onboarding determination completely
       const hasCompletedOnboarding = user.preferences?.onboarding_completed === true;
       
-      // Check if user has meaningful personalization data (actual topic/role selections)
-      const hasPersonalizationData = (user.preferences?.topics?.length || 0) > 0 ||
-                                     (user.preferences?.user_roles?.length || 0) > 0;
-      
-      // Show onboarding for users without personalization data OR if forced via URL parameter
-      const needsOnboarding = forceOnboarding || (!hasCompletedOnboarding && !hasPersonalizationData);
-      
-      // Debug logging for onboarding decision
-      console.log('🧪 Onboarding decision debug:', {
-        forceOnboarding,
-        hasCompletedOnboarding,
-        hasPersonalizationData,
-        needsOnboarding,
-        onboarding_completed: user.preferences?.onboarding_completed,
-        topics_length: user.preferences?.topics?.length,
-        user_roles_length: user.preferences?.user_roles?.length
-      });
+      // Show onboarding only if backend determined it's needed OR if forced via URL parameter
+      const needsOnboarding = forceOnboarding || !hasCompletedOnboarding;
       
       if (needsOnboarding) {
-        console.log('✅ Setting showOnboarding to true');
+        console.log(`🔄 [${timestamp}] Dashboard: SHOWING onboarding (forceOnboarding: ${forceOnboarding}, hasCompleted: ${hasCompletedOnboarding})`);
         setShowOnboarding(true);
-        return;
+        setShowWelcome(false);
       } else {
-        console.log('❌ Skipping onboarding - user has completed or has data');
+        console.log(`✅ [${timestamp}] Dashboard: SHOWING dashboard (backend determined onboarding complete)`);
         setShowOnboarding(false);
+        setShowWelcome(false);
       }
+    } else {
+      console.log(`⏳ [${timestamp}] Dashboard: Waiting for user data (user: ${!!user}, preferences: ${!!user?.preferences})`);
     }
-  }, [user, navigate]);
-
-  useEffect(() => {
-    if (user) {
-      // Only show welcome for truly new users who haven't completed onboarding
-      const isNewUser = new Date(user.createdAt).getTime() > Date.now() - (24 * 60 * 60 * 1000); // 24 hours
-      const hasCompletedOnboarding = user.preferences?.onboarding_completed === true;
-      
-      if (isNewUser && !showOnboarding && !hasCompletedOnboarding) {
-        setShowWelcome(true);
-      }
-    }
-  }, [user]);
+  }, [user?.id, user?.preferences?.onboarding_completed, forceOnboarding]); // Use specific properties instead of entire user object
 
   // Show loading while authentication is being determined
   if (authLoading) {
@@ -127,8 +142,16 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  // Memoize the dashboard component to prevent unnecessary re-renders
+  // Use stable key and add showOnboarding/showWelcome as dependencies to prevent incorrect memoization
+  const dashboard = useMemo(() => {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    console.log(`🏠 [${timestamp}] Dashboard: Creating MobileDashboard via useMemo`);
+    return <MobileDashboard key="main-dashboard" />;
+  }, [showOnboarding, showWelcome]); // Add state dependencies to ensure correct memoization
+
   // Main dashboard - use the new MobileDashboard component
-  return <MobileDashboard />;
+  return dashboard;
 };
 
 export default Dashboard;

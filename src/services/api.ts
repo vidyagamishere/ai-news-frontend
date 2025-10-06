@@ -30,6 +30,10 @@ const contentApi = axios.create({
 // Initialize debug logger for API service
 const debug = new DebugLogger('APIService');
 
+// Request deduplication cache to prevent duplicate API calls
+const requestCache = new Map<string, { promise: Promise<any>; timestamp: number }>();
+const cacheTimeout = 10000; // 10 seconds cache for better deduplication
+
 // Direct modular endpoint request function - calls FastAPI endpoints directly
 async function makeModularRequest(
   endpoint: string, 
@@ -41,6 +45,18 @@ async function makeModularRequest(
 ) {
   debug.enter('makeModularRequest', { endpoint, method, params, hasData: !!data, headers: Object.keys(headers) });
   const startTime = Date.now();
+  
+  // Create cache key for GET requests only (POST requests should not be cached)
+  const cacheKey = method === 'GET' ? `${method}:${endpoint}:${JSON.stringify(params)}:${JSON.stringify(headers)}` : null;
+  
+  if (cacheKey) {
+    // Check if request is in cache and still valid
+    const cached = requestCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < cacheTimeout) {
+      console.log(`🔄 Using cached request for: ${method} /${endpoint}`);
+      return cached.promise;
+    }
+  }
   
   try {
     const apiInstance = useContentApi ? contentApi : api;
@@ -474,7 +490,7 @@ export const apiService = {
     const headers = {
       'Authorization': `Bearer ${token}`
     };
-    return await makeModularRequest('auth/profile', 'GET', {}, null, headers);
+    return await makeModularRequest('api/v2/auth/profile', 'GET', {}, null, headers);
   },
 
   // ===============================
@@ -489,7 +505,7 @@ export const apiService = {
       credential: idToken  // Backend expects 'credential' field, not 'id_token'
     };
     
-    return await makeModularRequest('auth/google', 'POST', {}, data);
+    return await makeModularRequest('api/v2/auth/google', 'POST', {}, data);
   },
 
   // Verify authentication token
@@ -518,7 +534,7 @@ export const apiService = {
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
     try {
-      const result = await makeModularRequest('auth/logout', 'POST', {}, {}, headers);
+      const result = await makeModularRequest('api/v2/auth/logout', 'POST', {}, {}, headers);
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
       return result;
@@ -628,18 +644,29 @@ export const apiService = {
     limit?: number;
   }): Promise<any> => {
     console.log('📱 Fetching personalized feed with filters:', filterRequest);
-    return await makeModularRequest('api/v1/personalized-feed', 'POST', {}, filterRequest, {}, true);
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    return await makeModularRequest('api/v1/personalized-feed', 'POST', {}, filterRequest, headers, true);
   },
 
   // Get available interests/topics
   getAvailableInterests: async (): Promise<{ categories: any[]; count: number }> => {
-    return await makeModularRequest('ai-topics', 'GET');
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    return await makeModularRequest('ai-topics', 'GET', {}, null, headers);
   },
 
   // Get available publishers  
   getAvailablePublishers: async (): Promise<{ publishers: string[]; count: number }> => {
-    // Return empty for now since we're focusing on ai-topics
-    return { publishers: [], count: 0 };
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    // Call the actual API endpoint instead of returning empty
+    try {
+      return await makeModularRequest('api/v1/available-publishers', 'GET', {}, null, headers);
+    } catch (error) {
+      console.warn('Failed to fetch publishers, using fallback:', error);
+      return { publishers: [], count: 0 };
+    }
   },
 
   // Get available content types
@@ -658,7 +685,7 @@ export const apiService = {
       'Authorization': `Bearer ${token}`
     };
     
-    return await makeModularRequest('auth/preferences', 'PUT', {}, preferences, headers);
+    return await makeModularRequest('api/v2/auth/preferences', 'PUT', {}, preferences, headers);
   }
 };
 

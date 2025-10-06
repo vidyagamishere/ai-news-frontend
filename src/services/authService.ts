@@ -5,7 +5,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'https://mindful-adventure-pro
 
 interface AuthResponse {
   user: User;
-  token: string;
+  access_token: string;
   isUserExist?: boolean;
 }
 
@@ -62,7 +62,7 @@ class AuthService {
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    return this.request('/auth/login', {
+    return this.request('/api/v2/auth/signin', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
@@ -77,7 +77,7 @@ class AuthService {
   async validateToken(_token: string): Promise<User> {
     try {
       console.log('🔍 Validating token with API...');
-      const user = await this.request('/auth/profile');
+      const user = await this.request('/api/v2/auth/profile');
       console.log('✅ Token validation successful');
       return user;
     } catch (error) {
@@ -92,7 +92,7 @@ class AuthService {
     console.log('🔗 Sending preferences update request:', preferences);
     
     try {
-      const response = await this.request('/auth/preferences', {
+      const response = await this.request('/api/v2/auth/preferences', {
         method: 'PUT',
         body: JSON.stringify(preferences),
       });
@@ -104,7 +104,7 @@ class AuthService {
       // Fallback: If backend fails, get fresh user profile to check if it actually saved
       console.log('🔄 Attempting to fetch fresh profile as fallback...');
       try {
-        const freshProfile = await this.request('/auth/profile');
+        const freshProfile = await this.request('/api/v2/auth/profile');
         console.log('🔄 Fresh profile fetched:', freshProfile);
         return freshProfile;
       } catch (profileError) {
@@ -167,7 +167,7 @@ class AuthService {
 
   async googleLogin(idToken: string): Promise<AuthResponse> {
     console.log('Sending Google login request with token length:', idToken.length);
-    const response = await this.request('/auth/google', {
+    const response = await this.request('/api/v2/auth/google', {
       method: 'POST',
       body: JSON.stringify({ 
         credential: idToken  // Backend expects 'credential' field, not 'id_token'
@@ -178,7 +178,7 @@ class AuthService {
   }
 
   async sendOTP(email: string, name?: string, authMode: 'signin' | 'signup' = 'signin'): Promise<OTPResponse> {
-    return this.request('/auth/send-otp', {
+    return this.request('/api/v2/auth/send-otp', {
       method: 'POST',
       body: JSON.stringify({
         email,
@@ -195,7 +195,7 @@ class AuthService {
       userData 
     });
     
-    const result = await this.request('/auth/verify-otp', {
+    const result = await this.request('/api/v2/auth/verify-otp', {
       method: 'POST',
       body: JSON.stringify({
         email,

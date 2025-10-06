@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search } from 'lucide-react';
 import { apiService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { renderingStateManager } from '../utils/renderingStateManager';
+
+// Global instance guard to prevent duplicate component initialization
+let globalInstanceInitialized = false;
 
 // Types
 interface ContentItem {
   id: string;
   category: string;
-  type: 'ARTICLE' | 'VIDEO' | 'AUDIO';
+  type: 'BLOGS' | 'VIDEOS' | 'PODCASTS';
   title: string;
   summary: string;
   sourceLink: string;
@@ -21,7 +26,7 @@ interface UserProfile {
   aiExposure: 'Beginner' | 'Intermediate' | 'Expert';
   interests: string[];
   newsletterSubscription: boolean;
-  selectedContentTypes: ('ARTICLE' | 'VIDEO' | 'AUDIO')[];
+  selectedContentTypes: ('BLOGS' | 'VIDEOS' | 'PODCASTS')[];
   selectedPublishers: string[];
   timeFilter: string;
   currentSearchQuery: string;
@@ -33,7 +38,7 @@ const mockContent: ContentItem[] = [
   {
     id: '1',
     category: 'Generative AI',
-    type: 'ARTICLE',
+    type: 'BLOGS',
     title: 'Tensor Core Architecture Doubles LLM Training Speed',
     summary: 'Research details a novel hardware acceleration technique that achieves a 2.1x throughput increase for sparse attention models, reducing training costs significantly.',
     sourceLink: 'https://vidyagam.tech/article/tensor-cores',
@@ -44,7 +49,7 @@ const mockContent: ContentItem[] = [
   {
     id: '2',
     category: 'Generative AI',
-    type: 'VIDEO',
+    type: 'VIDEOS',
     title: 'Quantum Computing Explained in 5 Minutes',
     summary: 'This video demystifies the concepts of superposition and entanglement, using simple, visual analogies. Outlines which industries will see earliest breakthroughs.',
     sourceLink: 'https://vidyagam.tech/video/quantum-explained',
@@ -55,7 +60,7 @@ const mockContent: ContentItem[] = [
   {
     id: '3',
     category: 'Cloud Computing',
-    type: 'AUDIO',
+    type: 'PODCASTS',
     title: 'Security Best Practices for Serverless Deployments',
     summary: 'This podcast segment analyzes common pitfalls in serverless architecture security, focusing on function permissions and environment variable injection prevention.',
     sourceLink: 'https://vidyagam.tech/audio/serverless-security',
@@ -66,14 +71,72 @@ const mockContent: ContentItem[] = [
 ];
 
 const MobileDashboard: React.FC = () => {
-  const [currentScreen, setCurrentScreen] = useState<'preview' | 'preferences' | 'dashboard' | 'settings'>('preview');
+  const { user, isAuthenticated } = useAuth();
+  const [renderingSessionId, setRenderingSessionId] = useState<string | null>(null);
+  
+  // Advanced rendering state management with global session control
+  useEffect(() => {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    const componentName = 'MobileDashboard';
+    
+    console.log(`📱 [${timestamp}] MobileDashboard: Component mounting attempt:`, {
+      globalInstanceInitialized,
+      userId: user?.id,
+      isAuthenticated,
+      currentSession: renderingStateManager.getCurrentSession()?.sessionId
+    });
+    
+    // Check if this is a duplicate render of the same component
+    if (renderingStateManager.isDuplicateRender(componentName)) {
+      console.warn(`🚨 [${timestamp}] MobileDashboard: DUPLICATE render detected - blocked by rendering state manager`);
+      return;
+    }
+    
+    // Check if another component is currently rendering
+    if (renderingStateManager.isBlocked(componentName)) {
+      console.warn(`🚫 [${timestamp}] MobileDashboard: Blocked by active rendering session: ${renderingStateManager.getCurrentSession()?.component}`);
+      return;
+    }
+    
+    // Start new rendering session
+    const sessionResult = renderingStateManager.startSession(componentName, user?.id);
+    if (!sessionResult.success) {
+      console.warn(`🚨 [${timestamp}] MobileDashboard: Failed to start rendering session`);
+      return;
+    }
+    
+    const sessionId = sessionResult.sessionId!;
+    setRenderingSessionId(sessionId);
+    globalInstanceInitialized = true;
+    
+    console.log(`✅ [${timestamp}] MobileDashboard: Started rendering session ${sessionId}`);
+    
+    return () => {
+      const cleanupTimestamp = new Date().toISOString().split('T')[1].split('.')[0];
+      globalInstanceInitialized = false;
+      
+      if (renderingSessionId) {
+        renderingStateManager.completeSession(renderingSessionId);
+        console.log(`🔄 [${cleanupTimestamp}] MobileDashboard: Completed session ${renderingSessionId} and cleaned up`);
+      } else {
+        console.log(`🔄 [${cleanupTimestamp}] MobileDashboard: Cleaned up (no active session)`);
+      }
+    };
+  }, [user?.id, isAuthenticated, renderingSessionId]); // Add required dependencies
+  // Initialize screen based on authentication and onboarding status
+  const [currentScreen, setCurrentScreen] = useState<'preview' | 'preferences' | 'dashboard' | 'settings'>(() => {
+    if (isAuthenticated && user?.preferences?.onboarding_completed) {
+      return 'dashboard';
+    }
+    return 'preview';
+  });
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: 'Alex Johnson',
     role: 'Software Architect',
     aiExposure: 'Intermediate',
     interests: ['Generative AI', 'Cloud Computing', 'AI Start Ups'],
     newsletterSubscription: true,
-    selectedContentTypes: ['ARTICLE', 'VIDEO', 'AUDIO'],
+    selectedContentTypes: ['BLOGS', 'VIDEOS', 'PODCASTS'],
     selectedPublishers: ['Google DeepMind', 'MIT Tech Review'],
     timeFilter: 'Last Week',
     currentSearchQuery: ''
@@ -85,66 +148,129 @@ const MobileDashboard: React.FC = () => {
   const [availableContentTypes, setAvailableContentTypes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lastLoadParams = React.useRef<string>('');
 
-  // Load available options on mount
+  // Update user profile from authenticated user data
   useEffect(() => {
-    const loadAvailableOptions = async () => {
-      try {
-        const [interestsRes, publishersRes] = await Promise.all([
-          apiService.getAvailableInterests(),
-          apiService.getAvailablePublishers()
-        ]);
+    if (isAuthenticated && user) {
+      // Use setTimeout to debounce rapid updates
+      const timeoutId = setTimeout(() => {
+        setUserProfile(prev => ({
+          ...prev,
+          name: user.name || prev.name,
+          role: (user.preferences as any)?.professional_roles?.[0] || prev.role,
+          aiExposure: (user.preferences?.experience_level as 'Beginner' | 'Intermediate' | 'Expert') || prev.aiExposure,
+          interests: (user.preferences as any)?.categories_selected || prev.interests,
+          selectedContentTypes: ((user.preferences as any)?.content_types_selected as ('BLOGS' | 'VIDEOS' | 'PODCASTS')[]) || prev.selectedContentTypes,
+          selectedPublishers: (user.preferences as any)?.publishers_selected || prev.selectedPublishers,
+          newsletterSubscription: user.preferences?.email_notifications || prev.newsletterSubscription
+        }));
         
-        // Handle new categories structure from ai_categories_master
-        const interests = interestsRes.categories ? 
-          interestsRes.categories.map((cat: any) => cat.name) : 
-          (interestsRes.interests || []);
-        setAvailableInterests(interests);
-        setAvailablePublishers(publishersRes.publishers || []);
-        
-        // Get content types from the same ai-topics endpoint that has both categories and content_types
-        const contentTypes = interestsRes.content_types ? 
-          interestsRes.content_types.map((ct: any) => ct.name) : 
-          ['ARTICLE', 'VIDEO', 'AUDIO'];
-        setAvailableContentTypes(contentTypes);
-      } catch (err) {
-        console.error('Error loading available options:', err);
-        // Use fallback values
-        setAvailableInterests(['Generative AI', 'Cloud Computing', 'AI Start Ups', 'Machine Learning', 'Data Engineering', 'Cyber Security']);
-        setAvailablePublishers(['Google DeepMind', 'AWS Blog', 'MIT Tech Review', 'The Verge', 'TechCrunch', 'IEEE Spectrum']);
-        setAvailableContentTypes(['ARTICLE', 'VIDEO', 'AUDIO']);
-      }
-    };
+        // If user has completed onboarding, go directly to dashboard
+        if (user.preferences?.onboarding_completed) {
+          setCurrentScreen('dashboard');
+        }
+      }, 100); // 100ms debounce
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isAuthenticated, user?.id, user?.name, user?.preferences?.onboarding_completed]); // Remove navigateToScreen dependency
+
+  // Function to load available options only when user opens preferences/settings
+  const loadAvailableOptionsForPreferences = useCallback(async () => {
+    try {
+      console.log('📱 Loading available options for preferences screen...');
+      const [interestsRes, publishersRes] = await Promise.all([
+        apiService.getAvailableInterests(),
+        apiService.getAvailablePublishers()
+      ]);
+      
+      // Handle new categories structure from ai_categories_master
+      const interests = (interestsRes as any).categories ? 
+        (interestsRes as any).categories.map((cat: any) => cat.name) : 
+        ((interestsRes as any).interests || []);
+      setAvailableInterests(interests);
+      setAvailablePublishers((publishersRes as any).publishers || []);
+      
+      // Get content types from the same ai-topics endpoint that has both categories and content_types
+      const contentTypes = (interestsRes as any).content_types ? 
+        (interestsRes as any).content_types.map((ct: any) => ct.name) : 
+        ['BLOGS', 'VIDEOS', 'PODCASTS'];
+      setAvailableContentTypes(contentTypes);
+      
+      console.log('✅ Available options loaded for preferences');
+    } catch (err) {
+      console.error('Error loading available options for preferences:', err);
+    }
+  }, []);
+
+  // Helper function to handle screen transitions with appropriate data loading
+  const navigateToScreen = useCallback(async (screen: 'preview' | 'preferences' | 'dashboard' | 'settings') => {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    console.log(`📱 [${timestamp}] MobileDashboard: Navigating from '${currentScreen}' to '${screen}' screen (session: ${renderingSessionId})`);
     
-    loadAvailableOptions();
+    // Only proceed if we have a valid rendering session
+    if (!renderingSessionId) {
+      console.warn(`📱 [${timestamp}] MobileDashboard: Navigation blocked - no active rendering session`);
+      return;
+    }
+    
+    // Load available options only when navigating to preferences or settings
+    if ((screen === 'preferences' || screen === 'settings') && currentScreen !== 'preferences' && currentScreen !== 'settings') {
+      console.log(`📱 [${timestamp}] MobileDashboard: Loading available options for preferences/settings...`);
+      await loadAvailableOptionsForPreferences();
+    }
+    
+    console.log(`📱 [${timestamp}] MobileDashboard: Screen transition complete - now on '${screen}'`);
+    setCurrentScreen(screen);
+  }, [currentScreen, loadAvailableOptionsForPreferences, renderingSessionId]);
+
+  // Initialize available options with fallback values (no API calls on mount)
+  // These will only be loaded when user actually opens preferences/settings
+  useEffect(() => {
+    if (!globalInstanceInitialized) return;
+    
+    console.log('📱 MobileDashboard: Setting fallback available options (no API calls)');
+    // Set fallback values without API calls - these are only needed when user changes preferences
+    setAvailableInterests(['Generative AI', 'Cloud Computing', 'AI Start Ups', 'Machine Learning', 'Data Engineering', 'Cyber Security']);
+    setAvailablePublishers(['Google DeepMind', 'AWS Blog', 'MIT Tech Review', 'The Verge', 'TechCrunch', 'IEEE Spectrum']);
+    setAvailableContentTypes(['BLOGS', 'VIDEOS', 'PODCASTS']);
   }, []);
 
   const loadPersonalizedFeed = useCallback(async () => {
+    const filterRequest = {
+      interests: userProfile.interests,
+      content_types: userProfile.selectedContentTypes,
+      publishers: userProfile.selectedPublishers,
+      time_filter: userProfile.timeFilter,
+      search_query: userProfile.currentSearchQuery,
+      limit: 50
+    };
+    
+    // Create a unique key for this request to prevent duplicate calls
+    const requestKey = JSON.stringify(filterRequest);
+    if (lastLoadParams.current === requestKey && !loading) {
+      return; // Skip if same request is already processed
+    }
+    lastLoadParams.current = requestKey;
+    
     setLoading(true);
     setError(null);
     
     try {
-      const filterRequest = {
-        interests: userProfile.interests,
-        content_types: userProfile.selectedContentTypes,
-        publishers: userProfile.selectedPublishers,
-        time_filter: userProfile.timeFilter,
-        search_query: userProfile.currentSearchQuery,
-        limit: 50
-      };
       
       const response = await apiService.getPersonalizedFeed(filterRequest);
       
       // Convert grouped content back to flat array for compatibility
       const flatContent: ContentItem[] = [];
-      response.grouped_content?.forEach((group: { category: string; items: Array<{ id?: number | string; content_type_label?: string; title?: string; description?: string; url?: string; published_date?: string; source?: string; significance_score?: number }> }) => {
+      response.grouped_content?.forEach((group: { category: string; items: Array<{ id?: number | string; content_type_label?: string; title?: string; summary?: string; description?: string; url?: string; published_date?: string; source?: string; significance_score?: number }> }) => {
         group.items?.forEach((item) => {
           flatContent.push({
             id: item.id?.toString() || Math.random().toString(),
             category: group.category,
-            type: (item.content_type_label as 'ARTICLE' | 'VIDEO' | 'AUDIO') || 'ARTICLE',
+            type: (item.content_type_label as 'BLOGS' | 'VIDEOS' | 'PODCASTS') || 'BLOGS',
             title: item.title || 'Untitled',
-            summary: item.description || 'No description available',
+            summary: item.summary || item.description || 'No description available',
             sourceLink: item.url || '#',
             publishDate: item.published_date || new Date().toISOString(),
             publisher: item.source || 'Unknown',
@@ -161,14 +287,55 @@ const MobileDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [userProfile.interests, userProfile.selectedContentTypes, userProfile.selectedPublishers, userProfile.timeFilter, userProfile.currentSearchQuery]);
+  }, [userProfile.interests, userProfile.selectedContentTypes, userProfile.selectedPublishers, userProfile.timeFilter, userProfile.currentSearchQuery, loading]);
 
-  // Load personalized feed when user profile changes
+  // Load personalized feed when screen changes to dashboard and user is authenticated
   useEffect(() => {
-    if (currentScreen === 'dashboard') {
-      loadPersonalizedFeed();
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    console.log(`📱 [${timestamp}] MobileDashboard: Feed loading trigger:`, {
+      currentScreen,
+      isAuthenticated,
+      hasUser: !!user,
+      userId: user?.id,
+      renderingSessionId,
+      shouldLoad: currentScreen === 'dashboard' && isAuthenticated && user && renderingSessionId
+    });
+    
+    // Only load if we have an active rendering session and meet all conditions
+    if (currentScreen === 'dashboard' && isAuthenticated && user && renderingSessionId) {
+      
+      // Check if we're still allowed to proceed with this session
+      const currentSession = renderingStateManager.getCurrentSession();
+      if (!currentSession || currentSession.sessionId !== renderingSessionId) {
+        console.warn(`📱 [${timestamp}] MobileDashboard: Feed loading blocked - invalid session ${renderingSessionId}`);
+        return;
+      }
+      
+      // Mark session as ongoing before starting API call
+      renderingStateManager.setOngoing(renderingSessionId);
+      
+      // Debounce the feed loading to prevent rapid successive calls
+      const timeoutId = setTimeout(() => {
+        const loadTimestamp = new Date().toISOString().split('T')[1].split('.')[0];
+        console.log(`📱 [${loadTimestamp}] MobileDashboard: LOADING personalized feed for session ${renderingSessionId}`);
+        
+        // Load feed and complete session when done
+        loadPersonalizedFeed().finally(() => {
+          if (renderingSessionId) {
+            renderingStateManager.completeSession(renderingSessionId);
+            console.log(`📱 [${loadTimestamp}] MobileDashboard: Feed loaded, session ${renderingSessionId} completed`);
+          }
+        });
+      }, 300);
+      
+      return () => {
+        console.log(`📱 [${timestamp}] MobileDashboard: Feed loading timeout cleared`);
+        clearTimeout(timeoutId);
+      };
+    } else {
+      console.log(`📱 [${timestamp}] MobileDashboard: Feed loading skipped (conditions not met or no session)`);
     }
-  }, [currentScreen, loadPersonalizedFeed]);
+  }, [currentScreen, loadPersonalizedFeed, isAuthenticated, user?.id, renderingSessionId, user]); // Include user and renderingSessionId
 
   // Filter functions
   const checkTimeFilter = (timeFilter: string, contentDateString: string): boolean => {
@@ -201,8 +368,27 @@ const MobileDashboard: React.FC = () => {
     const contentToFilter = realContent.length > 0 ? realContent : content;
     const lowerQuery = profile.currentSearchQuery.toLowerCase();
     
+    // Debug: contentToFilter has realContent.length articles
+    
+    // If we have real content from API, only apply search filter (backend already filtered by preferences)
+    if (realContent.length > 0) {
+      return contentToFilter.filter(item => {
+        // Only apply search query filter for real content
+        let searchQueryMatch = true;
+        if (lowerQuery) {
+          searchQueryMatch = 
+            item.title.toLowerCase().includes(lowerQuery) ||
+            item.summary.toLowerCase().includes(lowerQuery) ||
+            item.category.toLowerCase().includes(lowerQuery) ||
+            item.publisher.toLowerCase().includes(lowerQuery);
+        }
+        return searchQueryMatch;
+      });
+    }
+    
+    // For mock content, apply all filters
     return contentToFilter.filter(item => {
-      // Preference filters
+      // Preference filters for mock content
       const isInterestMatch = profile.interests.includes(item.category);
       const isTypeMatch = profile.selectedContentTypes.includes(item.type);
       const isPublisherMatch = profile.selectedPublishers.includes(item.publisher);
@@ -238,7 +424,7 @@ const MobileDashboard: React.FC = () => {
     }));
   };
 
-  const toggleContentType = (type: 'ARTICLE' | 'VIDEO' | 'AUDIO') => {
+  const toggleContentType = (type: 'BLOGS' | 'VIDEOS' | 'PODCASTS') => {
     setUserProfile(prev => ({
       ...prev,
       selectedContentTypes: prev.selectedContentTypes.includes(type)
@@ -260,30 +446,37 @@ const MobileDashboard: React.FC = () => {
     setUserProfile(prev => ({ ...prev, currentSearchQuery: query.trim() }));
   };
 
+  // Utility functions for content rendering
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'BLOGS': return 'bg-blue-100 text-blue-800 border-blue-500';
+      case 'VIDEOS': return 'bg-red-100 text-red-800 border-red-500';
+      case 'PODCASTS': return 'bg-green-100 text-green-800 border-green-500';
+      default: return 'bg-gray-100 text-gray-800 border-gray-500';
+    }
+  };
+
   // Content card renderer
   const renderContentCard = (item: ContentItem) => {
-    const getTypeColor = (type: string) => {
-      switch (type) {
-        case 'ARTICLE': return 'bg-blue-100 text-blue-800 border-blue-500';
-        case 'VIDEO': return 'bg-red-100 text-red-800 border-red-500';
-        case 'AUDIO': return 'bg-green-100 text-green-800 border-green-500';
-        default: return 'bg-gray-100 text-gray-800 border-gray-500';
-      }
-    };
 
     const getActionText = (type: string) => {
       switch (type) {
-        case 'ARTICLE': return 'Read Article';
-        case 'VIDEO': return 'Watch Video';
-        case 'AUDIO': return 'Listen';
+        case 'BLOGS': return 'Read Article';
+        case 'VIDEOS': return 'Watch Video';
+        case 'PODCASTS': return 'Listen';
         default: return 'View';
       }
     };
 
+    const typeColors = getTypeColor(item.type);
+    const borderClass = item.type === 'BLOGS' ? 'border-blue-500' : 
+                       item.type === 'VIDEOS' ? 'border-red-500' : 
+                       item.type === 'PODCASTS' ? 'border-green-500' : 'border-gray-500';
+    
     return (
-      <div key={item.id} className={`bg-white p-4 rounded-xl shadow transition duration-200 hover:shadow-lg border-l-4 ${getTypeColor(item.type).split(' ')[2].replace('text', 'border')}`}>
+      <div key={item.id} className={`bg-white p-4 rounded-xl shadow transition duration-200 hover:shadow-lg border-l-4 ${borderClass}`}>
         <div className="flex justify-between items-center mb-2">
-          <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full uppercase ${getTypeColor(item.type)}`}>
+          <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full uppercase ${typeColors}`}>
             {item.type}
           </span>
           <span className="text-xs text-gray-500 font-medium">{item.publisher}</span>
@@ -329,7 +522,17 @@ const MobileDashboard: React.FC = () => {
       }
     }
 
+    // Group content by content type for organized display
+    const contentByType: { [key: string]: ContentItem[] } = {
+      'BLOGS': filteredContent.filter(item => item.type === 'BLOGS'),
+      'VIDEOS': filteredContent.filter(item => item.type === 'VIDEOS'),
+      'PODCASTS': filteredContent.filter(item => item.type === 'PODCASTS')
+    };
+
     const allCategories = Object.keys(groupedContent);
+    const topBreakingStories = filteredContent
+      .sort((a, b) => (b.significance || 5) - (a.significance || 5))
+      .slice(0, 3);
 
     return (
       <div className="space-y-6">
@@ -346,35 +549,160 @@ const MobileDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Featured Article */}
-        {allCategories.length > 0 && groupedContent[allCategories[0]] && groupedContent[allCategories[0]][0] && (
-          <div className="bg-white rounded-xl shadow-lg p-4 cursor-pointer hover:shadow-xl transition-shadow duration-300 border-t-4 border-indigo-500">
-            <p className="text-xs text-indigo-600 font-semibold mb-1 uppercase">AI Level: Complex</p>
-            <h2 className="text-xl font-extrabold text-gray-900 leading-snug">{groupedContent[allCategories[0]][0].title}</h2>
-            <p className="text-sm text-indigo-500 mt-2">Source: {groupedContent[allCategories[0]][0].publisher} | {new Date(groupedContent[allCategories[0]][0].publishDate).toLocaleTimeString()}</p>
+        {/* Breaking Stories Section - Horizontal scroll */}
+        {topBreakingStories.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center mb-3">
+              <span className="text-lg font-bold text-red-600 mr-2">🚨</span>
+              <h2 className="text-lg font-bold text-gray-800">Breaking Stories</h2>
+            </div>
+            <div className="flex overflow-x-scroll pb-3 space-x-3 scrollbar-hide">
+              {topBreakingStories.map((story) => (
+                <div key={story.id} className="flex-none w-72 bg-white rounded-xl shadow-md p-4 border-l-4 border-red-500 cursor-pointer hover:shadow-lg transition-shadow">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className={`inline-block text-xs font-semibold px-2 py-1 rounded-full uppercase ${getTypeColor(story.type)}`}>
+                      {story.type}
+                    </span>
+                    <span className="text-xs text-red-600 font-bold">Score: {story.significance}</span>
+                  </div>
+                  <h3 className="text-sm font-bold text-gray-900 mb-2 line-clamp-2">{story.title}</h3>
+                  <p className="text-xs text-gray-600 mb-2 line-clamp-2">{story.summary.substring(0, 100)}...</p>
+                  <div className="flex justify-between items-center text-xs text-gray-500">
+                    <span>{story.publisher}</span>
+                    <span>{new Date(story.publishDate).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Content domains with horizontal scrolling */}
-        {allCategories.length > 0 ? (
-          allCategories.map(category => (
-            <div key={category}>
-              <h3 className="text-lg font-bold text-gray-800 mb-3 uppercase">{category} (DOMAIN)</h3>
-              <div className="flex overflow-x-scroll pb-4 space-x-3 scrollbar-hide">
-                {groupedContent[category].map((item, index) => (
+        {/* Content Types Sections */}
+        <div className="space-y-6">
+          {/* Blogs Section */}
+          {contentByType['BLOGS'].length > 0 && (
+            <div>
+              <div className="flex items-center mb-3">
+                <span className="text-lg mr-2">📰</span>
+                <h3 className="text-lg font-bold text-gray-800">AI News & Articles</h3>
+                <span className="ml-2 text-sm text-gray-500">({contentByType['BLOGS'].length})</span>
+              </div>
+              <div className="flex overflow-x-scroll pb-3 space-x-3 scrollbar-hide">
+                {contentByType['BLOGS'].slice(0, 5).map((item) => (
                   <div key={item.id} className="flex-none w-64 bg-white p-3 rounded-lg shadow border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
-                    <span className="text-xs text-gray-500 font-semibold mb-1 uppercase block">
-                      AI Level: {getAILevel(item.significance || 5)}
-                    </span>
-                    <h4 className="font-semibold text-gray-800 line-clamp-3 mt-1">{item.title}</h4>
-                    <p className="text-xs text-gray-500 mt-2">Source: {item.publisher} | {new Date(item.publishDate).toLocaleTimeString()}</p>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="inline-block text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                        BLOGS
+                      </span>
+                      <span className="text-xs text-gray-500">Score: {item.significance}</span>
+                    </div>
+                    <h4 className="font-semibold text-gray-800 text-sm mb-2 line-clamp-2">{item.title}</h4>
+                    <p className="text-xs text-gray-600 mb-2 line-clamp-2">{item.summary.substring(0, 80)}...</p>
+                    <div className="flex justify-between items-center text-xs text-gray-500">
+                      <span>{item.publisher}</span>
+                      <span>{new Date(item.publishDate).toLocaleDateString()}</span>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
-          ))
-        ) : (
-          <p className="text-gray-500 text-center mt-12">No content matched your current filters. Try adjusting your preferences or search terms.</p>
+          )}
+
+          {/* Videos Section */}
+          {contentByType['VIDEOS'].length > 0 && (
+            <div>
+              <div className="flex items-center mb-3">
+                <span className="text-lg mr-2">🎥</span>
+                <h3 className="text-lg font-bold text-gray-800">Video Content</h3>
+                <span className="ml-2 text-sm text-gray-500">({contentByType['VIDEOS'].length})</span>
+              </div>
+              <div className="flex overflow-x-scroll pb-3 space-x-3 scrollbar-hide">
+                {contentByType['VIDEOS'].slice(0, 5).map((item) => (
+                  <div key={item.id} className="flex-none w-64 bg-white p-3 rounded-lg shadow border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="inline-block text-xs font-semibold px-2 py-1 rounded-full bg-red-100 text-red-800">
+                        VIDEOS
+                      </span>
+                      <span className="text-xs text-gray-500">Score: {item.significance}</span>
+                    </div>
+                    <h4 className="font-semibold text-gray-800 text-sm mb-2 line-clamp-2">{item.title}</h4>
+                    <p className="text-xs text-gray-600 mb-2 line-clamp-2">{item.summary.substring(0, 80)}...</p>
+                    <div className="flex justify-between items-center text-xs text-gray-500">
+                      <span>{item.publisher}</span>
+                      <span>{new Date(item.publishDate).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Podcasts Section */}
+          {contentByType['PODCASTS'].length > 0 && (
+            <div>
+              <div className="flex items-center mb-3">
+                <span className="text-lg mr-2">🎧</span>
+                <h3 className="text-lg font-bold text-gray-800">Audio & Podcasts</h3>
+                <span className="ml-2 text-sm text-gray-500">({contentByType['PODCASTS'].length})</span>
+              </div>
+              <div className="flex overflow-x-scroll pb-3 space-x-3 scrollbar-hide">
+                {contentByType['PODCASTS'].slice(0, 5).map((item) => (
+                  <div key={item.id} className="flex-none w-64 bg-white p-3 rounded-lg shadow border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="inline-block text-xs font-semibold px-2 py-1 rounded-full bg-green-100 text-green-800">
+                        PODCASTS
+                      </span>
+                      <span className="text-xs text-gray-500">Score: {item.significance}</span>
+                    </div>
+                    <h4 className="font-semibold text-gray-800 text-sm mb-2 line-clamp-2">{item.title}</h4>
+                    <p className="text-xs text-gray-600 mb-2 line-clamp-2">{item.summary.substring(0, 80)}...</p>
+                    <div className="flex justify-between items-center text-xs text-gray-500">
+                      <span>{item.publisher}</span>
+                      <span>{new Date(item.publishDate).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Categories Section - Traditional grouping */}
+        {allCategories.length > 0 && (
+          <div className="space-y-6">
+            <div className="flex items-center mb-3">
+              <span className="text-lg mr-2">🏷️</span>
+              <h3 className="text-lg font-bold text-gray-800">By Your Interests</h3>
+            </div>
+            {allCategories.map(category => (
+              <div key={category}>
+                <h4 className="text-md font-semibold text-gray-700 mb-3 uppercase">{category}</h4>
+                <div className="flex overflow-x-scroll pb-3 space-x-3 scrollbar-hide">
+                  {groupedContent[category].map((item) => (
+                    <div key={item.id} className="flex-none w-64 bg-white p-3 rounded-lg shadow border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
+                      <span className="text-xs text-gray-500 font-semibold mb-1 uppercase block">
+                        AI Level: {getAILevel(item.significance || 5)}
+                      </span>
+                      <h4 className="font-semibold text-gray-800 text-sm mb-2 line-clamp-2">{item.title}</h4>
+                      <div className="flex justify-between items-center text-xs text-gray-500">
+                        <span>{item.publisher}</span>
+                        <span>{new Date(item.publishDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* No content fallback */}
+        {filteredContent.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📰</div>
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">No content found</h3>
+            <p className="text-gray-500">Try adjusting your filters or search terms to see more results.</p>
+          </div>
         )}
       </div>
     );
@@ -409,7 +737,7 @@ const MobileDashboard: React.FC = () => {
 
       <footer className="bg-white border-t border-gray-200 p-4">
         <button 
-          onClick={() => setCurrentScreen('preferences')}
+          onClick={() => navigateToScreen('preferences')}
           className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors"
         >
           Start Personalizing Feed & Sign In
@@ -467,9 +795,9 @@ const MobileDashboard: React.FC = () => {
             {availableContentTypes.map(type => (
               <button
                 key={type}
-                onClick={() => toggleContentType(type as 'ARTICLE' | 'VIDEO' | 'AUDIO')}
+                onClick={() => toggleContentType(type as 'BLOGS' | 'VIDEOS' | 'PODCASTS')}
                 className={`px-3 py-1 text-sm rounded-lg transition flex-1 ${
-                  userProfile.selectedContentTypes.includes(type as 'ARTICLE' | 'VIDEO' | 'AUDIO')
+                  userProfile.selectedContentTypes.includes(type as 'BLOGS' | 'VIDEOS' | 'PODCASTS')
                     ? 'bg-indigo-500 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -537,7 +865,7 @@ const MobileDashboard: React.FC = () => {
 
       <footer className="bg-white border-t border-gray-200 p-4">
         <button 
-          onClick={() => setCurrentScreen('dashboard')}
+          onClick={() => navigateToScreen('dashboard')}
           className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition-colors"
         >
           Save Preferences & Go to Dashboard
@@ -615,7 +943,7 @@ const MobileDashboard: React.FC = () => {
           </div>
         </div>
         <button 
-          onClick={() => setCurrentScreen('preferences')}
+          onClick={() => navigateToScreen('preferences')}
           className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition-colors"
         >
           Personalize Your Feed
@@ -697,9 +1025,9 @@ const MobileDashboard: React.FC = () => {
                 {availableContentTypes.map(type => (
                   <button
                     key={type}
-                    onClick={() => toggleContentType(type as 'ARTICLE' | 'VIDEO' | 'AUDIO')}
+                    onClick={() => toggleContentType(type as 'BLOGS' | 'VIDEOS' | 'PODCASTS')}
                     className={`px-3 py-2 text-sm rounded-lg transition flex-1 ${
-                      userProfile.selectedContentTypes.includes(type as 'ARTICLE' | 'VIDEO' | 'AUDIO')
+                      userProfile.selectedContentTypes.includes(type as 'BLOGS' | 'VIDEOS' | 'PODCASTS')
                         ? 'bg-indigo-500 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
@@ -746,7 +1074,7 @@ const MobileDashboard: React.FC = () => {
       
       <footer className="mt-8 pt-6 border-t border-gray-200">
         <button 
-          onClick={() => setCurrentScreen('dashboard')}
+          onClick={() => navigateToScreen('dashboard')}
           className="w-full bg-green-600 text-white py-4 rounded-lg font-bold text-xl hover:bg-green-700 transition-colors"
         >
           Save Preferences & Go to Dashboard
@@ -886,7 +1214,7 @@ const MobileDashboard: React.FC = () => {
           <h3 className="text-xl font-bold text-gray-800 border-b pb-3 mb-6">Account Actions</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button 
-              onClick={() => setCurrentScreen('preferences')}
+              onClick={() => navigateToScreen('preferences')}
               className="text-left bg-gray-50 p-4 rounded-lg border hover:bg-gray-100 transition group"
             >
               <div className="flex justify-between items-center">
@@ -1016,7 +1344,7 @@ const MobileDashboard: React.FC = () => {
 
         <div className="space-y-2">
           <button 
-            onClick={() => setCurrentScreen('preferences')}
+            onClick={() => navigateToScreen('preferences')}
             className="w-full text-left bg-white p-4 rounded-lg shadow flex justify-between items-center hover:bg-gray-50"
           >
             <span>Edit Profile & Preferences</span>
@@ -1041,7 +1369,7 @@ const MobileDashboard: React.FC = () => {
             className={`p-2 lg:p-3 rounded-lg cursor-pointer transition ${
               currentScreen === 'dashboard' ? 'bg-indigo-600' : 'hover:bg-gray-700'
             }`}
-            onClick={() => setCurrentScreen('dashboard')}
+            onClick={() => navigateToScreen('dashboard')}
           >
             <span className="font-bold text-sm lg:text-base">Dashboard</span>
           </li>
@@ -1049,7 +1377,7 @@ const MobileDashboard: React.FC = () => {
             className={`p-2 lg:p-3 rounded-lg cursor-pointer transition ${
               currentScreen === 'settings' ? 'bg-indigo-600' : 'hover:bg-gray-700'
             }`}
-            onClick={() => setCurrentScreen('settings')}
+            onClick={() => navigateToScreen('settings')}
           >
             <span className="font-bold text-sm lg:text-base">Settings</span>
           </li>
@@ -1057,7 +1385,7 @@ const MobileDashboard: React.FC = () => {
             className={`p-2 lg:p-3 rounded-lg cursor-pointer transition ${
               currentScreen === 'preferences' ? 'bg-indigo-600' : 'hover:bg-gray-700'
             }`}
-            onClick={() => setCurrentScreen('preferences')}
+            onClick={() => navigateToScreen('preferences')}
           >
             <span className="font-bold text-sm lg:text-base">Preferences</span>
           </li>
@@ -1083,7 +1411,7 @@ const MobileDashboard: React.FC = () => {
           <div className="text-2xl font-extrabold text-indigo-400">Vidyagam</div>
           <div className="flex space-x-4">
             <button 
-              onClick={() => setCurrentScreen('dashboard')}
+              onClick={() => navigateToScreen('dashboard')}
               className={`px-4 py-2 rounded-lg transition ${
                 currentScreen === 'dashboard' ? 'bg-indigo-600' : 'hover:bg-gray-700'
               }`}
@@ -1091,7 +1419,7 @@ const MobileDashboard: React.FC = () => {
               Dashboard
             </button>
             <button 
-              onClick={() => setCurrentScreen('settings')}
+              onClick={() => navigateToScreen('settings')}
               className={`px-4 py-2 rounded-lg transition ${
                 currentScreen === 'settings' ? 'bg-indigo-600' : 'hover:bg-gray-700'
               }`}
@@ -1099,7 +1427,7 @@ const MobileDashboard: React.FC = () => {
               Settings
             </button>
             <button 
-              onClick={() => setCurrentScreen('preferences')}
+              onClick={() => navigateToScreen('preferences')}
               className={`px-4 py-2 rounded-lg transition ${
                 currentScreen === 'preferences' ? 'bg-indigo-600' : 'hover:bg-gray-700'
               }`}
@@ -1135,7 +1463,7 @@ const MobileDashboard: React.FC = () => {
       {showTabControls && (
         <div className="bg-gray-100 p-2 flex space-x-2">
           <button 
-            onClick={() => setCurrentScreen('dashboard')}
+            onClick={() => navigateToScreen('dashboard')}
             className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition ${
               currentScreen === 'dashboard' 
                 ? 'bg-indigo-500 text-white' 
@@ -1145,7 +1473,7 @@ const MobileDashboard: React.FC = () => {
             Dashboard
           </button>
           <button 
-            onClick={() => setCurrentScreen('settings')}
+            onClick={() => navigateToScreen('settings')}
             className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition ${
               currentScreen === 'settings' 
                 ? 'bg-indigo-500 text-white' 
@@ -1230,9 +1558,9 @@ const MobileDashboard: React.FC = () => {
               {availableContentTypes.map(type => (
                 <button
                   key={type}
-                  onClick={() => toggleContentType(type as 'ARTICLE' | 'VIDEO' | 'AUDIO')}
+                  onClick={() => toggleContentType(type as 'BLOGS' | 'VIDEOS' | 'PODCASTS')}
                   className={`px-3 py-2 text-sm rounded-lg transition flex-1 ${
-                    userProfile.selectedContentTypes.includes(type as 'ARTICLE' | 'VIDEO' | 'AUDIO')
+                    userProfile.selectedContentTypes.includes(type as 'BLOGS' | 'VIDEOS' | 'PODCASTS')
                       ? 'bg-indigo-500 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
@@ -1279,7 +1607,7 @@ const MobileDashboard: React.FC = () => {
       
       <footer className="mt-8 pt-6 border-t border-gray-200">
         <button 
-          onClick={() => setCurrentScreen('dashboard')}
+          onClick={() => navigateToScreen('dashboard')}
           className="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition-colors"
         >
           Save Preferences & Go to Dashboard
@@ -1349,4 +1677,9 @@ const MobileDashboard: React.FC = () => {
   );
 };
 
-export default MobileDashboard;
+// Custom comparison function to prevent unnecessary re-renders
+// Since MobileDashboard has no props and manages its own state via useAuth,
+// we can safely prevent all prop-based re-renders
+const areEqual = () => true;
+
+export default React.memo(MobileDashboard, areEqual);
