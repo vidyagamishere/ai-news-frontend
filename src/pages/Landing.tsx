@@ -730,26 +730,30 @@ const Landing: React.FC = () => {
           </button>
         </div>
 
-          </div>
-        </div>
+      </div>
+    </div>
+  </header>
         
-        {/* Vertical Sidebar Menu */}
-        {menuOpen && (
-          <div className="fixed inset-0 z-50">
-            {/* Overlay */}
-            <div 
-              className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-              onClick={() => setMenuOpen(false)}
-            ></div>
-            
-            {/* Sidebar */}
-            <div className="sidebar-menu fixed left-0 top-0 h-full w-80 bg-white shadow-xl transform transition-transform">
-              <div className="p-6">
-                {/* Header Layout (Same as Main Page) */}
-                <div className="flex justify-between items-center mb-6">
-                  
-                  {/* Left: Close Button */}
-                  <div className="flex items-center">
+  {/* Vertical Sidebar Menu */}
+  {menuOpen && (
+    <div className="fixed inset-0 z-50">
+      {/* Overlay */}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+        onClick={() => setMenuOpen(false)}
+      />
+      
+      {/* Sidebar */}
+      <div 
+        className="fixed top-0 left-0 h-full bg-white shadow-xl z-50 transform transition-transform duration-300"
+        style={{ width: isMobile ? '85vw' : '400px', overflowY: 'auto' }}
+      >
+        <div className="flex flex-col h-full">
+          <div className="p-6">
+                  {/* Header Layout - Same as dashboard */}
+                  <div className="flex justify-between items-center mb-6">
+                    
+                    {/* Left: Close Button */}
                     <button 
                       onClick={() => setMenuOpen(false)}
                       style={{
@@ -770,101 +774,109 @@ const Landing: React.FC = () => {
                         e.currentTarget.style.backgroundColor = '#ffffff';
                         e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
                       }}
+                      aria-label="Close menu"
                     >
                       <svg style={{ height: '24px', width: '24px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
-                  </div>
 
-                  {/* Center: Title + Subtitle */}
-                  <div className="flex flex-col items-center">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                    {/* Center: Logo + Subtitle */}
+                    <div className="flex flex-col items-center flex-1 mx-4">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <h1 className="text-2xl font-bold text-gray-900">
+                          Vidyagam
+                        </h1>
                       </div>
-                      <h1 className="text-2xl font-bold text-gray-900">
-                        Vidyagam
-                      </h1>
+                      <span 
+                        className="text-xs mt-1" 
+                        style={{ 
+                          color: '#6b7280',
+                          fontSize: '12px',
+                          fontWeight: '400',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        AI Latest, Curated and Filtered for you
+                      </span>
                     </div>
-                    <span 
-                      className="text-xs mt-1" 
-                      style={{ 
-                        color: '#6b7280',
-                        fontSize: '12px',
-                        fontWeight: '400',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      AI Latest, Curated and Filtered for you
-                    </span>
-                  </div>
 
-                  {/* Right: Auth Buttons */}
-                  <div className="flex items-center space-x-2">
-                    <button 
-                      onClick={() => {
-                        setMenuOpen(false);
-                        navigateToAuth('signin');
-                      }}
-                      style={{
-                        backgroundColor: '#ffffff',
-                        color: '#000000',
-                        padding: '8px 16px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                        whiteSpace: 'nowrap'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f9fafb';
-                        e.currentTarget.style.borderColor = '#d1d5db';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#ffffff';
-                        e.currentTarget.style.borderColor = '#e5e7eb';
-                      }}
-                    >
-                      Sign In
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setMenuOpen(false);
-                        navigateToAuth('signup');
-                      }}
-                      style={{
-                        backgroundColor: '#ffffff',
-                        color: '#000000',
-                        padding: '8px 16px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        border: '2px solid #000000',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                        whiteSpace: 'nowrap'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#000000';
-                        e.currentTarget.style.color = '#ffffff';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#ffffff';
-                        e.currentTarget.style.color = '#000000';
-                      }}
-                    >
-                      Get Started
-                    </button>
-                  </div>
+                    {/* Right: Auth Icons (Mobile: icons only, Desktop: text) */}
+                    <div className="flex items-center space-x-2">
+                      <button 
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigateToAuth('signin');
+                        }}
+                        style={{
+                          backgroundColor: '#ffffff',
+                          color: '#000000',
+                          padding: '8px',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f9fafb';
+                          e.currentTarget.style.borderColor = '#d1d5db';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#ffffff';
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                        }}
+                        aria-label="Sign In"
+                        title="Sign In"
+                      >
+                        <LogIn size={18} />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigateToAuth('signup');
+                        }}
+                        style={{
+                          backgroundColor: '#ffffff',
+                          color: '#000000',
+                          padding: '8px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          border: '2px solid #000000',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#000000';
+                          e.currentTarget.style.color = '#ffffff';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#ffffff';
+                          e.currentTarget.style.color = '#000000';
+                        }}
+                        aria-label="Get Started"
+                        title="Get Started"
+                      >
+                        <UserPlus size={18} />
+                      </button>
+                    </div>
 
-                </div>
+                  </div>
 
 
                 {/* Menu Items */}
@@ -915,9 +927,8 @@ const Landing: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </>
         )}
-      </header>
 
       {/* Horizontal Navigation Menu */}
       {menuItems.length > 0 && (
@@ -1455,16 +1466,16 @@ const Landing: React.FC = () => {
             .landing-auth-buttons button { padding: 8px !important; }
             .landing-btn-text { display: none !important; }
             .horizontal-menu-section { display: none !important; }
-            .hero-title { font-size: 22px !important; }
-            .hero-subtitle { font-size: 14px !important; }
-            .section-title { font-size: 18px !important; }
-            .hero-buttons { flex-direction: column !important; gap: 12px !important; }
-            .category-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 16px !important; }
+            .hero-title { fontSize: '22px' !important; }
+            .hero-subtitle { fontSize: '14px' !important; }
+            .section-title { fontSize: '18px' !important; }
+            .hero-buttons { flexDirection: 'column' !important; gap: '12px' !important; }
+            .category-grid { grid-template-columns: repeat(2, 1fr) !important; gap: '16px' !important; }
             .content-grid { grid-template-columns: 1fr !important; }
-            .content-stats { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
-            .content-stats > div { padding: 12px !important; }
-            .section-gap { gap: 32px !important; }
-            .article-card { padding: 16px !important; }
+            .content-stats { grid-template-columns: repeat(3, 1fr) !important; gap: '8px' !important; }
+            .content-stats > div { padding: '12px' !important; }
+            .section-gap { gap: '32px' !important; }
+            .article-card { padding: '16px' !important; }
             .cta-buttons { flex-direction: column !important; }
             .sidebar-menu { width: 100vw !important; }
           }
@@ -1505,6 +1516,20 @@ const Landing: React.FC = () => {
           
           .sidebar-menu {
             transform: translateX(0);
+          }
+          
+          /* Mobile: Hamburger menu covers 85% width */
+          @media (max-width: 768px) {
+            .sidebar-menu {
+              width: 85vw !important;
+            }
+          }
+          
+          /* Tablet and Desktop: Hamburger menu width */
+          @media (min-width: 769px) {
+            .sidebar-menu {
+              width: 400px !important;
+            }
           }
           
           /* Focus styles for accessibility */

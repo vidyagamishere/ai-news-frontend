@@ -838,7 +838,7 @@ const CompleteMobileDashboard: React.FC = () => {
           className={`fixed top-0 left-0 h-full bg-white shadow-xl z-50 transform transition-transform duration-300 ${
             menuOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
-          style={{ width: isMobile ? '100vw' : '320px', overflowY: 'auto' }}
+          style={{ width: isMobile ? '85vw' : '400px', overflowY: 'auto' }}
         >
           <div className="flex flex-col h-full">
             {/* Menu Header - Same layout as Landing.tsx */}
@@ -1654,6 +1654,20 @@ const CompleteMobileDashboard: React.FC = () => {
           
           .horizontal-nav::-webkit-scrollbar {
             display: none;
+          }
+          
+          /* Mobile: Hamburger menu covers 85% width */
+          @media (max-width: 768px) {
+            .fixed.top-0.left-0 {
+              width: 85vw !important;
+            }
+          }
+          
+          /* Tablet and Desktop: Hamburger menu width */
+          @media (min-width: 769px) {
+            .fixed.top-0.left-0 {
+              width: 400px !important;
+            }
           }
           
           /* Hide horizontal menu on mobile and tablet - use hamburger menu instead */
