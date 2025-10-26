@@ -218,6 +218,7 @@ const Admin: React.FC = () => {
   ];
 
   const handleTriggerScraping = async () => {
+    console.log('🎯 handleTriggerScraping called with model:', selectedModel);
     setScrapingLoading(true);
     setError(null);
     setResult(null);
@@ -234,6 +235,8 @@ const Admin: React.FC = () => {
         }
       );
 
+      console.log('✅ Scraping response:', response);
+      
       if (response.success) {
         setResult({
           success: true,
@@ -380,6 +383,109 @@ const Admin: React.FC = () => {
         </div>
       )}
 
+      {/* Model Selection Section - MOVED HERE BEFORE SOURCES TABLE */}
+      <div className="model-selection" style={{ marginTop: '0', marginBottom: '32px' }}>
+        <h2>🤖 Select LLM Model for Content Processing</h2>
+        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+          Choose the AI model to process and analyze scraped content. Each model has different strengths:
+        </p>
+        
+        {/* Debug indicator */}
+        <div style={{ 
+          padding: '8px 12px', 
+          backgroundColor: '#f0fdf4', 
+          borderRadius: '6px',
+          marginBottom: '12px',
+          fontSize: '12px',
+          color: '#15803d',
+          border: '1px solid #86efac'
+        }}>
+          ✅ Model Selection Panel Loaded • Currently Selected: <strong>{selectedModel}</strong>
+        </div>
+
+        <div className="model-options">
+          {models.map((model) => {
+            console.log('🎨 Rendering model option:', model.name, 'Selected:', selectedModel === model.id);
+            return (
+              <div
+                key={model.id}
+                className={`model-option ${selectedModel === model.id ? 'selected' : ''}`}
+                onClick={() => {
+                  console.log('🖱️ Model clicked:', model.id);
+                  setSelectedModel(model.id);
+                }}
+                style={{ borderColor: selectedModel === model.id ? model.color : '#e5e7eb' }}
+              >
+                {model.recommended && <div className="recommended-badge">RECOMMENDED</div>}
+                <div className="model-name" style={{ color: model.color }}>
+                  {model.name}
+                </div>
+                <div className="model-description">
+                  {model.description}
+                </div>
+                {selectedModel === model.id && (
+                  <div className="selected-indicator" style={{ color: model.color }}>
+                    ✓ Selected
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <button
+          onClick={handleTriggerScraping}
+          disabled={scrapingLoading}
+          className="btn-scraping"
+          style={{ 
+            backgroundColor: scrapingLoading ? '#9ca3af' : models.find(m => m.id === selectedModel)?.color,
+            cursor: scrapingLoading ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {scrapingLoading ? (
+            <>
+              <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              ⏳ Scraping in progress...
+            </>
+          ) : (
+            `🚀 Start Scraping with ${models.find(m => m.id === selectedModel)?.name}`
+          )}
+        </button>
+      </div>
+
+      {/* Result Display - ALSO MOVED UP */}
+      {result && (
+        <div className={`result-display ${result.success ? 'success' : 'error'}`}>
+          <h3>{result.success ? '✅ Scraping Completed Successfully' : '❌ Scraping Failed'}</h3>
+          <p>{result.message}</p>
+          <div className="result-details">
+            <div className="detail-item">
+              <span className="detail-label">🤖 Model Used:</span>
+              <strong>{models.find(m => m.id === selectedModel)?.name || result.llm_model_used}</strong>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">📡 Sources Scraped:</span>
+              <strong>{result.details?.sources_scraped || 0}</strong>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">📄 Articles Found:</span>
+              <strong>{result.details?.articles_found || 0}</strong>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">💾 Articles Processed:</span>
+              <strong style={{ color: '#10b981' }}>{result.details?.articles_processed || 0}</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Display - ALSO MOVED UP */}
+      {error && (
+        <div className="error-display">
+          <h3>Error</h3>
+          <p>{error}</p>
+        </div>
+      )}
+
       <div className="sources-table">
         <h3>AI Sources ({sources.length})</h3>
         <div className="table-container">
@@ -414,90 +520,7 @@ const Admin: React.FC = () => {
         </div>
       </div>
 
-      {/* Model Selection Section */}
-      <div className="model-selection">
-        <h2>🤖 Select LLM Model for Content Processing</h2>
-        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
-          Choose the AI model to process and analyze scraped content. Each model has different strengths:
-        </p>
-        <div className="model-options">
-          {models.map((model) => (
-            <div
-              key={model.id}
-              className={`model-option ${selectedModel === model.id ? 'selected' : ''}`}
-              onClick={() => setSelectedModel(model.id)}
-              style={{ borderColor: selectedModel === model.id ? model.color : '#e5e7eb' }}
-            >
-              {model.recommended && <div className="recommended-badge">RECOMMENDED</div>}
-              <div className="model-name" style={{ color: model.color }}>
-                {model.name}
-              </div>
-              <div className="model-description">
-                {model.description}
-              </div>
-              {selectedModel === model.id && (
-                <div className="selected-indicator" style={{ color: model.color }}>
-                  ✓ Selected
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-        <button
-          onClick={handleTriggerScraping}
-          disabled={scrapingLoading}
-          className="btn-scraping"
-          style={{ 
-            backgroundColor: scrapingLoading ? '#9ca3af' : models.find(m => m.id === selectedModel)?.color,
-            cursor: scrapingLoading ? 'not-allowed' : 'pointer'
-          }}
-        >
-          {scrapingLoading ? (
-            <>
-              <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
-              ⏳ Scraping in progress...
-            </>
-          ) : (
-            `🚀 Start Scraping with ${models.find(m => m.id === selectedModel)?.name}`
-          )}
-        </button>
-      </div>
-
-      {/* Result Display */}
-      {result && (
-        <div className={`result-display ${result.success ? 'success' : 'error'}`}>
-          <h3>{result.success ? '✅ Scraping Completed Successfully' : '❌ Scraping Failed'}</h3>
-          <p>{result.message}</p>
-          <div className="result-details">
-            <div className="detail-item">
-              <span className="detail-label">🤖 Model Used:</span>
-              <strong>{models.find(m => m.id === selectedModel)?.name || result.llm_model_used}</strong>
-            </div>
-            <div className="detail-item">
-              <span className="detail-label">📡 Sources Scraped:</span>
-              <strong>{result.details?.sources_scraped || 0}</strong>
-            </div>
-            <div className="detail-item">
-              <span className="detail-label">📄 Articles Found:</span>
-              <strong>{result.details?.articles_found || 0}</strong>
-            </div>
-            <div className="detail-item">
-              <span className="detail-label">💾 Articles Processed:</span>
-              <strong style={{ color: '#10b981' }}>{result.details?.articles_processed || 0}</strong>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Error Display */}
-      {error && (
-        <div className="error-display">
-          <h3>Error</h3>
-          <p>{error}</p>
-        </div>
-      )}
-
-      {/* API Key Info */}
+      {/* API Key Info - Keep at bottom */}
       <div className="api-key-info">
         <h3>API Keys Required</h3>
         <ul>

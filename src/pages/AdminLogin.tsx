@@ -227,23 +227,6 @@ const AdminLogin: React.FC = () => {
           </button>
         </form>
 
-        <div style={{
-          marginTop: '1.5rem',
-          padding: '1rem',
-          background: '#f9fafb',
-          borderRadius: '6px',
-          fontSize: '0.75rem',
-          color: '#6b7280'
-        }}>
-          <p style={{ margin: 0, textAlign: 'center' }}>
-            <strong>Admin Credentials:</strong><br />
-            Username: <code style={{ background: '#e5e7eb', padding: '2px 4px', borderRadius: '3px' }}>admin@vidyagam.com</code><br />
-            Password: <code style={{ background: '#e5e7eb', padding: '2px 4px', borderRadius: '3px' }}>Vidyagam@Success</code>
-          </p>
-          <p style={{ margin: '0.5rem 0 0', textAlign: 'center', fontSize: '0.7rem' }}>
-            💡 <strong>Tip:</strong> You can also sign in with <code style={{ background: '#e5e7eb', padding: '2px 4px', borderRadius: '3px' }}>admin@vidyagam.com</code> through the main sign-in page (with OTP verification)!
-          </p>
-        </div>
 
         <div style={{
           marginTop: '1rem',
