@@ -746,7 +746,7 @@ const Landing: React.FC = () => {
       {/* Sidebar */}
       <div 
         className="fixed top-0 left-0 h-full bg-white shadow-xl z-50 transform transition-transform duration-300"
-        style={{ width: isMobile ? '85vw' : '400px', overflowY: 'auto' }}
+        style={{ width: isMobile ? '100vw' : '480px', overflowY: 'auto' }}
       >
         <div className="flex flex-col h-full">
           <div className="p-6">
@@ -1465,18 +1465,17 @@ const Landing: React.FC = () => {
             .landing-auth-buttons button { padding: 8px !important; }
             .landing-btn-text { display: none !important; }
             .horizontal-menu-section { display: none !important; }
-            .hero-title { fontSize: '22px' !important; }
-            .hero-subtitle { fontSize: '14px' !important; }
-            .section-title { fontSize: '18px' !important; }
+            .hero-title { fontSize: 22px !important; }
+            .hero-subtitle { fontSize: 14px !important; }
+            .section-title { fontSize: 18px !important; }
             .hero-buttons { flexDirection: 'column' !important; gap: '12px' !important; }
-            .category-grid { grid-template-columns: repeat(2, 1fr) !important; gap: '16px' !important; }
+            .category-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 16px !important; }
             .content-grid { grid-template-columns: 1fr !important; }
-            .content-stats { grid-template-columns: repeat(3, 1fr) !important; gap: '8px' !important; }
-            .content-stats > div { padding: '12px' !important; }
-            .section-gap { gap: '32px' !important; }
-            .article-card { padding: '16px' !important; }
+            .content-stats { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
+            .content-stats > div { padding: 12px !important; }
+            .section-gap { gap: 32px !important; }
+            .article-card { padding: 16px !important; }
             .cta-buttons { flex-direction: column !important; }
-            .sidebar-menu { width: 100vw !important; }
           }
           
           /* Tablet responsiveness */
@@ -1488,7 +1487,6 @@ const Landing: React.FC = () => {
             .landing-auth-buttons button { padding: 8px !important; }
             .horizontal-menu-section { display: none !important; }
             .content-grid { grid-template-columns: repeat(2, 1fr) !important; }
-            .sidebar-menu { width: 320px !important; }
           }
           
           /* Small mobile devices */
@@ -1500,7 +1498,6 @@ const Landing: React.FC = () => {
             .hero-title { font-size: 20px !important; }
             .section-title { font-size: 16px !important; }
             .horizontal-nav button { font-size: 12px !important; padding: 8px 4px !important; }
-            .sidebar-menu { width: 100vw !important; }
           }
           
           /* Navigation specific styles */
@@ -1513,30 +1510,11 @@ const Landing: React.FC = () => {
             display: none;
           }
           
-          .sidebar-menu {
-            transform: translateX(0);
-          }
-          
-          /* Mobile: Hamburger menu covers 85% width */
-          @media (max-width: 768px) {
-            .sidebar-menu {
-              width: 85vw !important;
-            }
-          }
-          
-          /* Tablet and Desktop: Hamburger menu width */
-          @media (min-width: 769px) {
-            .sidebar-menu {
-              width: 400px !important;
-            }
-          }
-          
           /* Focus styles for accessibility */
           .horizontal-nav button:focus,
-          .sidebar-menu button:focus {
+          button:focus {
             outline: 2px solid #000000;
             outline-offset: 2px;
-            background-color: #ffffff !important;
           }
         `}
       </style>
