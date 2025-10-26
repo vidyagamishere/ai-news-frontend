@@ -57,6 +57,43 @@ const SettingsFullScreen: React.FC<SettingsFullScreenProps> = ({
   const canProceedStep2 = userPreferences.content_types_selected.length >= 1 && 
                          userPreferences.publishers_selected.length >= 3;
 
+  // Toggle handlers
+  const handleCategoryToggle = (categoryId: number) => {
+    const newCategories = userPreferences.categories_selected.includes(categoryId)
+      ? userPreferences.categories_selected.filter((id: number) => id !== categoryId)
+      : [...userPreferences.categories_selected, categoryId];
+    
+    setUserPreferences({
+      ...userPreferences,
+      categories_selected: newCategories
+    });
+    setSettingsChanged(true);
+  };
+
+  const handleContentTypeToggle = (contentTypeId: number) => {
+    const newContentTypes = userPreferences.content_types_selected.includes(contentTypeId)
+      ? userPreferences.content_types_selected.filter((id: number) => id !== contentTypeId)
+      : [...userPreferences.content_types_selected, contentTypeId];
+    
+    setUserPreferences({
+      ...userPreferences,
+      content_types_selected: newContentTypes
+    });
+    setSettingsChanged(true);
+  };
+
+  const handlePublisherToggle = (publisherId: number | string) => {
+    const newPublishers = userPreferences.publishers_selected.includes(publisherId)
+      ? userPreferences.publishers_selected.filter((id: number | string) => id !== publisherId)
+      : [...userPreferences.publishers_selected, publisherId];
+    
+    setUserPreferences({
+      ...userPreferences,
+      publishers_selected: newPublishers
+    });
+    setSettingsChanged(true);
+  };
+
   return (
     <div style={{
       position: 'fixed',
