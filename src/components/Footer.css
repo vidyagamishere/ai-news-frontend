@@ -1,8 +1,8 @@
 .app-footer {
-  background: white;
-  color: #333;
+  background: #1f2937;
+  color: #ffffff;
   margin-top: auto;
-  border-top: 1px solid #e0e6ed;
+  border-top: none;
 }
 
 .footer-container {
@@ -14,21 +14,21 @@
 
 .footer-content {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: flex-start;
-  gap: 2rem;
+  gap: 4rem;
   margin-bottom: 1.5rem;
 }
 
 .footer-brand h3 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #2d3748;
+  color: #ffffff;
   margin-bottom: 0.5rem;
 }
 
 .footer-brand p {
-  color: #4a5568;
+  color: #d1d5db;
   line-height: 1.6;
   margin: 0;
 }
@@ -37,6 +37,7 @@
   display: flex;
   gap: 3rem;
   align-items: flex-start;
+  margin-left: auto;
 }
 
 .footer-group {
@@ -47,13 +48,13 @@
 }
 
 .footer-group strong {
-  color: #2d3748;
+  color: #ffffff;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .footer-group a {
-  color: #667eea;
+  color: #60a5fa;
   text-decoration: none;
   transition: color 0.2s ease;
   white-space: nowrap;
@@ -61,18 +62,18 @@
 }
 
 .footer-group a:hover {
-  color: #5a6fd8;
+  color: #93c5fd;
   text-decoration: underline;
 }
 
 .footer-bottom {
   padding-top: 2rem;
-  border-top: 1px solid #e0e6ed;
+  border-top: 1px solid #374151;
   text-align: center;
 }
 
 .footer-bottom p {
-  color: #6b7280;
+  color: #d1d5db;
   font-size: 0.875rem;
   margin-bottom: 0.5rem;
 }

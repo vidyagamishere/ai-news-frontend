@@ -273,7 +273,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
         publisher_ids_selected: selectedPublisherIds,
         
         // Additional preference fields
-        newsletter_frequency: "weekly",
+        newsletter_frequency: "weekly" as "weekly" | "12_hours" | "daily" | "monthly",
         email_notifications: true,
         breaking_news_alerts: false,
         onboarding_completed: true

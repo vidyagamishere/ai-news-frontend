@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Settings, User, Archive, Bell, Filter, Home, Bookmark, Menu, X, Clock, Star, Play, Headphones, ExternalLink, LogOut, Save, ChevronDown } from 'lucide-react';
+import { Search, Settings, Menu, X, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
-import Header from './Header';
 import Footer from './Footer';
 import SEO from './SEO';
 import { DashboardSkeleton } from './LoadingSkeleton';
@@ -53,6 +52,7 @@ const CompleteMobileDashboard: React.FC = () => {
   
   // Settings State
   const [savingSettings, setSavingSettings] = useState(false);
+  // @ts-ignore - Used in SettingsFullScreen component
   const [settingsChanged, setSettingsChanged] = useState(false);
   
   // Add menu items state similar to Landing.tsx
@@ -76,41 +76,6 @@ const CompleteMobileDashboard: React.FC = () => {
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [availableContentTypes, setAvailableContentTypes] = useState<any[]>([]);
   const [availablePublishers, setAvailablePublishers] = useState<any[]>([]);
-  
-  const EXPERIENCE_LEVELS = [
-    { id: 'beginner', name: 'Beginner', icon: '🌱', description: 'New to AI' },
-    { id: 'intermediate', name: 'Intermediate', icon: '🚀', description: 'Some AI knowledge' },
-    { id: 'advanced', name: 'Advanced', icon: '⚡', description: 'AI professional' },
-    { id: 'expert', name: 'Expert', icon: '🎯', description: 'AI researcher/leader' }
-  ];
-
-  const ROLE_TYPES = [
-    { id: 'student', name: 'Student', icon: '🎓' },
-    { id: 'developer', name: 'Developer', icon: '💻' },
-    { id: 'researcher', name: 'Researcher', icon: '🔬' },
-    { id: 'enthusiast', name: 'Enthusiast', icon: '❤️' },
-    { id: 'executive', name: 'Executive', icon: '👔' },
-    { id: 'entrepreneur', name: 'Entrepreneur', icon: '🚀' }
-  ];
-
-  // Helper function to get category icon (same as Landing.tsx)
-  const getCategoryIcon = (categoryName: string): string => {
-    const iconMap: { [key: string]: string } = {
-      'Generative AI': '🤖',
-      'Machine Learning': '🧠',
-      'AI Applications': '💼',
-      'AI Infrastructure': '💬',
-      'AI Safety And Governance': '💬',
-      'Robotics': '🤖',
-      'Quantum AI': '🔬',
-      'AI StartUps': '🛠️',
-      'Cloud Computing': '⚖️',
-      'Deep Learning': '🧠',
-      'Internet Of Things (IoT)': '🧠',
-      'Future Technology': '🕸️'
-    };
-    return iconMap[categoryName.toLowerCase()] || '🤖';
-  };
 
   // Load available options for settings
   useEffect(() => {
@@ -177,11 +142,11 @@ const CompleteMobileDashboard: React.FC = () => {
       
       // Convert IDs to names for API request
       const categoryNames = userPreferences.categories_selected
-        .map(id => availableCategories.find(cat => cat.id === id)?.name)
+        .map((id: any) => availableCategories.find(cat => cat.id === id)?.name)
         .filter(Boolean) as string[];
       
       const contentTypeNames = userPreferences.content_types_selected
-        .map(id => availableContentTypes.find(ct => ct.id === id)?.name)
+        .map((id: any) => availableContentTypes.find(ct => ct.id === id)?.name)
         .filter(Boolean) as string[];
       
       // Handle publishers - 'all' or convert IDs to names
@@ -190,7 +155,7 @@ const CompleteMobileDashboard: React.FC = () => {
         publisherNames = ['all'];
       } else {
         publisherNames = userPreferences.publishers_selected
-          .map(id => {
+          .map((id: any) => {
             if (typeof id === 'number') {
               return availablePublishers.find(pub => pub.id === id)?.name;
             }
@@ -719,13 +684,6 @@ const CompleteMobileDashboard: React.FC = () => {
       </div>
     );
   };
-  // Handle search
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setCurrentView('dashboard');
-    setMenuOpen(false);
-    hasLoadedContent.current = false;
-  };
 
   // Handle logout
   const handleLogout = async () => {
@@ -768,7 +726,7 @@ const CompleteMobileDashboard: React.FC = () => {
         publisher_ids_selected: userPreferences.publishers_selected,
         
         // Additional preference fields
-        newsletter_frequency: "weekly",
+        newsletter_frequency: "weekly" as "weekly" | "12_hours" | "daily" | "monthly",
         email_notifications: true,
         breaking_news_alerts: false,
         onboarding_completed: true

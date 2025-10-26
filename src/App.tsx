@@ -37,7 +37,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     userId: user?.id,
     userEmail: user?.email,
     hasChildren: !!children,
-    childrenType: children?.type?.name || typeof children,
+    childrenType: typeof children === 'object' && children && 'type' in children 
+      ? (children as any).type?.name || typeof children 
+      : typeof children,
     stackTrace: new Error().stack?.split('\n').slice(1, 3).join('\n')
   });
   

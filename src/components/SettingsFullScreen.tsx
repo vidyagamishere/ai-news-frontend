@@ -132,7 +132,7 @@ const SettingsFullScreen: React.FC<SettingsFullScreenProps> = ({
                   <button
                     key={level.id}
                     onClick={() => {
-                      setUserPreferences(prev => ({ ...prev, experience_level: level.id }));
+                      setUserPreferences((prev: any) => ({ ...prev, experience_level: level.id }));
                       setSettingsChanged(true);
                     }}
                     style={{
@@ -176,7 +176,7 @@ const SettingsFullScreen: React.FC<SettingsFullScreenProps> = ({
                   <button
                     key={role.id}
                     onClick={() => {
-                      setUserPreferences(prev => ({
+                      setUserPreferences((prev: any) => ({
                         ...prev,
                         professional_roles: prev.professional_roles.includes(role.id)
                           ? prev.professional_roles.filter((r: any) => r !== role.id)
@@ -253,7 +253,7 @@ const SettingsFullScreen: React.FC<SettingsFullScreenProps> = ({
                       type="checkbox"
                       checked={userPreferences.categories_selected.includes(category.id)}
                       onChange={(e) => {
-                        setUserPreferences(prev => ({
+                        setUserPreferences((prev: any) => ({
                           ...prev,
                           categories_selected: e.target.checked
                             ? [...prev.categories_selected, category.id]
@@ -317,7 +317,7 @@ const SettingsFullScreen: React.FC<SettingsFullScreenProps> = ({
                       type="checkbox"
                       checked={userPreferences.content_types_selected.includes(contentType.id)}
                       onChange={(e) => {
-                        setUserPreferences(prev => ({
+                        setUserPreferences((prev: any) => ({
                           ...prev,
                           content_types_selected: e.target.checked
                             ? [...prev.content_types_selected, contentType.id]
@@ -380,7 +380,7 @@ const SettingsFullScreen: React.FC<SettingsFullScreenProps> = ({
                       type="checkbox"
                       checked={userPreferences.publishers_selected.includes(publisher.id)}
                       onChange={(e) => {
-                        setUserPreferences(prev => ({
+                        setUserPreferences((prev: any) => ({
                           ...prev,
                           publishers_selected: e.target.checked
                             ? [...prev.publishers_selected, publisher.id]
