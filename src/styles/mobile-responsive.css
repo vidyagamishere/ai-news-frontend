@@ -1,0 +1,318 @@
+/* 
+ * Mobile Responsiveness Enhancements
+ * Ensures optimal experience across all device sizes
+ */
+
+/* === BASE MOBILE STYLES === */
+@media (max-width: 480px) {
+  /* Extra small mobile devices */
+  .container {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+  
+  .btn-base {
+    min-height: 44px;
+    min-width: 44px;
+    font-size: var(--text-sm);
+  }
+  
+  .filter-chip {
+    font-size: var(--text-xs);
+    padding: var(--space-1-5) var(--space-2-5);
+    min-height: 44px;
+  }
+}
+
+/* === TYPOGRAPHY RESPONSIVENESS === */
+@media (max-width: 768px) {
+  /* Mobile typography scaling */
+  h1 {
+    font-size: var(--text-2xl-mobile);
+    line-height: var(--leading-tight);
+  }
+  
+  h2 {
+    font-size: var(--text-xl-mobile);
+    line-height: var(--leading-tight);
+  }
+  
+  h3 {
+    font-size: var(--text-lg-mobile);
+    line-height: var(--leading-snug);
+  }
+  
+  h4 {
+    font-size: var(--text-base-mobile);
+    line-height: var(--leading-snug);
+  }
+  
+  p {
+    font-size: var(--text-sm-mobile);
+    line-height: var(--leading-relaxed);
+  }
+  
+  .text-xs { font-size: var(--text-xs-mobile); }
+  .text-sm { font-size: var(--text-sm-mobile); }
+  .text-base { font-size: var(--text-base-mobile); }
+  .text-lg { font-size: var(--text-lg-mobile); }
+  .text-xl { font-size: var(--text-xl-mobile); }
+  .text-2xl { font-size: var(--text-2xl-mobile); }
+  .text-3xl { font-size: var(--text-3xl-mobile); }
+  .text-4xl { font-size: var(--text-4xl-mobile); }
+}
+
+/* === LANDING PAGE MOBILE === */
+@media (max-width: 768px) {
+  .landing-hero {
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
+  }
+  
+  .landing-hero h1 {
+    font-size: var(--text-2xl-mobile);
+    margin-bottom: var(--space-2);
+  }
+  
+  .landing-hero p {
+    font-size: var(--text-sm-mobile);
+    margin-bottom: var(--space-3);
+  }
+  
+  .category-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+  }
+  
+  .category-stats .card {
+    padding: var(--space-3);
+  }
+  
+  .breaking-news {
+    padding: var(--space-3);
+  }
+  
+  .breaking-news-content {
+    font-size: var(--text-sm-mobile);
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-hero h1 {
+    font-size: var(--text-2xl-mobile);
+  }
+  
+  .landing-hero .brand-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  .category-stats {
+    gap: var(--space-1-5);
+  }
+  
+  .filter-chip-mobile {
+    font-size: var(--text-xs-mobile);
+    padding: var(--space-1) var(--space-2);
+  }
+}
+
+/* === DASHBOARD MOBILE === */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: var(--space-3);
+  }
+  
+  .dashboard-header {
+    margin-bottom: var(--space-4);
+  }
+  
+  .dashboard-search {
+    margin-bottom: var(--space-4);
+  }
+  
+  .dashboard-filters {
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+  
+  .article-card-mobile {
+    margin-bottom: var(--space-3);
+  }
+  
+  .cta-buttons {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .cta-buttons .btn-base {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Tablet styles */
+  .content-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-5);
+  }
+  
+  .dashboard-container {
+    padding: var(--space-6);
+  }
+}
+
+/* === TOUCH TARGET OPTIMIZATION === */
+@media (pointer: coarse) {
+  /* Ensure all interactive elements meet 44px minimum */
+  .btn-base,
+  .filter-chip,
+  .article-card,
+  .card-interactive,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+  
+  .filter-chip {
+    min-width: 44px;
+    padding: var(--space-2) var(--space-3);
+  }
+  
+  .article-card {
+    min-height: 120px;
+  }
+  
+  /* Increase tap targets for small elements */
+  .article-meta,
+  .badge {
+    padding: var(--space-2) var(--space-3);
+  }
+}
+
+/* === LANDSCAPE MOBILE === */
+@media (max-width: 768px) and (orientation: landscape) {
+  .landing-hero {
+    padding-top: var(--space-6);
+    padding-bottom: var(--space-6);
+  }
+  
+  .landing-hero h1 {
+    font-size: var(--text-2xl-mobile);
+  }
+  
+  .category-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* === HIGH DPI DISPLAYS === */
+@media (min-resolution: 2dppx) {
+  .article-image,
+  .brand-icon,
+  .category-icon {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* === REDUCED MOTION === */
+@media (prefers-reduced-motion: reduce) {
+  .article-card,
+  .btn-base,
+  .filter-chip,
+  .card {
+    transition: none;
+  }
+  
+  .breaking-news .animate-scroll {
+    animation: none;
+  }
+  
+  .landing-hero .animate-float {
+    animation: none;
+  }
+}
+
+/* === DARK MODE MOBILE === */
+@media (prefers-color-scheme: dark) and (max-width: 768px) {
+  .landing-hero {
+    background: linear-gradient(135deg, var(--dark-bg-primary), var(--dark-bg-secondary));
+  }
+  
+  .article-card {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border-primary);
+    color: var(--dark-text-primary);
+  }
+}
+
+/* === FOCUS MANAGEMENT === */
+@media (max-width: 768px) {
+  .btn-base:focus,
+  .filter-chip:focus,
+  .article-card:focus,
+  input:focus {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+  }
+  
+  /* Skip to content link for accessibility */
+  .skip-to-content {
+    position: absolute;
+    top: -40px;
+    left: 6px;
+    background: var(--primary-600);
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    border-radius: 4px;
+    z-index: 1000;
+  }
+  
+  .skip-to-content:focus {
+    top: 6px;
+  }
+}
+
+/* === SAFE AREA INSETS (for notched devices) === */
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    .dashboard-container,
+    .landing-container {
+      padding-left: max(var(--space-4), env(safe-area-inset-left));
+      padding-right: max(var(--space-4), env(safe-area-inset-right));
+      padding-top: max(var(--space-4), env(safe-area-inset-top));
+      padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+    }
+  }
+}
+
+/* === PRINT STYLES === */
+@media print {
+  .btn-base,
+  .filter-chip,
+  .breaking-news,
+  .cta-buttons {
+    display: none;
+  }
+  
+  .article-card {
+    break-inside: avoid;
+    margin-bottom: var(--space-4);
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+  
+  .landing-hero {
+    background: none;
+    color: black;
+  }
+}

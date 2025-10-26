@@ -14,28 +14,19 @@ const Footer: React.FC = () => {
           
           <div className="footer-links">
             <div className="footer-group">
-              <strong>Product:</strong>
-              <Link to="/dashboard">Dashboard</Link>
-              <Link to="/auth">Sign In</Link>
-              <Link to="/auth?mode=signup">Sign Up</Link>
-            </div>
-            
-            <div className="footer-group">
               <strong>Legal:</strong>
-              <Link to="/terms">Terms</Link>
-              <Link to="/privacy">Privacy</Link>
+              <Link to="/privacy">Privacy Policy</Link>
             </div>
             
             <div className="footer-group">
               <strong>Contact:</strong>
-              <a href="mailto:admin@vidyagam.com">Support</a>
-              <a href="mailto:admin@vidyagam.com">Feedback</a>
+              <a href="mailto:admin@vidyagam.com">Contact Us</a>
             </div>
           </div>
         </div>
         
         <div className="footer-bottom">
-          <p>&copy; 2025 Vidyagam. All rights reserved. We aggregate content from publicly available sources under fair use principles.</p>
+          <p>&copy; 2025 Vidyagam. All rights reserved.</p>
         </div>
       </div>
     </footer>

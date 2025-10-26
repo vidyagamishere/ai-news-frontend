@@ -142,7 +142,7 @@
   align-items: center;
   justify-content: center;
   padding: 3rem;
-  color: white;
+  color: white !important;
   position: relative;
   overflow: hidden;
 }
@@ -163,6 +163,7 @@
   z-index: 2;
   text-align: center;
   max-width: 500px;
+  color: white !important;
 }
 
 .brand-link {
@@ -227,6 +228,7 @@
   margin-bottom: 1.5rem;
   line-height: 1.2;
   opacity: 0.95;
+  color: white !important;
 }
 
 .brand-content p {
@@ -234,6 +236,7 @@
   opacity: 0.9;
   margin-bottom: 3rem;
   line-height: 1.6;
+  color: white !important;
 }
 
 .brand-features {
@@ -277,6 +280,7 @@
   font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.2;
+  color: white !important;
 }
 
 .brand-feature span {
@@ -284,6 +288,7 @@
   font-weight: 400;
   opacity: 0.9;
   line-height: 1.4;
+  color: white !important;
 }
 
 /* Right Panel - Form */
@@ -565,15 +570,17 @@
   gap: 0.75rem;
   cursor: pointer;
   font-size: 0.875rem;
-  color: var(--text-dark);
+  color: #111827;
   line-height: 1.5;
 }
 
 .checkbox-label input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   margin-top: 2px;
   appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   border: 2px solid #d1d5db;
   border-radius: 4px;
   cursor: pointer;
@@ -581,11 +588,24 @@
   position: relative;
   flex-shrink: 0;
   background: white;
+  outline: none;
+  vertical-align: top;
+  display: inline-block;
+}
+
+.checkbox-label input[type="checkbox"]:hover {
+  border-color: #3b82f6;
+}
+
+.checkbox-label input[type="checkbox"]:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .checkbox-label input[type="checkbox"]:checked {
-  background: var(--primary-blue);
-  border-color: var(--primary-blue);
+  background: #3b82f6;
+  border-color: #3b82f6;
 }
 
 .checkbox-label input[type="checkbox"]:checked::before {
@@ -595,21 +615,23 @@
   left: 50%;
   transform: translate(-50%, -50%);
   color: white;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: bold;
+  line-height: 1;
+}
+
+.checkbox-label span {
+  flex: 1;
 }
 
 .checkbox-label a {
-  color: var(--primary-blue);
+  color: #3b82f6;
   text-decoration: none;
 }
 
 .checkbox-label a:hover {
   text-decoration: underline;
-}
-
-.checkbox-checkmark {
-  display: none;
+  color: #2563eb;
 }
 
 /* Responsive Design */

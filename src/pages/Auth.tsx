@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Mail, User } from 'lucide-react';
+import { Mail, User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import GoogleSignIn from '../components/auth/GoogleSignIn';
 import '../components/auth/auth.css';
@@ -15,11 +15,14 @@ const Auth: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
+    confirmPassword: '',
     acceptTerms: false
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
   
-  const { loading, error, isAuthenticated, sendOTP } = useAuth();
+  const { loading, error, isAuthenticated, sendOTP, login, signup, isGmailDomain } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,6 +46,24 @@ const Auth: React.FC = () => {
       errors.email = 'Please enter a valid email address';
     }
     
+    // Password validation for non-Gmail users
+    const isGmail = isGmailDomain(formData.email);
+    if (!isGmail) {
+      if (!formData.password) {
+        errors.password = 'Password is required';
+      } else if (formData.password.length < 6) {
+        errors.password = 'Password must be at least 6 characters';
+      }
+      
+      if (mode === 'signup') {
+        if (!formData.confirmPassword) {
+          errors.confirmPassword = 'Please confirm your password';
+        } else if (formData.password !== formData.confirmPassword) {
+          errors.confirmPassword = 'Passwords do not match';
+        }
+      }
+    }
+    
     if (mode === 'signup' && !formData.acceptTerms) {
       errors.acceptTerms = 'You must accept the Terms of Service';
     }
@@ -63,16 +84,39 @@ const Auth: React.FC = () => {
     try {
       console.log('🔍 Auth Debug:', { mode, email: formData.email, name: formData.name });
       
+      const isGmail = isGmailDomain(formData.email);
+      
       if (mode === 'signin') {
-        // Existing user - always use OTP verification
-        console.log('📧 Sending OTP for signin mode');
-        await sendOTP(formData.email, '', 'signin');
-        navigate('/verify-otp?email=' + encodeURIComponent(formData.email) + '&userData=' + encodeURIComponent(JSON.stringify({name: '', email: formData.email})) + '&authMode=signin');
+        if (isGmail) {
+          // Gmail user - use email verification
+          console.log('📧 Sending verification for Gmail signin');
+          await sendOTP(formData.email, '', 'signin');
+          navigate('/verify-otp?email=' + encodeURIComponent(formData.email) + '&userData=' + encodeURIComponent(JSON.stringify({name: '', email: formData.email})) + '&authMode=signin');
+        } else {
+          // Non-Gmail user - use password verification
+          console.log('🔐 Password signin for non-Gmail user');
+          const result = await login({
+            email: formData.email,
+            password: formData.password
+          });
+          // Login success - user will be redirected by useEffect
+        }
       } else {
-        // New user signup - always use OTP verification
-        console.log('📧 Sending OTP for signup mode');
-        await sendOTP(formData.email, formData.name, 'signup');
-        navigate('/verify-otp?email=' + encodeURIComponent(formData.email) + '&userData=' + encodeURIComponent(JSON.stringify(formData)) + '&authMode=signup');
+        if (isGmail) {
+          // Gmail user - use email verification
+          console.log('📧 Sending verification for Gmail signup');
+          await sendOTP(formData.email, formData.name, 'signup');
+          navigate('/verify-otp?email=' + encodeURIComponent(formData.email) + '&userData=' + encodeURIComponent(JSON.stringify(formData)) + '&authMode=signup');
+        } else {
+          // Non-Gmail user - use password signup
+          console.log('🔐 Password signup for non-Gmail user');
+          const result = await signup({
+            email: formData.email,
+            name: formData.name,
+            password: formData.password
+          });
+          // Signup success - user will be redirected by useEffect
+        }
       }
     } catch (err: any) {
       // Handle specific authentication errors
@@ -148,6 +192,7 @@ const Auth: React.FC = () => {
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {
+    console.log(`🔍 Input change: ${field} = ${value}`, { formData });
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear field error when user starts typing
     if (formErrors[field]) {
@@ -165,6 +210,8 @@ const Auth: React.FC = () => {
     setFormData({
       name: '',
       email: '',
+      password: '',
+      confirmPassword: '',
       acceptTerms: false
     });
     setFormErrors({});
@@ -226,8 +273,8 @@ const Auth: React.FC = () => {
             <h2>{isSignIn ? 'Welcome back' : 'Join Vidyagam'}</h2>
             <p>
               {isSignIn 
-                ? 'Enter your email to receive an OTP and access your dashboard' 
-                : 'Enter your email and name to get started - we\'ll send you an OTP to verify'
+                ? 'Enter your credentials to access your dashboard' 
+                : 'Enter your details to get started with your AI news experience'
               }
             </p>
           </div>
@@ -237,7 +284,7 @@ const Auth: React.FC = () => {
           </div>
 
           <div className="auth-divider">
-            <span>or continue with email OTP</span>
+            <span>or continue with email</span>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">
@@ -279,6 +326,55 @@ const Auth: React.FC = () => {
               )}
             </div>
 
+            {/* Password fields for non-Gmail users */}
+            {formData.email && !isGmailDomain(formData.email) && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="password">Password</label>
+                  <div className="input-wrapper">
+                    <Lock className="input-icon" size={18} />
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={formData.password}
+                      onChange={(e) => handleInputChange('password', e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {formErrors.password && (
+                    <div className="field-error">{formErrors.password}</div>
+                  )}
+                </div>
+
+                {isSignUp && (
+                  <div className="form-group">
+                    <label htmlFor="confirmPassword">Confirm Password</label>
+                    <div className="input-wrapper">
+                      <Lock className="input-icon" size={18} />
+                      <input
+                        id="confirmPassword"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Confirm your password"
+                        value={formData.confirmPassword}
+                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                        required
+                      />
+                    </div>
+                    {formErrors.confirmPassword && (
+                      <div className="field-error">{formErrors.confirmPassword}</div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
 
             {isSignUp && (
               <div className="form-group">
@@ -289,10 +385,13 @@ const Auth: React.FC = () => {
                       checked={formData.acceptTerms}
                       onChange={(e) => handleInputChange('acceptTerms', e.target.checked)}
                       required={isSignUp}
+                      id="acceptTerms"
+                      name="acceptTerms"
                     />
-                    <span className="checkbox-checkmark"></span>
-                    I accept the <Link to="/terms" target="_blank">Terms of Service</Link> and{' '}
-                    <Link to="/privacy" target="_blank">Privacy Policy</Link>
+                    <span>
+                      I accept the <Link to="/terms" target="_blank">Terms of Service</Link> and{' '}
+                      <Link to="/privacy" target="_blank">Privacy Policy</Link>
+                    </span>
                   </label>
                 </div>
                 {formErrors.acceptTerms && (
@@ -314,8 +413,11 @@ const Auth: React.FC = () => {
               disabled={loading}
             >
               {loading 
-                ? (isSignIn ? 'Sending OTP...' : 'Sending OTP...')
-                : (isSignIn ? 'Get OTP to Sign In' : 'Get OTP to Sign Up')
+                ? (isSignIn ? 'Signing In...' : 'Signing Up...')
+                : (formData.email && !isGmailDomain(formData.email)
+                    ? (isSignIn ? 'Sign In with Password' : 'Sign Up with Password')
+                    : (isSignIn ? 'Continue to Sign In' : 'Continue to Sign Up')
+                  )
               }
             </button>
           </form>

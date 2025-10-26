@@ -311,6 +311,32 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
             )}
 
             {!isSignIn && (
+              <div className="form-group">
+                <label htmlFor="modal-confirm-password">Confirm Password</label>
+                <div className="input-wrapper">
+                  <Lock className="input-icon" size={18} />
+                  <input
+                    id="modal-confirm-password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {formErrors.confirmPassword && (
+                  <div className="field-error">{formErrors.confirmPassword}</div>
+                )}
+              </div>
+            )}
+
+            {!isSignIn && (
               <div className="signup-info">
                 <p className="auth-info">
                   📧 <strong>Gmail users:</strong> Use Google Sign In above<br/>

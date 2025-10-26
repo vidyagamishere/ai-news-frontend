@@ -6,6 +6,7 @@ import {
 import type { AITopic, ContentType } from '../../types/auth';
 import { useAuth } from '../../contexts/AuthContext';
 import { authService } from '../../services/authService';
+import apiService from '../../services/api';
 import './onboarding.css';
 
 const CATEGORY_ICONS = {
@@ -56,21 +57,51 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
   const [loading, setLoading] = useState(false);
   
   // Step 1: Welcome & Experience Level
-  const [selectedExperience, setSelectedExperience] = useState<string>('');
-  const [selectedRole, setSelectedRole] = useState<string>('');
+  const [selectedExperience, setSelectedExperience] = useState<string>('intermediate');
+  const [selectedRole, setSelectedRole] = useState<string>('enthusiast');
   
-  // Step 2: Topics of Interest
-  const [availableTopics, setAvailableTopics] = useState<AITopic[]>([]);
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  // Step 2: Categories/Topics of Interest
+  const [availableCategories, setAvailableCategories] = useState<any[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   
   // Step 3: Content Preferences
   const [availableContentTypes, setAvailableContentTypes] = useState<any[]>([]);
-  const [selectedContentTypes, setSelectedContentTypes] = useState<string[]>(['ARTICLE', 'VIDEO', 'AUDIO']);
+  const [selectedContentTypeIds, setSelectedContentTypeIds] = useState<number[]>([]);
   
-  // Step 4: Publisher Preferences
-  const [selectedPublishers, setSelectedPublishers] = useState<string[]>([
-    'techcrunch', 'arxiv', 'venturebeat', 'airesearch', 'techreport', 'awsblog'
-  ]);
+  // Step 4: Publisher Preferences (auto-selected based on categories)
+  const [availablePublishers, setAvailablePublishers] = useState<any[]>([]);
+  const [selectedPublisherIds, setSelectedPublisherIds] = useState<number[]>([]);
+  
+  // Filtered publishers based on selected categories
+  const filteredPublishers = availablePublishers.filter(pub => 
+    selectedCategoryIds.length === 0 || 
+    !pub.category_id || 
+    selectedCategoryIds.includes(pub.category_id)
+  );
+  
+  // Group publishers by category
+  const groupPublishersByCategory = () => {
+    const grouped: { [key: string]: any[] } = {};
+    const uncategorized: any[] = [];
+    
+    filteredPublishers.forEach(publisher => {
+      if (publisher.category_id && selectedCategoryIds.includes(publisher.category_id)) {
+        // Find category name
+        const category = availableCategories.find(cat => cat.id === publisher.category_id);
+        const categoryName = category?.name || `Category ${publisher.category_id}`;
+        
+        if (!grouped[categoryName]) {
+          grouped[categoryName] = [];
+        }
+        grouped[categoryName].push(publisher);
+      } else {
+        // Publishers without category or with unselected categories
+        uncategorized.push(publisher);
+      }
+    });
+    
+    return { grouped, uncategorized };
+  };
 
   const { updatePreferences } = useAuth();
 
@@ -80,82 +111,118 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
     loadAvailableTopicsAndContentTypes();
   }, []);
 
+  // Update publisher selection when categories change
+  useEffect(() => {
+    if (availablePublishers.length > 0 && selectedCategoryIds.length > 0) {
+      updatePublisherSelection(selectedCategoryIds);
+    }
+  }, [selectedCategoryIds, availablePublishers]);
+
   const loadAvailableTopicsAndContentTypes = async () => {
     try {
-      // Get both categories and content types from the backend
-      const response = await authService.getUserRolesAndTopics();
-      
-      // Set topics with auto-selection for Generative AI, AI Start Ups, AI Applications
-      const topics = response.topics || [];
-      setAvailableTopics(topics);
-      
-      const autoSelectedTopics = topics.filter(t => 
-        ['Generative AI', 'AI Start Ups', 'AI Applications'].includes(t.name)
-      ).map(t => t.id);
-      setSelectedTopics(autoSelectedTopics);
-      
-      // Set content types from backend and auto-select all 3
-      const contentTypes = response.content_types || [
-        { id: 1, name: 'ARTICLE', display_name: 'Articles', description: 'News articles and blog posts', icon: '📄', selected: true },
-        { id: 2, name: 'VIDEO', display_name: 'Videos', description: 'Video content and tutorials', icon: '🎥', selected: true },
-        { id: 3, name: 'AUDIO', display_name: 'Podcasts', description: 'Podcast episodes and audio content', icon: '🎙️', selected: true }
-      ];
-      
-      // Deduplicate content types by id to avoid duplicates
-      const uniqueContentTypes = contentTypes.filter((ct, index, arr) => 
-        arr.findIndex(item => item.id === ct.id) === index
-      );
-      setAvailableContentTypes(uniqueContentTypes);
-      
-      const autoSelectedContentTypes = uniqueContentTypes.filter(ct => ct.selected).map(ct => ct.name);
-      setSelectedContentTypes(autoSelectedContentTypes);
-    } catch (error) {
-      console.error('Failed to load topics:', error);
-      // Provide fallback topics matching backend categories
-      setAvailableTopics([
-        { id: 'ml_foundations', name: 'Machine Learning', category: 'research', selected: true, description: 'Core ML algorithms, techniques, and foundations' },
-        { id: 'deep_learning', name: 'Deep Learning', category: 'research', selected: true, description: 'Neural networks, deep learning research and applications' },
-        { id: 'nlp_llm', name: 'Natural Language Processing', category: 'language', selected: true, description: 'Language models, NLP, and conversational AI' },
-        { id: 'computer_vision', name: 'Computer Vision', category: 'research', selected: false, description: 'Image recognition, visual AI, and computer vision' },
-        { id: 'ai_tools', name: 'AI Tools & Platforms', category: 'platform', selected: false, description: 'New AI tools and platforms for developers' },
-        { id: 'ai_research', name: 'AI Research Papers', category: 'research', selected: false, description: 'Latest academic research and scientific breakthroughs' },
-        { id: 'ai_ethics', name: 'AI Ethics & Safety', category: 'policy', selected: false, description: 'Responsible AI, safety research, and ethical considerations' },
-        { id: 'robotics', name: 'Robotics & Automation', category: 'robotics', selected: false, description: 'Physical AI, robotics, and automation systems' },
-        { id: 'ai_business', name: 'AI in Business', category: 'company', selected: false, description: 'Enterprise AI and industry applications' },
-        { id: 'ai_startups', name: 'AI Startups & Funding', category: 'startup', selected: false, description: 'New AI companies and startup ecosystem' },
-        { id: 'ai_healthcare', name: 'AI in Healthcare', category: 'healthcare', selected: false, description: 'Medical AI applications and healthcare tech' },
-        { id: 'ai_finance', name: 'AI in Finance', category: 'finance', selected: false, description: 'Financial AI, trading, and fintech applications' }
+      // Load categories, content types, and publishers from API
+      const [categoriesResponse, contentTypesResponse, publishersResponse] = await Promise.all([
+        apiService.getAvailableCategories(),
+        apiService.getAvailableContentTypes(), 
+        apiService.getAvailablePublishers()
       ]);
+      
+      // Set categories with smart defaults
+      const categories = categoriesResponse.categories || [];
+      setAvailableCategories(categories);
+      
+      // Auto-select specific category IDs: 5 (Generative AI), 1 (Machine Learning), 2 (AI Applications)
+      const preferredCategoryIds = [5, 1, 2];
+      const existingCategoryIds = categories.map(cat => cat.id);
+      const selectedCats = preferredCategoryIds.filter(id => existingCategoryIds.includes(id));
+      
+      // If preferred IDs don't exist, fall back to first available categories
+      const finalSelectedCats = selectedCats.length > 0 ? selectedCats : categories.slice(0, 3).map(c => c.id);
+      setSelectedCategoryIds(finalSelectedCats);
+      
+      // Set content types and auto-select all
+      const contentTypes = contentTypesResponse.content_types || [];
+      setAvailableContentTypes(contentTypes);
+      setSelectedContentTypeIds(contentTypes.map(ct => ct.id)); // Select all content types
+      
+      // Set publishers for auto-selection
+      const publishers = publishersResponse.publishers || [];
+      setAvailablePublishers(publishers);
+      
+      console.log('📊 Onboarding data loaded:', {
+        categories: categories.length,
+        contentTypes: contentTypes.length,
+        publishers: publishers.length,
+        autoSelectedCategories: finalSelectedCats.length,
+        selectedCategoryIds: finalSelectedCats
+      });
+      
+      // Auto-select publishers from selected categories
+      updatePublisherSelection(finalSelectedCats);
+    } catch (error) {
+      console.error('Error loading onboarding data:', error);
+      // Set fallback data
+      setAvailableCategories([]);
+      setAvailableContentTypes([]);
+      setAvailablePublishers([]);
     }
   };
 
-  const handleTopicToggle = (topicId: string) => {
-    setSelectedTopics(prev => 
-      prev.includes(topicId) 
-        ? prev.filter(id => id !== topicId)
-        : [...prev, topicId]
+  // Smart publisher selection based on selected categories
+  const updatePublisherSelection = (categoryIds: number[]) => {
+    const relevantPublishers = availablePublishers.filter(pub => 
+      categoryIds.length === 0 || 
+      !pub.category_id || 
+      categoryIds.includes(pub.category_id)
     );
+    
+    // Auto-select all relevant publishers
+    const autoSelectedIds = relevantPublishers.map(pub => pub.id);
+    
+    // Only update if there are relevant publishers
+    if (autoSelectedIds.length > 0) {
+      setSelectedPublisherIds(autoSelectedIds);
+    }
+    
+    console.log('📰 Auto-selected publishers for categories:', { 
+      categoryIds, 
+      relevantPublishers: relevantPublishers.length,
+      selectedIds: autoSelectedIds 
+    });
   };
 
-  const handleContentTypeToggle = (contentTypeName: string) => {
-    setSelectedContentTypes(prev => {
-      const newSelection = prev.includes(contentTypeName) 
-        ? prev.filter(name => name !== contentTypeName)
-        : [...prev, contentTypeName];
+  const handleCategoryToggle = (categoryId: number) => {
+    setSelectedCategoryIds(prev => {
+      const newSelection = prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId];
+      
+      // Auto-update publisher selection when categories change
+      updatePublisherSelection(newSelection);
+      return newSelection;
+    });
+  };
+
+  const handleContentTypeToggle = (contentTypeId: number) => {
+    setSelectedContentTypeIds(prev => {
+      const newSelection = prev.includes(contentTypeId) 
+        ? prev.filter(id => id !== contentTypeId)
+        : [...prev, contentTypeId];
       
       // Ensure at least 1 content type is selected
       return newSelection.length === 0 ? prev : newSelection;
     });
   };
 
-  const handlePublisherToggle = (publisherId: string) => {
-    setSelectedPublishers(prev => {
+  const handlePublisherToggle = (publisherId: number) => {
+    setSelectedPublisherIds(prev => {
       const newSelection = prev.includes(publisherId) 
         ? prev.filter(id => id !== publisherId)
         : [...prev, publisherId];
       
-      // Ensure at least 3 publishers are selected
-      return newSelection.length < 3 ? prev : newSelection;
+      // Ensure we don't select publishers that aren't in filtered list
+      const filteredIds = filteredPublishers.map(pub => pub.id);
+      return newSelection.filter(id => filteredIds.includes(id));
     });
   };
 
@@ -175,18 +242,35 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
   const handleComplete = async () => {
     setLoading(true);
     try {
-      // Get actual category names from selected topics
-      const selectedCategoryNames = availableTopics
-        .filter(topic => selectedTopics.includes(topic.id))
-        .map(topic => topic.name);
+      // Get actual category names from selected categories
+      const selectedCategoryNames = availableCategories
+        .filter(category => selectedCategoryIds.includes(category.id))
+        .map(category => category.name);
+
+      // Get content type names from selected content types
+      const selectedContentTypeNames = availableContentTypes
+        .filter(contentType => selectedContentTypeIds.includes(contentType.id))
+        .map(contentType => contentType.name);
+
+      // Get publisher names from selected publishers
+      const selectedPublisherNames = availablePublishers
+        .filter(publisher => selectedPublisherIds.includes(publisher.id))
+        .map(publisher => publisher.name);
 
       const preferences = {
         // Core user_preferences table fields
         experience_level: selectedExperience,
         professional_roles: [selectedRole],
-        categories_selected: selectedCategoryNames, // Store actual category names
-        content_types_selected: selectedContentTypes, // Already in correct format
-        publishers_selected: selectedPublishers,
+        
+        // Name-based arrays (backward compatibility)
+        categories_selected: selectedCategoryNames,
+        content_types_selected: selectedContentTypeNames,
+        publishers_selected: selectedPublisherNames,
+        
+        // ID-based arrays (preferred for filtering)
+        category_ids_selected: selectedCategoryIds,
+        content_type_ids_selected: selectedContentTypeIds,
+        publisher_ids_selected: selectedPublisherIds,
         
         // Additional preference fields
         newsletter_frequency: "weekly",
@@ -209,9 +293,13 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return selectedExperience && selectedRole && selectedTopics.length >= 1;
+        return selectedExperience && selectedRole && selectedCategoryIds.length >= 1;
       case 2:
-        return selectedContentTypes.length >= 1 && selectedPublishers.length >= 3;
+        // Ensure we have at least 1 content type and at least 3 publishers from filtered list
+        const validSelectedPublishers = selectedPublisherIds.filter(id => 
+          filteredPublishers.some(pub => pub.id === id)
+        );
+        return selectedContentTypeIds.length >= 1 && validSelectedPublishers.length >= 3;
       default:
         return false;
     }
@@ -266,24 +354,24 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
       <div className="preference-section">
         <h3>Select your interests (3 are pre-selected)</h3>
         <div className="topics-grid">
-          {availableTopics.map(topic => {
-            const IconComponent = CATEGORY_ICONS[topic.category as keyof typeof CATEGORY_ICONS] || Brain;
+          {availableCategories.map(category => {
+            const IconComponent = CATEGORY_ICONS[category.category as keyof typeof CATEGORY_ICONS] || Brain;
             return (
               <button
-                key={topic.id}
-                className={`topic-card ${selectedTopics.includes(topic.id) ? 'selected' : ''}`}
-                onClick={() => handleTopicToggle(topic.id)}
+                key={category.id}
+                className={`topic-card ${selectedCategoryIds.includes(category.id) ? 'selected' : ''}`}
+                onClick={() => handleCategoryToggle(category.id)}
               >
                 <IconComponent className="topic-icon" size={20} />
                 <div className="topic-content">
-                  <h4>{topic.name}</h4>
-                  <p>{topic.description}</p>
+                  <h4>{category.name}</h4>
+                  <p>{category.description}</p>
                 </div>
               </button>
             );
           })}
         </div>
-        <p className="topic-count">{selectedTopics.length} topics selected</p>
+        <p className="topic-count">{selectedCategoryIds.length} categories selected</p>
       </div>
     </div>
   );
@@ -303,49 +391,86 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
             <label key={contentType.id} className="content-type-checkbox">
               <input
                 type="checkbox"
-                checked={selectedContentTypes.includes(contentType.name)}
-                onChange={() => handleContentTypeToggle(contentType.name)}
+                checked={selectedContentTypeIds.includes(contentType.id)}
+                onChange={() => handleContentTypeToggle(contentType.id)}
                 className="content-type-input"
               />
               <div className="content-type-content">
                 <span className="content-type-icon">{contentType.icon || '📄'}</span>
                 <div>
-                  <h4>{contentType.display_name}</h4>
+                  <h4>{contentType.display_name || contentType.name}</h4>
                   <p>{contentType.description}</p>
                 </div>
               </div>
             </label>
           ))}
         </div>
-        <p className="content-note">{selectedContentTypes.length} of {availableContentTypes.length} content types selected (minimum 1 required)</p>
+        <p className="content-note">{selectedContentTypeIds.length} of {availableContentTypes.length} content types selected (minimum 1 required)</p>
       </div>
 
       <div className="preference-section">
         <h3>Trusted AI news sources (at least 3 required)</h3>
-        <div className="publishers-list">
-          {[
-            { id: 'techcrunch', name: 'TechCrunch', description: 'Leading tech news and startup coverage' },
-            { id: 'arxiv', name: 'arXiv', description: 'Research papers and academic publications' },
-            { id: 'venturebeat', name: 'VentureBeat', description: 'Technology and business news' },
-            { id: 'airesearch', name: 'AI Research', description: 'Latest AI research and developments' },
-            { id: 'techreport', name: 'The Register', description: 'Technology industry analysis' },
-            { id: 'awsblog', name: 'AWS Blog', description: 'Cloud computing and AI services' }
-          ].map(publisher => (
-            <label key={publisher.id} className="publisher-checkbox">
-              <input
-                type="checkbox"
-                checked={selectedPublishers.includes(publisher.id)}
-                onChange={() => handlePublisherToggle(publisher.id)}
-                className="publisher-input"
-              />
-              <div className="publisher-content">
-                <h4>{publisher.name}</h4>
-                <p>{publisher.description}</p>
-              </div>
-            </label>
-          ))}
-        </div>
-        <p className="publisher-note">{selectedPublishers.length} of 6 sources selected (minimum 3 required)</p>
+        {(() => {
+          const { grouped, uncategorized } = groupPublishersByCategory();
+          const validSelectedCount = selectedPublisherIds.filter(id => 
+            filteredPublishers.some(pub => pub.id === id)
+          ).length;
+          
+          return (
+            <>
+              {/* Display publishers grouped by selected categories */}
+              {Object.entries(grouped).map(([categoryName, publishers]) => (
+                <div key={categoryName} className="publisher-category-group">
+                  <h4 className="category-group-title">📚 {categoryName}</h4>
+                  <div className="publishers-list">
+                    {publishers.map(publisher => (
+                      <label key={publisher.id} className="publisher-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={selectedPublisherIds.includes(publisher.id)}
+                          onChange={() => handlePublisherToggle(publisher.id)}
+                          className="publisher-input"
+                        />
+                        <div className="publisher-content">
+                          <h4>{publisher.name}</h4>
+                          <p>{publisher.description || 'AI news and insights'}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              
+              {/* Display uncategorized publishers if any */}
+              {uncategorized.length > 0 && (
+                <div className="publisher-category-group">
+                  <h4 className="category-group-title">📰 General AI News Sources</h4>
+                  <div className="publishers-list">
+                    {uncategorized.map(publisher => (
+                      <label key={publisher.id} className="publisher-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={selectedPublisherIds.includes(publisher.id)}
+                          onChange={() => handlePublisherToggle(publisher.id)}
+                          className="publisher-input"
+                        />
+                        <div className="publisher-content">
+                          <h4>{publisher.name}</h4>
+                          <p>{publisher.description || 'AI news and insights'}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <p className="publisher-note">
+                {validSelectedCount} of {filteredPublishers.length} sources selected 
+                (minimum 3 required from your selected AI categories)
+              </p>
+            </>
+          );
+        })()}
       </div>
     </div>
   );

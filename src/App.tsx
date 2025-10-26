@@ -3,13 +3,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AdminAuthProvider } from './contexts/AdminAuthContext';
 import Home from './pages/Home';
+import Categories from './pages/Categories';
+import Preferences from './pages/Preferences';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Archive from './pages/Archive';
 import EmailVerification from './pages/EmailVerification';
-import Preferences from './pages/Preferences';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import About from './pages/About';
@@ -196,6 +197,8 @@ function AppContent() {
         } 
       />
       <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
+          <Route path="/preferences" element={<ProtectedRoute><Preferences /></ProtectedRoute>} />
     </Routes>
   );
 }

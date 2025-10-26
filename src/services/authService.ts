@@ -62,16 +62,58 @@ class AuthService {
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    return this.request('/api/v2/auth/signin', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
+    // Check if it's a Gmail domain
+    const isGmail = this.isGmailDomain(credentials.email);
+    
+    if (isGmail) {
+      // Gmail users use OTP-based login
+      return this.request('/api/v2/auth/signin', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      });
+    } else {
+      // Non-Gmail users use password-based login
+      return this.request('/api/v2/auth/signin', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password
+        }),
+      });
+    }
   }
 
   async signup(credentials: SignupCredentials): Promise<AuthResponse | OTPResponse> {
-    // For OTP-based signup, we just need email and name
-    // Password validation is removed as we use OTP verification
-    return this.sendOTP(credentials.email, credentials.name);
+    // Check if it's a Gmail domain
+    const isGmail = this.isGmailDomain(credentials.email);
+    
+    if (isGmail) {
+      // Gmail users use OTP-based signup
+      return this.sendOTP(credentials.email, credentials.name);
+    } else {
+      // Non-Gmail users use password-based signup
+      return this.request('/api/v2/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: credentials.email,
+          name: credentials.name,
+          password: credentials.password,
+          confirm_password: credentials.password
+        }),
+      });
+    }
+  }
+
+  // Helper method to check if email is Gmail domain
+  private isGmailDomain(email: string): boolean {
+    const gmailDomains = ['gmail.com', 'googlemail.com'];
+    const domain = email.toLowerCase().split('@')[1];
+    return gmailDomains.includes(domain);
+  }
+
+  // Public method to check if email is Gmail domain (for UI logic)
+  public checkIsGmailDomain(email: string): boolean {
+    return this.isGmailDomain(email);
   }
 
   async validateToken(_token: string): Promise<User> {

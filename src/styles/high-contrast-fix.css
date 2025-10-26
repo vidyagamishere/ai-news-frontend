@@ -1,0 +1,288 @@
+/* 
+ * High Contrast Fix - Simple & Effective
+ * Forces proper text contrast across all elements
+ */
+
+/* === GLOBAL TEXT CONTRAST FIXES === */
+
+/* Default text - ensure it's always readable */
+body, 
+* {
+  color: #1f2937 !important; /* Dark gray text by default */
+}
+
+/* Dark backgrounds get white text */
+header,
+.bg-gradient-to-br,
+.bg-slate-900,
+.bg-gray-900,
+[class*="from-slate-900"],
+[class*="via-gray-900"],
+[class*="to-slate-800"],
+[class*="bg-red-"],
+.breaking-news,
+footer {
+  color: #ffffff !important;
+}
+
+/* All children of dark backgrounds */
+header *,
+.bg-gradient-to-br *,
+.bg-slate-900 *,
+.bg-gray-900 *,
+[class*="from-slate-900"] *,
+[class*="via-gray-900"] *,
+[class*="to-slate-800"] *,
+[class*="bg-red-"] *,
+.breaking-news *,
+footer * {
+  color: #ffffff !important;
+}
+
+/* Light backgrounds get dark text */
+main,
+.bg-white,
+.bg-gray-50,
+.bg-gray-100,
+.card,
+.article-card,
+.bg-gradient-to-br.from-slate-50 {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+}
+
+/* All children of light backgrounds */
+main *,
+.bg-white *,
+.bg-gray-50 *,
+.bg-gray-100 *,
+.card *,
+.article-card * {
+  color: #1f2937 !important;
+}
+
+/* === SPECIFIC ELEMENT FIXES === */
+
+/* Header section - force white text */
+.landing-hero,
+.landing-hero * {
+  color: #ffffff !important;
+}
+
+/* Brand name and tagline */
+.landing-hero .text-on-dark,
+.landing-hero .text-on-dark-secondary,
+.text-on-dark,
+.text-on-dark-secondary,
+.text-on-dark-tertiary {
+  color: #ffffff !important;
+}
+
+/* Main content areas - force dark text and light background */
+main,
+main *,
+.max-w-7xl.mx-auto main,
+.max-w-7xl.mx-auto main * {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+}
+
+/* Exception: keep dark backgrounds dark */
+main .bg-gradient-to-br,
+main .bg-gradient-to-br *,
+main [class*="from-slate-900"],
+main [class*="from-slate-900"] * {
+  background: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a) !important;
+  color: #ffffff !important;
+}
+
+/* Article cards - ensure readability */
+.article-card {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  color: #1f2937 !important;
+}
+
+.article-card .article-title {
+  color: #1f2937 !important;
+  font-weight: 600 !important;
+}
+
+.article-card .article-summary {
+  color: #4b5563 !important;
+}
+
+.article-card .article-meta {
+  color: #6b7280 !important;
+}
+
+/* Buttons - proper contrast */
+.btn-base {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.btn-secondary {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.btn-ghost {
+  background-color: transparent !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Filter chips */
+.filter-chip {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.filter-chip.active {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+/* Badges */
+.badge-primary {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+.badge-success {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.badge-error {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+/* Category stats in dark sections */
+.card-glass {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.card-glass * {
+  color: #ffffff !important;
+}
+
+/* Breaking news ticker */
+.animate-scroll * {
+  color: #ffffff !important;
+}
+
+/* Form inputs */
+input, 
+textarea, 
+select {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Navigation categories */
+nav * {
+  color: #ffffff !important;
+}
+
+/* Mobile dashboard specific fixes */
+.dashboard-container {
+  background-color: #f9fafb !important;
+  color: #1f2937 !important;
+}
+
+.dashboard-container * {
+  color: #1f2937 !important;
+}
+
+/* Section headers */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600 !important;
+}
+
+/* Dark section headings stay white */
+header h1, header h2, header h3,
+.bg-gradient-to-br h1, .bg-gradient-to-br h2, .bg-gradient-to-br h3,
+footer h1, footer h2, footer h3 {
+  color: #ffffff !important;
+}
+
+/* Light section headings are dark */
+main h1, main h2, main h3,
+.bg-white h1, .bg-white h2, .bg-white h3,
+.card h1, .card h2, .card h3 {
+  color: #1f2937 !important;
+}
+
+/* Special handling for gradient text - make it readable */
+.bg-clip-text.text-transparent {
+  background: none !important;
+  color: #ffffff !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+}
+
+/* Content section headers */
+.bg-gradient-to-r.from-blue-600,
+.bg-gradient-to-r.from-blue-600 * {
+  color: #ffffff !important;
+}
+
+/* Ensure all section content is readable */
+section {
+  position: relative;
+}
+
+section.bg-white,
+section.bg-white * {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+}
+
+/* Link colors */
+a {
+  color: #3b82f6 !important;
+  text-decoration: underline !important;
+}
+
+/* Dark background links */
+header a,
+.bg-gradient-to-br a,
+footer a {
+  color: #60a5fa !important;
+}
+
+/* === MOBILE SPECIFIC FIXES === */
+@media (max-width: 768px) {
+  /* Ensure all mobile text is readable */
+  .landing-container * {
+    line-height: 1.5 !important;
+  }
+  
+  /* Mobile buttons */
+  .btn-base {
+    min-height: 44px !important;
+    font-size: 16px !important;
+  }
+  
+  /* Mobile article cards */
+  .article-card-mobile {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    padding: 16px !important;
+    margin-bottom: 16px !important;
+  }
+}

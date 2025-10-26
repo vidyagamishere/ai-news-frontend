@@ -396,7 +396,7 @@ export const apiService = {
 
   // Get Generative AI category stories for pre-login users  
   // Backend endpoint: GET /generative-ai-content (uses articles table with AI filters)
-  getGenerativeAIStories: async (limit: number = 6): Promise<{
+  getGenerativeAIStories: async (limit: number = 3): Promise<{
     articles: Array<{
       title: string;
       summary: string;
@@ -412,6 +412,96 @@ export const apiService = {
   }> => {
     console.log('🤖 Fetching Generative AI stories for landing page...');
     return await makeModularRequest('generative-ai-content', 'GET', { limit });
+  },
+
+  // Get AI Applications category stories for pre-login users  
+  // Backend endpoint: GET /ai-applications-content (uses articles table with AI filters)
+  getAIApplicationsStories: async (limit: number = 3): Promise<{
+    articles: Array<{
+      title: string;
+      summary: string;
+      url: string;
+      source: string;
+      significanceScore: number;
+      published_date: string | null;
+      content_type: string;
+      category: string;
+    }>;
+    count: number;
+    type: string;
+  }> => {
+    console.log('🏢 Fetching AI Applications stories for landing page...');
+    return await makeModularRequest('ai-applications-content', 'GET', { limit });
+  },
+
+  // Get AI Startups category stories for pre-login users  
+  // Backend endpoint: GET /ai-startups-content (uses articles table with AI filters)
+  getAIStartupsStories: async (limit: number = 3): Promise<{
+    articles: Array<{
+      title: string;
+      summary: string;
+      url: string;
+      source: string;
+      significanceScore: number;
+      published_date: string | null;
+      content_type: string;
+      category: string;
+    }>;
+    count: number;
+    type: string;
+  }> => {
+    console.log('🚀 Fetching AI Startups stories for landing page...');
+    return await makeModularRequest('ai-startups-content', 'GET', { limit });
+  },
+
+  // Get all landing page content organized by categories and content types
+  // Backend endpoint: GET /landing-content (mobile dashboard style organization)
+  getLandingContent: async (limitPerType: number = 3): Promise<{
+    categories: Array<{
+      id: number;
+      name: string;
+      priority: number;
+      description: string;
+      content: {
+        blogs: Array<{
+          title: string;
+          summary: string;
+          url: string;
+          source: string;
+          significanceScore: number;
+          published_date: string | null;
+          author: string;
+          category: string;
+          content_type: string;
+        }>;
+        podcasts: Array<{
+          title: string;
+          summary: string;
+          url: string;
+          source: string;
+          significanceScore: number;
+          published_date: string | null;
+          author: string;
+          category: string;
+          content_type: string;
+        }>;
+        videos: Array<{
+          title: string;
+          summary: string;
+          url: string;
+          source: string;
+          significanceScore: number;
+          published_date: string | null;
+          author: string;
+          category: string;
+          content_type: string;
+        }>;
+      };
+    }>;
+    total_categories: number;
+  }> => {
+    console.log('🏠 Fetching landing content for all categories and content types...');
+    return await makeModularRequest('landing-content', 'GET', { limit_per_type: limitPerType });
   },
 
   // Get personalized digest - requires authentication
@@ -657,7 +747,7 @@ export const apiService = {
   },
 
   // Get available publishers  
-  getAvailablePublishers: async (): Promise<{ publishers: string[]; count: number }> => {
+  getAvailablePublishers: async (): Promise<{ publishers: Array<{id: number; name: string; category_id?: number; priority?: number}>; count: number }> => {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     // Call the actual API endpoint instead of returning empty
@@ -670,8 +760,40 @@ export const apiService = {
   },
 
   // Get available content types
-  getAvailableContentTypes: async (): Promise<{ content_types: Array<{name: string; display_name: string}>; count: number }> => {
-    return await makeModularRequest('content-types', 'GET');
+  getAvailableContentTypes: async (): Promise<{ content_types: Array<{id: number; name: string; display_name: string; description?: string}>; count: number }> => {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    try {
+      return await makeModularRequest('api/v1/available-content-types', 'GET', {}, null, headers);
+    } catch (error) {
+      console.warn('Failed to fetch content types, using fallback:', error);
+      return { content_types: [], count: 0 };
+    }
+  },
+
+  // Get available categories for onboarding
+  getAvailableCategories: async (): Promise<{ categories: Array<{id: number; name: string; description?: string; priority?: number}>; count: number }> => {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    try {
+      return await makeModularRequest('api/v1/available-categories', 'GET', {}, null, headers);
+    } catch (error) {
+      console.warn('Failed to fetch categories, using fallback:', error);
+      return { categories: [], count: 0 };
+    }
+  },
+
+  // Get publishers for specific category
+  getPublishersByCategory: async (categoryId?: number): Promise<{ publishers: Array<{id: number; name: string; category_id?: number; priority?: number}>; count: number }> => {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    try {
+      const url = categoryId ? `api/v1/publishers?category_id=${categoryId}` : 'api/v1/available-publishers';
+      return await makeModularRequest(url, 'GET', {}, null, headers);
+    } catch (error) {
+      console.warn('Failed to fetch publishers by category, using fallback:', error);
+      return { publishers: [], count: 0 };
+    }
   },
 
   // Update user preferences (enhanced)
@@ -686,11 +808,28 @@ export const apiService = {
     };
     
     return await makeModularRequest('api/v2/auth/preferences', 'PUT', {}, preferences, headers);
+  },
+
+  // Content counts endpoint
+  getContentCounts: async (categoryId?: string): Promise<any> => {
+    debug.enter('getContentCounts', { categoryId });
+    
+    const params = categoryId ? { category_id: categoryId } : {};
+    
+    try {
+      const response = await makeModularRequest('content-counts', 'GET', params, null, {}, true);
+      debug.exit('getContentCounts', { totalArticles: response.total_articles, totalPodcasts: response.total_podcasts, totalVideos: response.total_videos });
+      return response;
+    } catch (error) {
+      debug.error('getContentCounts', error);
+      throw error;
+    }
   }
 };
 
 console.log('✅ API Service initialized with complete modular FastAPI architecture');
 console.log('🔗 All endpoints now use direct modular FastAPI routing with APIRouter');
 console.log('🔐 Authentication, admin, and content endpoints integrated via PostgreSQL backend');
+console.log('📊 Content counts endpoint added for real-time statistics');
 
 export default apiService;
