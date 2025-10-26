@@ -877,12 +877,12 @@ const CompleteMobileDashboard: React.FC = () => {
                         <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900">
+                    <h1 className="dashboard-hamburger-title text-2xl font-bold text-gray-900">
                       Vidyagam
                     </h1>
                   </div>
                   <span 
-                    className="text-xs mt-1" 
+                    className="dashboard-hamburger-subtitle text-xs mt-1" 
                     style={{ 
                       color: '#6b7280',
                       fontSize: '12px',
@@ -1664,6 +1664,8 @@ const CompleteMobileDashboard: React.FC = () => {
           @media (max-width: 640px) {
             .text-2xl { font-size: 1.25rem !important; }
             .text-sm { font-size: 0.75rem !important; }
+            .dashboard-hamburger-title { font-size: 1.25rem !important; }
+            .dashboard-hamburger-subtitle { fontSize: 0.625rem !important; }
           }
         `}
       </style>

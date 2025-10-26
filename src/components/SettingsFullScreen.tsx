@@ -288,56 +288,30 @@ const SettingsFullScreen: React.FC<SettingsFullScreenProps> = ({
                 Content Types
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '500px' }}>
-                {availableContentTypes.map(contentType => (
-                  <label
-                    key={contentType.id}
+                {availableContentTypes.map((type) => (
+                  <div
+                    key={type.id}
+                    onClick={() => handleContentTypeToggle(type.id)}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px',
-                      border: userPreferences.content_types_selected.includes(contentType.id) ? '2px solid #111827' : '1px solid #e5e7eb',
-                      borderRadius: '8px',
+                      padding: '20px',
+                      border: `2px solid ${userPreferences.content_types_selected.includes(type.id) ? '#3b82f6' : '#e5e7eb'}`,
+                      borderRadius: '12px',
                       cursor: 'pointer',
+                      backgroundColor: userPreferences.content_types_selected.includes(type.id) ? '#eff6ff' : '#ffffff',
                       transition: 'all 0.2s',
-                      backgroundColor: '#ffffff'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!userPreferences.content_types_selected.includes(contentType.id)) {
-                        e.currentTarget.style.borderColor = '#9ca3af';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!userPreferences.content_types_selected.includes(contentType.id)) {
-                        e.currentTarget.style.borderColor = '#e5e7eb';
-                      }
+                      position: 'relative'
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={userPreferences.content_types_selected.includes(contentType.id)}
-                      onChange={(e) => {
-                        setUserPreferences((prev: any) => ({
-                          ...prev,
-                          content_types_selected: e.target.checked
-                            ? [...prev.content_types_selected, contentType.id]
-                            : prev.content_types_selected.filter((id: any) => id !== contentType.id)
-                        }));
-                        setSettingsChanged(true);
-                      }}
-                      style={{ width: '18px', height: '18px', accentColor: '#111827', cursor: 'pointer' }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                        {contentType.name}
+                    {userPreferences.content_types_selected.includes(type.id) && (
+                      <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
+                        <svg style={{ width: '24px', height: '24px', color: '#3b82f6' }} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
                       </div>
-                      {contentType.description && (
-                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
-                          {contentType.description}
-                        </div>
-                      )}
-                    </div>
-                  </label>
+                    )}
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>{type.name}</h3>
+                    <p style={{ fontSize: '14px', color: '#6b7280' }}>{type.display_name || type.description || 'No description available'}</p>
+                  </div>
                 ))}
               </div>
             </div>

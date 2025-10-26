@@ -789,12 +789,12 @@ const Landing: React.FC = () => {
                       <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <h1 className="text-2xl font-bold text-gray-900">
+                  <h1 className="hamburger-menu-title text-2xl font-bold text-gray-900">
                     Vidyagam
                   </h1>
                 </div>
                 <span 
-                  className="text-xs mt-1" 
+                  className="hamburger-menu-subtitle text-xs mt-1" 
                   style={{ 
                     color: '#6b7280',
                     fontSize: '12px',
@@ -1460,6 +1460,8 @@ const Landing: React.FC = () => {
           @media (max-width: 768px) {
             .landing-title { font-size: 18px !important; }
             .landing-subtitle { font-size: 10px !important; }
+            .hamburger-menu-title { font-size: 18px !important; }
+            .hamburger-menu-subtitle { font-size: 10px !important; }
             .landing-logo-section { margin: 0 !important; }
             .landing-auth-buttons { gap: 4px !important; }
             .landing-auth-buttons button { padding: 8px !important; }
@@ -1468,7 +1470,7 @@ const Landing: React.FC = () => {
             .hero-title { fontSize: 22px !important; }
             .hero-subtitle { fontSize: 14px !important; }
             .section-title { fontSize: 18px !important; }
-            .hero-buttons { flexDirection: 'column' !important; gap: '12px' !important; }
+            .hero-buttons { flexDirection: column !important; gap: 12px !important; }
             .category-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 16px !important; }
             .content-grid { grid-template-columns: 1fr !important; }
             .content-stats { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
@@ -1482,6 +1484,8 @@ const Landing: React.FC = () => {
           @media (max-width: 1024px) and (min-width: 769px) {
             .landing-title { font-size: 20px !important; }
             .landing-subtitle { font-size: 11px !important; }
+            .hamburger-menu-title { font-size: 20px !important; }
+            .hamburger-menu-subtitle { font-size: 11px !important; }
             .landing-btn-text { display: none !important; }
             .landing-auth-buttons { gap: 4px !important; }
             .landing-auth-buttons button { padding: 8px !important; }
