@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { LogIn, UserPlus } from 'lucide-react';
 import SEO from '../components/SEO';
 import { LandingSkeleton } from '../components/LoadingSkeleton';
 import { apiService } from '../services/api';
@@ -601,7 +602,7 @@ const Landing: React.FC = () => {
       />
       
       {/* Modern Header */}
-  <header className="bg-white shadow-sm">
+  <header className="landing-header bg-white shadow-sm">
     <div className="max-w-7xl mx-auto px-4">
       <div className="flex justify-between items-center h-16">
         
@@ -637,19 +638,19 @@ const Landing: React.FC = () => {
         </div>
 
         {/* Center: Logo with AI Intelligence Icon and subtitle */}
-        <div className="flex flex-col items-center">
+        <div className="landing-logo-section flex flex-col items-center flex-1">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="landing-title text-2xl font-bold text-gray-900">
               Vidyagam
             </h1>
           </div>
           <span 
-            className="text-xs mt-1" 
+            className="landing-subtitle text-xs mt-1" 
             style={{ 
               color: '#6b7280',
               fontSize: '12px',
@@ -661,10 +662,11 @@ const Landing: React.FC = () => {
           </span>
         </div>
 
-        {/* Right: Auth Buttons */}
-        <div className={`${isMobile ? 'hidden' : 'flex'} items-center space-x-4`}>
+        {/* Right: Auth Buttons - Desktop text, Mobile/Tablet icons */}
+        <div className="landing-auth-buttons flex items-center space-x-2">
           <button 
             onClick={() => navigateToAuth('signin')}
+            className="landing-signin-btn"
             style={{
               backgroundColor: '#ffffff',
               color: '#000000',
@@ -675,7 +677,10 @@ const Landing: React.FC = () => {
               borderRadius: '6px',
               cursor: 'pointer',
               transition: 'all 0.2s',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.backgroundColor = '#f9fafb';
@@ -685,11 +690,15 @@ const Landing: React.FC = () => {
               e.currentTarget.style.backgroundColor = '#ffffff';
               e.currentTarget.style.borderColor = '#e5e7eb';
             }}
+            aria-label="Sign In"
+            title="Sign In"
           >
-            Sign In
+            <LogIn size={18} />
+            <span className="landing-btn-text">Sign In</span>
           </button>
           <button 
             onClick={() => navigateToAuth('signup')}
+            className="landing-signup-btn"
             style={{
               backgroundColor: '#ffffff',
               color: '#000000',
@@ -700,7 +709,10 @@ const Landing: React.FC = () => {
               borderRadius: '6px',
               cursor: 'pointer',
               transition: 'all 0.2s',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.backgroundColor = '#000000';
@@ -710,8 +722,11 @@ const Landing: React.FC = () => {
               e.currentTarget.style.backgroundColor = '#ffffff';
               e.currentTarget.style.color = '#000000';
             }}
+            aria-label="Get Started"
+            title="Get Started"
           >
-            Get Started
+            <UserPlus size={18} />
+            <span className="landing-btn-text">Get Started</span>
           </button>
         </div>
 
@@ -1431,8 +1446,14 @@ const Landing: React.FC = () => {
             100% { transform: translateX(-50%); }
           }
           
-          /* Mobile responsiveness */
+          /* Mobile responsiveness - Header */
           @media (max-width: 768px) {
+            .landing-title { font-size: 18px !important; }
+            .landing-subtitle { font-size: 10px !important; }
+            .landing-logo-section { margin: 0 !important; }
+            .landing-auth-buttons { gap: 4px !important; }
+            .landing-auth-buttons button { padding: 8px !important; }
+            .landing-btn-text { display: none !important; }
             .horizontal-menu-section { display: none !important; }
             .hero-title { font-size: 22px !important; }
             .hero-subtitle { font-size: 14px !important; }
@@ -1450,6 +1471,11 @@ const Landing: React.FC = () => {
           
           /* Tablet responsiveness */
           @media (max-width: 1024px) and (min-width: 769px) {
+            .landing-title { font-size: 20px !important; }
+            .landing-subtitle { font-size: 11px !important; }
+            .landing-btn-text { display: none !important; }
+            .landing-auth-buttons { gap: 4px !important; }
+            .landing-auth-buttons button { padding: 8px !important; }
             .horizontal-menu-section { display: none !important; }
             .content-grid { grid-template-columns: repeat(2, 1fr) !important; }
             .sidebar-menu { width: 320px !important; }
