@@ -30,6 +30,15 @@ const Admin: React.FC = () => {
 
   const categories = ['company', 'research', 'news', 'blog', 'podcast', 'video', 'events', 'learning', 'demos', 'other'];
 
+  // Add authentication check on component mount
+  useEffect(() => {
+    // If not authenticated, redirect to login page
+    if (!isAdminAuthenticated || !adminApiKey) {
+      console.log('❌ Not authenticated - redirecting to admin login');
+      window.location.href = '/admin/login';
+    }
+  }, [isAdminAuthenticated, adminApiKey]);
+
   useEffect(() => {
     fetchSources();
   }, []);
@@ -40,9 +49,8 @@ const Admin: React.FC = () => {
       
       // Check if admin is authenticated
       if (!isAdminAuthenticated || !adminApiKey) {
-        alert('Please sign in through the admin login to access admin features');
-        window.location.href = '/admin/login';
-        return;
+        console.log('❌ Not authenticated in fetchSources');
+        return; // Don't show alert here, the redirect will happen in the mount effect
       }
       
       // Use admin API key instead of JWT token
@@ -53,8 +61,8 @@ const Admin: React.FC = () => {
     } catch (error: unknown) {
       console.error('Failed to fetch sources:', error);
       if (error instanceof Error && (error.message.includes('Authentication required') || error.message.includes('Admin access'))) {
-        alert('Admin authentication required. Please sign in through admin login.');
-        window.location.href = '/admin/login';
+        console.log('❌ Authentication error - will redirect to login');
+        // Redirect will happen via the mount effect
       }
     } finally {
       setLoading(false);
@@ -112,7 +120,7 @@ const Admin: React.FC = () => {
     try {
       // Check if admin is authenticated
       if (!isAdminAuthenticated || !adminApiKey) {
-        alert('Please sign in through the admin login to access admin features');
+        alert('Session expired. Please sign in again.');
         window.location.href = '/admin/login';
         return;
       }
@@ -132,7 +140,7 @@ const Admin: React.FC = () => {
     } catch (error: unknown) {
       console.error('Admin scraping error:', error);
       if (error instanceof Error && error.message.includes('Authentication required')) {
-        alert('Admin authentication required. Please sign in through admin login.');
+        alert('Session expired. Please sign in again.');
         window.location.href = '/admin/login';
       } else {
         alert('❌ Admin scraping failed. Please check console for details.');
@@ -181,6 +189,86 @@ const Admin: React.FC = () => {
       alert('Feed validation failed');
     }
   };
+
+  const [selectedModel, setSelectedModel] = useState<'claude' | 'gemini' | 'huggingface'>('gemini');
+  const [scrapingLoading, setScrapingLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const models = [
+    {
+      id: 'gemini' as const,
+      name: 'Google Gemini 2.0 Flash',
+      description: 'FREE • Fast • Excellent quality • Recommended',
+      color: '#4285f4',
+      recommended: true
+    },
+    {
+      id: 'claude' as const,
+      name: 'Claude 3 Haiku',
+      description: 'Paid • Best quality • Anthropic',
+      color: '#d97706'
+    },
+    {
+      id: 'huggingface' as const,
+      name: 'Llama 3.1 8B Instruct',
+      description: 'FREE • Good quality • HuggingFace',
+      color: '#6366f1'
+    }
+  ];
+
+  const handleTriggerScraping = async () => {
+    setScrapingLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      // Use the admin API service with model parameter
+      const response = await apiService.callEndpoint(
+        `admin/scrape?llm_model=${selectedModel}`, 
+        'POST', 
+        {}, 
+        false, 
+        {
+          'X-Admin-API-Key': adminApiKey
+        }
+      );
+
+      if (response.success) {
+        setResult({
+          success: true,
+          message: response.message || 'Scraping completed successfully',
+          llm_model_used: selectedModel,
+          details: {
+            sources_scraped: response.sources_scraped || 0,
+            articles_found: response.articles_found || 0,
+            articles_processed: response.articles_processed || 0
+          }
+        });
+      } else {
+        throw new Error(response.message || 'Scraping failed');
+      }
+    } catch (err: any) {
+      console.error('Scraping error:', err);
+      setError(err.message || 'Failed to trigger scraping');
+    } finally {
+      setScrapingLoading(false);
+    }
+  };
+
+  if (loading && (!isAdminAuthenticated || !adminApiKey)) {
+    return (
+      <div className="admin-container">
+        <div className="loading">
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
+          <p>Checking authentication...</p>
+          <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>
+            Redirecting to login page...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -324,6 +412,102 @@ const Admin: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Model Selection Section */}
+      <div className="model-selection">
+        <h2>🤖 Select LLM Model for Content Processing</h2>
+        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+          Choose the AI model to process and analyze scraped content. Each model has different strengths:
+        </p>
+        <div className="model-options">
+          {models.map((model) => (
+            <div
+              key={model.id}
+              className={`model-option ${selectedModel === model.id ? 'selected' : ''}`}
+              onClick={() => setSelectedModel(model.id)}
+              style={{ borderColor: selectedModel === model.id ? model.color : '#e5e7eb' }}
+            >
+              {model.recommended && <div className="recommended-badge">RECOMMENDED</div>}
+              <div className="model-name" style={{ color: model.color }}>
+                {model.name}
+              </div>
+              <div className="model-description">
+                {model.description}
+              </div>
+              {selectedModel === model.id && (
+                <div className="selected-indicator" style={{ color: model.color }}>
+                  ✓ Selected
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={handleTriggerScraping}
+          disabled={scrapingLoading}
+          className="btn-scraping"
+          style={{ 
+            backgroundColor: scrapingLoading ? '#9ca3af' : models.find(m => m.id === selectedModel)?.color,
+            cursor: scrapingLoading ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {scrapingLoading ? (
+            <>
+              <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              ⏳ Scraping in progress...
+            </>
+          ) : (
+            `🚀 Start Scraping with ${models.find(m => m.id === selectedModel)?.name}`
+          )}
+        </button>
+      </div>
+
+      {/* Result Display */}
+      {result && (
+        <div className={`result-display ${result.success ? 'success' : 'error'}`}>
+          <h3>{result.success ? '✅ Scraping Completed Successfully' : '❌ Scraping Failed'}</h3>
+          <p>{result.message}</p>
+          <div className="result-details">
+            <div className="detail-item">
+              <span className="detail-label">🤖 Model Used:</span>
+              <strong>{models.find(m => m.id === selectedModel)?.name || result.llm_model_used}</strong>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">📡 Sources Scraped:</span>
+              <strong>{result.details?.sources_scraped || 0}</strong>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">📄 Articles Found:</span>
+              <strong>{result.details?.articles_found || 0}</strong>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">💾 Articles Processed:</span>
+              <strong style={{ color: '#10b981' }}>{result.details?.articles_processed || 0}</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Display */}
+      {error && (
+        <div className="error-display">
+          <h3>Error</h3>
+          <p>{error}</p>
+        </div>
+      )}
+
+      {/* API Key Info */}
+      <div className="api-key-info">
+        <h3>API Keys Required</h3>
+        <ul>
+          <li><strong>Claude:</strong> ANTHROPIC_API_KEY (paid)</li>
+          <li><strong>Gemini:</strong> GOOGLE_API_KEY (FREE - get from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">here</a>)</li>
+          <li><strong>HuggingFace:</strong> HUGGINGFACE_API_KEY (FREE - get from <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">here</a>)</li>
+        </ul>
+        <p>
+          💡 Add keys to your <code>.env</code> file in the backend directory
+        </p>
       </div>
 
       <style>{`
@@ -508,6 +692,257 @@ const Admin: React.FC = () => {
           color: #ef4444;
           font-weight: 500;
         }
+
+        .model-selection {
+          background: white;
+          padding: 1.5rem;
+          border-radius: 8px;
+          margin-bottom: 2rem;
+          border: 1px solid #e5e5e5;
+          margin-top: 2rem;
+        }
+
+        .model-selection h2 {
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+          color: #111827;
+        }
+
+        .model-options {
+          display: grid;
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+
+        .model-option {
+          padding: 1.25rem;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          background-color: #ffffff;
+          cursor: pointer;
+          text-align: left;
+          transition: all 0.2s;
+          position: relative;
+        }
+
+        .model-option:hover {
+          border-color: #d1d5db;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          transform: translateY(-2px);
+        }
+
+        .model-option.selected {
+          border-width: 2px;
+          background-color: #f9fafb;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .recommended-badge {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          background-color: #10b981;
+          color: #ffffff;
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+        }
+
+        .model-name {
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin-bottom: 6px;
+          padding-right: 100px;
+        }
+
+        .model-description {
+          font-size: 0.875rem;
+          color: #6b7280;
+          line-height: 1.4;
+        }
+
+        .selected-indicator {
+          margin-top: 8px;
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+
+        .btn-scraping {
+          width: 100%;
+          padding: 1rem;
+          font-size: 1rem;
+          font-weight: 600;
+          border: none;
+          border-radius: 8px;
+          color: #ffffff;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .btn-scraping:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-scraping:disabled {
+          opacity: 0.6;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        .result-display {
+          margin-top: 2rem;
+          padding: 1.5rem;
+          border-radius: 12px;
+          border: 2px solid transparent;
+          animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-display.success {
+          background-color: #d1fae5;
+          border-color: #10b981;
+        }
+
+        .result-display.error {
+          background-color: #fee2e2;
+          border-color: #dc2626;
+        }
+
+        .result-display h3 {
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin-bottom: 0.75rem;
+        }
+
+        .result-display p {
+          font-size: 0.875rem;
+          margin-bottom: 1rem;
+          color: #374151;
+        }
+
+        .result-details {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
+        }
+
+        .detail-item {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .detail-label {
+          font-size: 0.75rem;
+          color: #6b7280;
+          font-weight: 500;
+        }
+
+        .detail-item strong {
+          font-size: 1.25rem;
+          color: #111827;
+        }
+
+        .error-display {
+          margin-top: 2rem;
+          padding: 1.5rem;
+          background-color: #fee2e2;
+          border: 2px solid #dc2626;
+          border-radius: 12px;
+          animation: fadeIn 0.3s ease-in;
+        }
+
+        .error-display h3 {
+          color: #dc2626;
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+        }
+
+        .error-display p {
+          color: #991b1b;
+          font-size: 0.875rem;
+        }
+
+        .api-key-info {
+          margin-top: 2rem;
+          padding: 1.5rem;
+          background: linear-gradient(to right, #eff6ff, #dbeafe);
+          border: 2px solid #bfdbfe;
+          border-radius: 12px;
+        }
+
+        .api-key-info h3 {
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin-bottom: 0.75rem;
+          color: #1e40af;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .api-key-info ul {
+          font-size: 0.875rem;
+          color: #1e40af;
+          line-height: 2;
+          padding-left: 1.5rem;
+        }
+
+        .api-key-info ul li {
+          margin-bottom: 0.5rem;
+        }
+
+        .api-key-info ul li strong {
+          font-weight: 600;
+        }
+
+        .api-key-info ul li a {
+          color: #2563eb;
+          text-decoration: underline;
+          font-weight: 500;
+        }
+
+        .api-key-info ul li a:hover {
+          color: #1d4ed8;
+        }
+
+        .api-key-info p {
+          font-size: 0.875rem;
+          color: #3b82f6;
+          margin-top: 1rem;
+          padding: 0.75rem;
+          background-color: #ffffff;
+          border-radius: 6px;
+          border-left: 3px solid #3b82f6;
+        }
+
+        .api-key-info code {
+          background-color: #1e293b;
+          color: #e0e7ff;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-family: 'Courier New', monospace;
+          font-size: 0.875rem;
+        }
+
+        /* ...rest of existing styles... */
       `}</style>
     </div>
   );
