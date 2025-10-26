@@ -166,7 +166,7 @@ const Archive: React.FC = () => {
   if (error && !selectedArchive && !archives.length) {
     return (
       <div className="app">
-        <Header onRefresh={() => {}} onManualScrape={() => {}} isLoading={false} />
+        <Header />
         <div className="error-container">
           <div className="error-message">
             <h2>⚠️ Archive Error</h2>
@@ -187,7 +187,7 @@ const Archive: React.FC = () => {
         description="Browse historical AI news digests and search through archived articles."
         url="/archive"
       />
-      <Header onRefresh={() => loadArchiveData(true)} onManualScrape={() => {}} isLoading={loading} />
+      <Header />
       
       {error && (
         <div className="error-banner">

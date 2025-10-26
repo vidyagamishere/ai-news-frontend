@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Mail, RefreshCw, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/authService';
 import './auth.css';
 
 const OTPVerification: React.FC = () => {
@@ -20,7 +21,7 @@ const OTPVerification: React.FC = () => {
   const isSignupFlow = authModeParam === 'signup' || (userData.name && userData.name.trim() !== '');
   const isSigninFlow = authModeParam === 'signin' || (!userData.name || userData.name.trim() === '');
   
-  const { verifyOTP, sendOTP, loading } = useAuth();
+  const { loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,7 +48,7 @@ const OTPVerification: React.FC = () => {
 
     setVerificationStatus('verifying');
     try {
-      await verifyOTP(email, otp, userData);
+      await authService.verifyOTP(email, otp, userData);
       setVerificationStatus('success');
       
       // Handle success based on auth flow type
@@ -87,7 +88,7 @@ const OTPVerification: React.FC = () => {
       // Pass correct auth mode when resending OTP
       const authMode = isSignupFlow ? 'signup' : 'signin';
       const name = userData.name || '';
-      await sendOTP(email, name, authMode);
+      await authService.sendOTP(email, name, authMode);
       setTimeLeft(600); // Reset timer
       setMessage('New OTP sent! Please check your email.');
       setVerificationStatus('pending');

@@ -983,11 +983,11 @@ const Landing: React.FC = () => {
                     { title: `${contentCounts?.total_blogs || 0} Latest AI Blogs Available`, source: 'Vidyagam AI', url: '#' },
                     { title: 'Generative AI, Machine Learning & More', source: 'All Categories', url: '#' },
                     { title: 'Join 10,000+ AI Professionals', source: 'Get Started', url: '#' }
-                  ]).concat(breakingNews.length > 0 ? breakingNews : [
+                  ] as any).concat(breakingNews.length > 0 ? breakingNews : [
                     { title: `${contentCounts?.total_blogs || 0} Latest AI Blogs Available`, source: 'Vidyagam AI', url: '#' },
                     { title: 'Generative AI, Machine Learning & More', source: 'All Categories', url: '#' },
                     { title: 'Join 10,000+ AI Professionals', source: 'Get Started', url: '#' }
-                  ]).map((alert, index) => (
+                  ] as any).map((alert: any, index: number) => (
                     <div 
                       key={index}
                       onClick={() => window.open(alert.url, '_blank', 'noopener,noreferrer')}

@@ -23,7 +23,7 @@ const Dashboard: React.FC = () => {
       // Check if onboarding is completed
       const onboardingCompleted = user.preferences?.onboarding_completed;
       const localOnboardingComplete = localStorage.getItem('onboardingComplete');
-      const isGoogleUser = user.is_google;
+      const isGoogleUser = (user as any).is_google;
       
       console.log('🎯 Dashboard onboarding check:', {
         user_onboarding_completed: onboardingCompleted,

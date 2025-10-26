@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Mail, RefreshCw, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/authService';
 import './auth.css';
 
 const EmailVerification: React.FC = () => {
@@ -11,7 +12,7 @@ const EmailVerification: React.FC = () => {
   const email = searchParams.get('email') || '';
   const token = searchParams.get('token');
   
-  const { sendOTP, loading } = useAuth();
+  const { loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,7 +35,7 @@ const EmailVerification: React.FC = () => {
 
     setVerificationStatus('sending');
     try {
-      await sendOTP(email);
+      await authService.sendOTP(email);
       setVerificationStatus('pending');
       setMessage('OTP sent! Please check your inbox.');
     } catch (error) {

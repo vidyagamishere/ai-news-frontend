@@ -31,8 +31,8 @@ const Categories: React.FC = () => {
       const response = await apiService.getAvailableCategories();
       setCategories(response.categories || []);
       
-      if (user?.preferences?.category_ids_selected) {
-        setSelectedCategoryIds(user.preferences.category_ids_selected);
+      if (user && (user.preferences as any)?.category_ids_selected) {
+        setSelectedCategoryIds((user.preferences as any).category_ids_selected);
       }
     } catch (error) {
       console.error('Error loading categories:', error);
@@ -60,7 +60,7 @@ const Categories: React.FC = () => {
         ...user?.preferences,
         category_ids_selected: selectedCategoryIds,
         categories_selected: selectedCategoryNames
-      });
+      } as any);
       
       alert('✅ Categories updated successfully!');
     } catch (error) {

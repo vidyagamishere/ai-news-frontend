@@ -120,7 +120,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
         await signup({
           name: formData.name,
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          confirmPassword: formData.password,
+          acceptTerms: true
         });
       } catch (err: any) {
         console.error('Signup error:', err);

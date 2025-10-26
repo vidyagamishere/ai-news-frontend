@@ -173,15 +173,7 @@ const Home: React.FC = () => {
       />
       
       {/* Header - Using consistent Header component */}
-      <Header 
-        onRefresh={() => {}}
-        onManualScrape={() => {}}
-        isLoading={loading}
-        lastUpdated={undefined}
-        showAuthButtons={true}
-        onSignInClick={() => navigateToAuth('signin')}
-        onSignUpClick={() => navigateToAuth('signup')}
-      />
+      <Header />
 
       {/* Hero Section */}
       <section className="hero-section" aria-labelledby="hero-heading">

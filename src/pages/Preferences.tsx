@@ -94,7 +94,7 @@ const Preferences: React.FC = () => {
                   <p className="text-sm text-gray-600 mb-3">How often would you like to receive newsletters?</p>
                   <select
                     value={preferences.newsletter_frequency}
-                    onChange={(e) => setPreferences({ ...preferences, newsletter_frequency: e.target.value })}
+                    onChange={(e) => setPreferences({ ...preferences, newsletter_frequency: e.target.value as '12_hours' | 'daily' | 'weekly' | 'monthly' })}
                     className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="daily">Daily</option>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/authService';
 import GoogleSignIn from '../components/auth/GoogleSignIn';
 import '../components/auth/auth.css';
 import './auth.css';
@@ -22,7 +23,7 @@ const Auth: React.FC = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   
-  const { loading, error, isAuthenticated, sendOTP, login, signup, isGmailDomain } = useAuth();
+  const { loading, error, isAuthenticated, login, signup, isGmailDomain } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -90,7 +91,7 @@ const Auth: React.FC = () => {
         if (isGmail) {
           // Gmail user - use email verification
           console.log('📧 Sending verification for Gmail signin');
-          await sendOTP(formData.email, '', 'signin');
+          await authService.sendOTP(formData.email, '', 'signin');
           navigate('/verify-otp?email=' + encodeURIComponent(formData.email) + '&userData=' + encodeURIComponent(JSON.stringify({name: '', email: formData.email})) + '&authMode=signin');
         } else {
           // Non-Gmail user - use password verification
@@ -105,7 +106,7 @@ const Auth: React.FC = () => {
         if (isGmail) {
           // Gmail user - use email verification
           console.log('📧 Sending verification for Gmail signup');
-          await sendOTP(formData.email, formData.name, 'signup');
+          await authService.sendOTP(formData.email, formData.name, 'signup');
           navigate('/verify-otp?email=' + encodeURIComponent(formData.email) + '&userData=' + encodeURIComponent(JSON.stringify(formData)) + '&authMode=signup');
         } else {
           // Non-Gmail user - use password signup
@@ -113,7 +114,9 @@ const Auth: React.FC = () => {
           const result = await signup({
             email: formData.email,
             name: formData.name,
-            password: formData.password
+            password: formData.password,
+            confirmPassword: formData.password,
+            acceptTerms: true
           });
           // Signup success - user will be redirected by useEffect
         }
