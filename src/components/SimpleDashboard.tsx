@@ -273,8 +273,8 @@ const SimpleDashboard: React.FC = () => {
                     fontWeight: '500',
                     textDecoration: 'none'
                   }}
-                  onMouseOver={(e) => e.target.style.color = '#1d4ed8'}
-                  onMouseOut={(e) => e.target.style.color = '#2563eb'}
+                  onMouseOver={(e) => (e.target as HTMLElement).style.color = '#1d4ed8'}
+                  onMouseOut={(e) => (e.target as HTMLElement).style.color = '#2563eb'}
                 >
                   Read More →
                 </a>

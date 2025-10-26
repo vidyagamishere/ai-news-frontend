@@ -183,9 +183,9 @@ const Header: React.FC = () => {
             </button>
             
             <div className="flex items-center gap-4 mt-2">
-              {user?.profile_image ? (
+              {user?.profileImage ? (
                 <img
-                  src={user.profile_image}
+                  src={user.profileImage}
                   alt={user.name}
                   className="w-16 h-16 rounded-full border-4 border-white/30 shadow-lg"
                 />
@@ -199,7 +199,7 @@ const Header: React.FC = () => {
                 <p className="text-sm text-white/80 truncate">{user?.email}</p>
                 <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm">
                   <span className="text-xs font-medium text-white">
-                    {user?.subscription_tier === 'premium' ? '⭐ Premium' : '🆓 Free'}
+                    {user?.subscriptionTier === 'premium' ? '⭐ Premium' : '🆓 Free'}
                   </span>
                 </div>
               </div>
