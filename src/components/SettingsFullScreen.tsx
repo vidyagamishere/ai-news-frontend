@@ -82,9 +82,9 @@ const SettingsFullScreen: React.FC<SettingsFullScreenProps> = ({
     setSettingsChanged(true);
   };
 
-  const handlePublisherToggle = (publisherId: number | string) => {
+  const handlePublisherToggle = (publisherId: number) => {
     const newPublishers = userPreferences.publishers_selected.includes(publisherId)
-      ? userPreferences.publishers_selected.filter((id: number | string) => id !== publisherId)
+      ? userPreferences.publishers_selected.filter((id: number) => id !== publisherId)
       : [...userPreferences.publishers_selected, publisherId];
     
     setUserPreferences({
@@ -391,11 +391,12 @@ const SettingsFullScreen: React.FC<SettingsFullScreenProps> = ({
                       type="checkbox"
                       checked={userPreferences.publishers_selected.includes(publisher.id)}
                       onChange={(e) => {
+                        const publisherId = publisher.id as number;
                         setUserPreferences((prev: any) => ({
                           ...prev,
                           publishers_selected: e.target.checked
-                            ? [...prev.publishers_selected, publisher.id]
-                            : prev.publishers_selected.filter((id: any) => id !== publisher.id)
+                            ? [...prev.publishers_selected, publisherId]
+                            : prev.publishers_selected.filter((id: number) => id !== publisherId)
                         }));
                         setSettingsChanged(true);
                       }}
