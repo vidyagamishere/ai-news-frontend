@@ -750,185 +750,184 @@ const Landing: React.FC = () => {
       >
         <div className="flex flex-col h-full">
           <div className="p-6">
-                  {/* Header Layout - Same as dashboard */}
-                  <div className="flex justify-between items-center mb-6">
-                    
-                    {/* Left: Close Button */}
-                    <button 
-                      onClick={() => setMenuOpen(false)}
-                      style={{
-                        backgroundColor: '#ffffff',
-                        color: '#000000',
-                        padding: '8px',
-                        borderRadius: '6px',
-                        border: '1px solid #e5e7eb',
-                        transition: 'all 0.2s',
-                        cursor: 'pointer',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f9fafb';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#ffffff';
-                        e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                      }}
-                      aria-label="Close menu"
-                    >
-                      <svg style={{ height: '24px', width: '24px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+            {/* Header Layout - Same as dashboard */}
+            <div className="flex justify-between items-center mb-6">
+              
+              {/* Left: Close Button */}
+              <button 
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  backgroundColor: '#ffffff',
+                  color: '#000000',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  border: '1px solid #e5e7eb',
+                  transition: 'all 0.2s',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff';
+                  e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                }}
+                aria-label="Close menu"
+              >
+                <svg style={{ height: '24px', width: '24px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
 
-                    {/* Center: Logo + Subtitle */}
-                    <div className="flex flex-col items-center flex-1 mx-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        <h1 className="text-2xl font-bold text-gray-900">
-                          Vidyagam
-                        </h1>
-                      </div>
-                      <span 
-                        className="text-xs mt-1" 
-                        style={{ 
-                          color: '#6b7280',
-                          fontSize: '12px',
-                          fontWeight: '400',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        AI Latest, Curated and Filtered for you
-                      </span>
-                    </div>
-
-                    {/* Right: Auth Icons (Mobile: icons only, Desktop: text) */}
-                    <div className="flex items-center space-x-2">
-                      <button 
-                        onClick={() => {
-                          setMenuOpen(false);
-                          navigateToAuth('signin');
-                        }}
-                        style={{
-                          backgroundColor: '#ffffff',
-                          color: '#000000',
-                          padding: '8px',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.backgroundColor = '#f9fafb';
-                          e.currentTarget.style.borderColor = '#d1d5db';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.backgroundColor = '#ffffff';
-                          e.currentTarget.style.borderColor = '#e5e7eb';
-                        }}
-                        aria-label="Sign In"
-                        title="Sign In"
-                      >
-                        <LogIn size={18} />
-                      </button>
-                      <button 
-                        onClick={() => {
-                          setMenuOpen(false);
-                          navigateToAuth('signup');
-                        }}
-                        style={{
-                          backgroundColor: '#ffffff',
-                          color: '#000000',
-                          padding: '8px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          border: '2px solid #000000',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.backgroundColor = '#000000';
-                          e.currentTarget.style.color = '#ffffff';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.backgroundColor = '#ffffff';
-                          e.currentTarget.style.color = '#000000';
-                        }}
-                        aria-label="Get Started"
-                        title="Get Started"
-                      >
-                        <UserPlus size={18} />
-                      </button>
-                    </div>
-
+              {/* Center: Logo + Subtitle */}
+              <div className="flex flex-col items-center flex-1 mx-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                   </div>
-
-
-                {/* Menu Items */}
-                <div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Categories</h3>
-                  <nav className="space-y-1">
-                    {menuItems.map((menu) => (
-                      <button
-                        key={menu.id}
-                        onClick={() => {
-                          handleMenuSelection(menu.id);
-                          setMenuOpen(false);
-                        }}
-                        style={{
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '12px 16px',
-                          fontSize: '14px',
-                          fontWeight: '700',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '6px',
-                          marginBottom: '4px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          backgroundColor: activeMenu === menu.id ? '#dbeafe' : '#f9fafb',
-                          color: '#1f2937',
-                          boxShadow: activeMenu === menu.id ? '0 2px 4px rgba(59,130,246,0.15)' : '0 1px 2px rgba(0,0,0,0.05)'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (activeMenu !== menu.id) {
-                            e.currentTarget.style.backgroundColor = '#e5e7eb';
-                            e.currentTarget.style.color = '#1f2937';
-                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (activeMenu !== menu.id) {
-                            e.currentTarget.style.backgroundColor = '#f9fafb';
-                            e.currentTarget.style.color = '#1f2937';
-                            e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                          }
-                        }}
-                      >
-                        {menu.name}
-                      </button>
-                    ))}
-                  </nav>
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    Vidyagam
+                  </h1>
                 </div>
+                <span 
+                  className="text-xs mt-1" 
+                  style={{ 
+                    color: '#6b7280',
+                    fontSize: '12px',
+                    fontWeight: '400',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  AI Latest, Curated and Filtered for you
+                </span>
+              </div>
+
+              {/* Right: Auth Icons (Mobile: icons only, Desktop: text) */}
+              <div className="flex items-center space-x-2">
+                <button 
+                  onClick={() => {
+                    setMenuOpen(false);
+                    navigateToAuth('signin');
+                  }}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    color: '#000000',
+                    padding: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                  }}
+                  aria-label="Sign In"
+                  title="Sign In"
+                >
+                  <LogIn size={18} />
+                </button>
+                <button 
+                  onClick={() => {
+                    setMenuOpen(false);
+                    navigateToAuth('signup');
+                  }}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    color: '#000000',
+                    padding: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    border: '2px solid #000000',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#000000';
+                    e.currentTarget.style.color = '#ffffff';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.color = '#000000';
+                  }}
+                  aria-label="Get Started"
+                  title="Get Started"
+                >
+                  <UserPlus size={18} />
+                </button>
               </div>
             </div>
-          </>
-        )}
+
+            {/* Menu Items */}
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Categories</h3>
+              <nav className="space-y-1">
+                {menuItems.map((menu) => (
+                  <button
+                    key={menu.id}
+                    onClick={() => {
+                      handleMenuSelection(menu.id);
+                      setMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '12px 16px',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      marginBottom: '4px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      backgroundColor: activeMenu === menu.id ? '#dbeafe' : '#f9fafb',
+                      color: '#1f2937',
+                      boxShadow: activeMenu === menu.id ? '0 2px 4px rgba(59,130,246,0.15)' : '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeMenu !== menu.id) {
+                        e.currentTarget.style.backgroundColor = '#e5e7eb';
+                        e.currentTarget.style.color = '#1f2937';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeMenu !== menu.id) {
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                        e.currentTarget.style.color = '#1f2937';
+                        e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                      }
+                    }}
+                  >
+                    {menu.name}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
 
       {/* Horizontal Navigation Menu */}
       {menuItems.length > 0 && (
