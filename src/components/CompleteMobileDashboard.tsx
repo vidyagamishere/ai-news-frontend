@@ -1257,12 +1257,14 @@ const CompleteMobileDashboard: React.FC = () => {
 
         {/* Horizontal Navigation Menu */}
         {menuItems.length > 0 && (
-          <section style={{ 
-            background: '#ffffff',
-            borderBottom: 'none',
-            paddingTop: '16px',
-            paddingBottom: '16px'
-          }}>
+          <section 
+            className="horizontal-menu-section"
+            style={{ 
+              background: '#ffffff',
+              borderBottom: 'none',
+              paddingTop: '16px',
+              paddingBottom: '16px'
+            }}>
             <div className="max-w-7xl mx-auto px-4">
               <div className="horizontal-nav flex items-center justify-center h-12">
                 {/* Center: Category Menu Items */}
@@ -1654,10 +1656,9 @@ const CompleteMobileDashboard: React.FC = () => {
             display: none;
           }
           
-          @media (max-width: 768px) {
-            .horizontal-nav { overflow-x: auto !important; padding: 0 8px !important; }
-            .horizontal-nav button { font-size: 10px !important; padding: 6px 8px !important; }
-            .horizontal-nav > button[aria-label="Search"] { position: absolute !important; right: 8px !important; }
+          /* Hide horizontal menu on mobile and tablet - use hamburger menu instead */
+          @media (max-width: 1024px) {
+            .horizontal-menu-section { display: none !important; }
           }
 
           @media (max-width: 640px) {

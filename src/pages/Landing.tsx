@@ -906,12 +906,14 @@ const Landing: React.FC = () => {
 
       {/* Horizontal Navigation Menu */}
       {menuItems.length > 0 && (
-        <section style={{ 
-          background: '#ffffff',
-          borderBottom: 'none',
-          paddingTop: '16px',
-          paddingBottom: '16px'
-        }}>
+        <section 
+          className="horizontal-menu-section"
+          style={{ 
+            background: '#ffffff',
+            borderBottom: 'none',
+            paddingTop: '16px',
+            paddingBottom: '16px'
+          }}>
           <div className="max-w-7xl mx-auto px-4">
             <div className="horizontal-nav flex items-center justify-center h-12 space-x-4 overflow-x-auto">
               {menuItems.map((menu) => (
@@ -1431,6 +1433,7 @@ const Landing: React.FC = () => {
           
           /* Mobile responsiveness */
           @media (max-width: 768px) {
+            .horizontal-menu-section { display: none !important; }
             .hero-title { font-size: 22px !important; }
             .hero-subtitle { font-size: 14px !important; }
             .section-title { font-size: 18px !important; }
@@ -1442,14 +1445,13 @@ const Landing: React.FC = () => {
             .section-gap { gap: 32px !important; }
             .article-card { padding: 16px !important; }
             .cta-buttons { flex-direction: column !important; }
-            .horizontal-nav { overflow-x: auto !important; }
             .sidebar-menu { width: 100vw !important; }
           }
           
           /* Tablet responsiveness */
           @media (max-width: 1024px) and (min-width: 769px) {
+            .horizontal-menu-section { display: none !important; }
             .content-grid { grid-template-columns: repeat(2, 1fr) !important; }
-            .horizontal-nav { padding: 0 16px !important; }
             .sidebar-menu { width: 320px !important; }
           }
           
