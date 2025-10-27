@@ -9,6 +9,14 @@ import './auth.css';
 
 type AuthMode = 'signin' | 'signup';
 
+// ✅ ADD: Logger utility
+const logger = {
+  info: (message: string, ...args: any[]) => console.log(`ℹ️ ${message}`, ...args),
+  error: (message: string, ...args: any[]) => console.error(`❌ ${message}`, ...args),
+  warn: (message: string, ...args: any[]) => console.warn(`⚠️ ${message}`, ...args),
+  debug: (message: string, ...args: any[]) => console.debug(`🔍 ${message}`, ...args)
+};
+
 const Auth: React.FC = () => {
   const [searchParams] = useSearchParams();
   const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
@@ -25,6 +33,10 @@ const Auth: React.FC = () => {
   
   const { loading, error, isAuthenticated, login, signup, isGmailDomain } = useAuth();
   const navigate = useNavigate();
+
+  // ✅ ADD: Missing state for modals
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -563,6 +575,117 @@ const Auth: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ✅ ADD: Terms Modal */}
+      {showTermsModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            padding: '32px',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+          }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px', color: '#111827' }}>
+              Terms of Service
+            </h2>
+            <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6', marginBottom: '24px' }}>
+              <p style={{ marginBottom: '12px' }}>
+                By using this service, you agree to our Terms of Service. We are committed to providing you with high-quality AI news and content.
+              </p>
+              <p style={{ marginBottom: '12px' }}>
+                <strong>1. Acceptance of Terms:</strong> By accessing and using this service, you accept and agree to be bound by the terms and provision of this agreement.
+              </p>
+              <p>
+                For complete terms and conditions, please contact our support team.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowTermsModal(false)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ ADD: Privacy Modal */}
+      {showPrivacyModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            padding: '32px',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+          }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px', color: '#111827' }}>
+              Privacy Policy
+            </h2>
+            <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6', marginBottom: '24px' }}>
+              <p style={{ marginBottom: '12px' }}>
+                We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.
+              </p>
+              <p>
+                For complete privacy information, please contact our support team.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPrivacyModal(false)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
