@@ -1305,3 +1305,55 @@ button:focus-visible {
 .underline {
   text-decoration-line: underline;
 }
+
+/* ✅ CRITICAL: Force checkboxes to be visible in SignUp page */
+input[type="checkbox"]#terms-checkbox,
+input[type="checkbox"]#privacy-checkbox {
+  display: block !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  cursor: pointer !important;
+  accent-color: #3b82f6 !important;
+  opacity: 1 !important;
+  position: static !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  -webkit-appearance: checkbox !important;
+  -moz-appearance: checkbox !important;
+  appearance: auto !important;
+  margin: 2px 0 0 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* Ensure label doesn't hide checkbox */
+label[for="terms-checkbox"],
+label[for="privacy-checkbox"] {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  cursor: pointer !important;
+}
+
+/* ✅ FORCE AUTH MODAL CHECKBOXES TO BE VISIBLE */
+input[type="checkbox"]#terms-privacy-checkbox,
+input[type="checkbox"]#terms-checkbox,
+input[type="checkbox"]#privacy-checkbox {
+  display: block !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  cursor: pointer !important;
+  accent-color: #3b82f6 !important;
+  opacity: 1 !important;
+  position: static !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  -webkit-appearance: checkbox !important;
+  -moz-appearance: checkbox !important;
+  appearance: auto !important;
+  margin: 2px 0 0 0 !important;
+  flex-shrink: 0 !important;
+}

@@ -248,6 +248,21 @@ div[role="dialog"] {
   gap: 0.75rem;
 }
 
+/* ✅ IMPORTANT: Do NOT hide checkboxes in SignUp page */
+input[type="checkbox"]#terms-checkbox,
+input[type="checkbox"]#privacy-checkbox {
+  display: block !important;
+  width: 20px !important;
+  height: 20px !important;
+  cursor: pointer !important;
+  accent-color: #3b82f6 !important;
+  opacity: 1 !important;
+  position: relative !important;
+  -webkit-appearance: checkbox !important;
+  -moz-appearance: checkbox !important;
+  appearance: auto !important;
+}
+
 .checkbox-label {
   display: flex;
   align-items: flex-start;
@@ -258,42 +273,14 @@ div[role="dialog"] {
   line-height: 1.4;
 }
 
-.checkbox-label input[type="checkbox"] {
-  display: none;
-}
-
-.checkbox-checkmark {
+/* Only hide checkboxes in AuthModal, NOT in SignUp */
+.auth-modal .checkbox-label input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  border: 2px solid #e2e8f0;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
+  margin-top: 2px;
+  cursor: pointer;
+  accent-color: #667eea;
   flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.checkbox-label input[type="checkbox"]:checked + .checkbox-checkmark {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border-color: #667eea;
-}
-
-.checkbox-label input[type="checkbox"]:checked + .checkbox-checkmark::after {
-  content: '✓';
-  color: white;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.checkbox-label a {
-  color: #667eea;
-  text-decoration: none;
-}
-
-.checkbox-label a:hover {
-  text-decoration: underline;
 }
 
 /* Auth Error */

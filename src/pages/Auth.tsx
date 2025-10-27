@@ -379,30 +379,105 @@ const Auth: React.FC = () => {
               </>
             )}
 
-            {isSignUp && (
-              <div className="form-group">
-                <div className="terms-checkbox">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={formData.acceptTerms}
-                      onChange={(e) => handleInputChange('acceptTerms', e.target.checked)}
-                      required={isSignUp}
-                      id="acceptTerms"
-                      name="acceptTerms"
-                    />
-                    <span>
-                      I accept the <Link to="/terms" target="_blank">Terms of Service</Link> and{' '}
-                      <Link to="/privacy" target="_blank">Privacy Policy</Link>
-                    </span>
-                  </label>
+            {/* ✅ FIXED: Show Terms checkbox ONLY for Sign Up, NOT for Sign In */}
+            {mode === 'signup' && (
+              <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                <label 
+                  htmlFor="terms-privacy-checkbox"
+                  style={{ 
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    cursor: 'pointer',
+                    userSelect: 'none'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    id="terms-privacy-checkbox"
+                    checked={formData.acceptTerms}
+                    onChange={(e) => {
+                      handleInputChange('acceptTerms', e.target.checked);
+                      logger.info(`Terms checkbox changed: ${e.target.checked}`);
+                    }}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      minWidth: '20px',
+                      minHeight: '20px',
+                      marginTop: '2px',
+                      cursor: 'pointer',
+                      accentColor: '#3b82f6',
+                      flexShrink: 0
+                    }}
+                  />
+                  <span style={{ fontSize: '14px', color: '#374151', lineHeight: '1.5', flex: 1 }}>
+                    I accept the{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowTermsModal(true);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#3b82f6',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        padding: 0,
+                        font: 'inherit'
+                      }}
+                    >
+                      Terms of Service
+                    </button>
+                    {' '}and{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowPrivacyModal(true);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#3b82f6',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        padding: 0,
+                        font: 'inherit'
+                      }}
+                    >
+                      Privacy Policy
+                    </button>
+                  </span>
+                </label>
+
+                {/* Visual indicator */}
+                <div style={{
+                  marginTop: '12px',
+                  padding: '12px',
+                  backgroundColor: formData.acceptTerms ? '#dcfce7' : '#fee2e2',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  color: formData.acceptTerms ? '#15803d' : '#991b1b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <span style={{ fontSize: '16px' }}>
+                    {formData.acceptTerms ? '✓' : '!'}
+                  </span>
+                  <span>
+                    {formData.acceptTerms 
+                      ? 'Policies accepted - you can proceed' 
+                      : 'Please accept Terms of Service and Privacy Policy'}
+                  </span>
                 </div>
-                {formErrors.acceptTerms && (
-                  <div className="field-error">{formErrors.acceptTerms}</div>
-                )}
               </div>
             )}
-
 
             {error && (
               <div className="auth-error">
@@ -410,18 +485,40 @@ const Auth: React.FC = () => {
               </div>
             )}
 
-            <button 
-              type="submit" 
-              className="auth-submit" 
-              disabled={loading}
+            {/* Submit Button - LIGHT SKY BLUE */}
+            <button
+              type="submit"
+              disabled={mode === 'signup' ? !formData.acceptTerms || loading : loading}
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '12px',
+                border: 'none',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: (mode === 'signup' && !formData.acceptTerms) || loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.3s ease',
+                backgroundColor: (mode === 'signup' && !formData.acceptTerms) || loading ? '#d1d5db' : '#0ea5e9', // ✅ Light sky blue
+                color: '#ffffff',
+                boxShadow: (mode === 'signup' && !formData.acceptTerms) || loading ? 'none' : '0 2px 4px rgba(14, 165, 233, 0.2)',
+                marginTop: '8px'
+              }}
+              onMouseEnter={(e) => {
+                if ((mode === 'signin' || formData.acceptTerms) && !loading) {
+                  e.currentTarget.style.backgroundColor = '#0284c7'; // Darker sky blue on hover
+                  e.currentTarget.style.boxShadow = '0 4px 6px rgba(14, 165, 233, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if ((mode === 'signin' || formData.acceptTerms) && !loading) {
+                  e.currentTarget.style.backgroundColor = '#0ea5e9';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(14, 165, 233, 0.2)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }
+              }}
             >
-              {loading 
-                ? (isSignIn ? 'Signing In...' : 'Signing Up...')
-                : (formData.email && !isGmailDomain(formData.email)
-                    ? (isSignIn ? 'Sign In with Password' : 'Sign Up with Password')
-                    : (isSignIn ? 'Continue to Sign In' : 'Continue to Sign Up')
-                  )
-              }
+              {loading ? 'Processing...' : (mode === 'signup' ? 'Continue to Sign Up' : 'Continue to Sign In')}
             </button>
           </form>
 
