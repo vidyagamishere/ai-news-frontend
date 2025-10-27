@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Mail } from 'lucide-react';
 
 // ✅ ADD: Logger utility
 const logger = {
@@ -8,25 +9,47 @@ const logger = {
   debug: (message: string, ...args: any[]) => console.debug(`🔍 ${message}`, ...args)
 };
 
-const SignUp = () => {
+const SignUp: React.FC = () => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({ email: '', password: '', confirmPassword: '' });
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const handleNonGoogleSignUp = async () => {
+  // ✅ NEW: Add helper function to check if email is Gmail
+  const isGmailEmail = (email: string): boolean => {
+    const normalizedEmail = email.toLowerCase().trim();
+    return normalizedEmail.endsWith('@gmail.com') || normalizedEmail.endsWith('@googlemail.com');
+  };
+
+  // ✅ UPDATED: handleSubmit with Gmail validation
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // ✅ NEW: Check if Gmail user is trying to sign up with email/password
+    if (isGmailEmail(formData.email)) {
+      setError('Gmail users must sign up with Google. Please use the "Continue with Google" button instead.');
+      return;
+    }
+
+    // Clear previous errors
+    setErrors({});
+    setError(null);
+
     // ✅ FIX: Check if BOTH terms and privacy are accepted
     if (!termsAccepted || !privacyAccepted) {
       setError('Please accept both Terms of Service and Privacy Policy to continue');
       return;
     }
 
-    if (!email || !password || !confirmPassword) {
+    if (!formData.email || !formData.password || !formData.confirmPassword) {
       setError('Please fill in all fields');
       return;
     }
@@ -34,9 +57,33 @@ const SignUp = () => {
     // ...existing validation code...
   };
 
+  // ✅ UPDATED: Email field with real-time Gmail validation
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    setError(null);
+  };
+
   return (
     <div style={{ /* ...existing styles... */ }}>
       {/* ...existing code... */}
+
+      {/* Email field with Gmail validation */}
+      <div className="form-group">
+        <label htmlFor="email">Email Address *</label>
+        <div className="input-wrapper">
+          <Mail className="input-icon" size={20} />
+          <input
+            type="email"
+            id="email"
+            value={email}
+            onChange={handleEmailChange}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+            placeholder="Enter your email"
+            required
+          />
+        </div>
+        {errors.email && <span className="field-error">{errors.email}</span>}
+      </div>
 
       {/* Terms and Privacy Checkboxes - COMPLETELY OVERRIDE CSS */}
       <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
@@ -188,7 +235,7 @@ const SignUp = () => {
 
       {/* ✅ FIXED: Sign Up button with light sky blue background */}
       <button
-        onClick={handleNonGoogleSignUp}
+        onClick={handleSubmit}
         disabled={!termsAccepted || !privacyAccepted || isLoading}
         style={{
           width: '100%',

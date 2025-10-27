@@ -62,6 +62,31 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     setTimeout(onClose, 300); // Wait for animation
   };
 
+  // ✅ NEW: Add helper function to check if email is Gmail
+  const isGmailEmail = (email: string): boolean => {
+    const normalizedEmail = email.toLowerCase().trim();
+    return normalizedEmail.endsWith('@gmail.com') || normalizedEmail.endsWith('@googlemail.com');
+  };
+
+  // ✅ UPDATED: Email field validation with Gmail check
+  const validateEmail = (email: string): string => {
+    if (!email.trim()) {
+      return 'Email is required';
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return 'Please enter a valid email address';
+    }
+
+    // ✅ NEW: Check if it's a Gmail address
+    if (isGmailEmail(email)) {
+      return 'Gmail users must sign in with Google. Please use "Continue with Google" button above.';
+    }
+    
+    return '';
+  };
+
   const validateForm = () => {
     const errors: Record<string, string> = {};
     
@@ -69,10 +94,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       errors.name = 'Name is required';
     }
     
-    if (!formData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'Please enter a valid email';
+    const emailError = validateEmail(formData.email);
+    if (emailError) {
+      errors.email = emailError;
     }
     
     if (!formData.password) {
@@ -99,14 +123,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if user is trying to use Gmail with password instead of Google One Tap
-    if (isGmailDomain(formData.email)) {
+    // ✅ NEW: Additional Gmail check before submission
+    if (isGmailEmail(formData.email)) {
       setFormErrors({
         email: 'Gmail users must use Google Sign In above for security. Please click the Google Sign In button.'
       });
       return;
     }
-    
+
     // For signup, validate form and create account
     if (mode === 'signup') {
       const errors = validateForm();

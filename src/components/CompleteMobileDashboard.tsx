@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Settings, Menu, X, LogOut } from 'lucide-react';
+import { Search, Settings, Menu, X, LogOut, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import Footer from './Footer';
@@ -42,6 +42,10 @@ const CompleteMobileDashboard: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   
+  // Add time filter state - DEFAULT to 'Last 24 Hours'
+  const [timeFilter, setTimeFilter] = useState<'Last 24 Hours' | 'Last Week' | 'Last Month' | 'This Year'>('Last 24 Hours');
+  const [isTimeFilterOpen, setIsTimeFilterOpen] = useState(false);
+  
   // Add content counts state (similar to Landing.tsx)
   const [contentCounts, setContentCounts] = useState<any>(null);
 
@@ -76,6 +80,29 @@ const CompleteMobileDashboard: React.FC = () => {
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [availableContentTypes, setAvailableContentTypes] = useState<any[]>([]);
   const [availablePublishers, setAvailablePublishers] = useState<any[]>([]);
+
+  // Time filter options
+  const timeFilterOptions: Array<'Last 24 Hours' | 'Last Week' | 'Last Month' | 'This Year'> = [
+    'Last 24 Hours',
+    'Last Week',
+    'Last Month',
+    'This Year'
+  ];
+
+  const getTimeFilterIcon = () => {
+    switch (timeFilter) {
+      case 'Last 24 Hours':
+        return '⏰';
+      case 'Last Week':
+        return '📅';
+      case 'Last Month':
+        return '🗓️';
+      case 'This Year':
+        return '📆';
+      default:
+        return '⏰';
+    }
+  };
 
   // Load available options for settings
   useEffect(() => {
@@ -168,7 +195,7 @@ const CompleteMobileDashboard: React.FC = () => {
         interests: categoryNames.length > 0 ? categoryNames : ['Generative AI', 'Machine Learning'],
         content_types: contentTypeNames.length > 0 ? contentTypeNames : ['blog', 'video', 'podcast'],
         publishers: publisherNames.length > 0 ? publisherNames : ['all'],
-        time_filter: 'Last Week',
+        time_filter: timeFilter, // Use selected time filter
         search_query: searchQuery,
         limit: 50
       };
@@ -231,7 +258,7 @@ const CompleteMobileDashboard: React.FC = () => {
       });
       
       setContent(flatContent);
-      hasLoadedContent.current = true; // Mark as loaded AFTER successful load
+      hasLoadedContent.current = true;
       
       console.log('✅ Feed loaded successfully:', flatContent.length, 'items');
       console.log('📊 Content breakdown:', {
@@ -251,6 +278,7 @@ const CompleteMobileDashboard: React.FC = () => {
 
   loadFeed();
 }, [isAuthenticated, user?.id, searchQuery, 
+    timeFilter, // Add timeFilter to dependencies
     JSON.stringify(userPreferences.categories_selected),
     JSON.stringify(userPreferences.content_types_selected), 
     JSON.stringify(userPreferences.publishers_selected),
@@ -258,10 +286,10 @@ const CompleteMobileDashboard: React.FC = () => {
     availableContentTypes.length,
     availablePublishers.length
 ]);
-  // Reset load flag when preferences change
+  // Reset load flag when time filter changes
   useEffect(() => { 
     hasLoadedContent.current = false;
-  }, [userPreferences.categories_selected, userPreferences.content_types_selected, userPreferences.publishers_selected]);
+  }, [timeFilter, userPreferences.categories_selected, userPreferences.content_types_selected, userPreferences.publishers_selected]);
 
   const formatTimeAgo = (dateString: string | null) => {
     if (!dateString) return 'Unknown';
@@ -622,12 +650,48 @@ const CompleteMobileDashboard: React.FC = () => {
         {/* Display ALL blogs (no limit) */}
         {contentByType.blog.length > 0 && (
           <section>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <div style={{ width: '32px', height: '32px', backgroundColor: '#dbeafe', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ color: '#3b82f6' }}>📖</span>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px', 
+              marginBottom: '24px'
+            }}>
+              <div style={{ 
+                width: '32px', 
+                height: '32px', 
+                backgroundColor: '#dbeafe', 
+                borderRadius: '8px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <span style={{ color: '#3b82f6', fontSize: '18px' }}>📖</span>
               </div>
-              <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>Latest Blogs</h2>
-              <span style={{ backgroundColor: '#dbeafe', color: '#1e40af', padding: '4px 12px', borderRadius: '16px', fontSize: '14px', fontWeight: '500' }}>
+              <h2 style={{ 
+                fontSize: '20px', 
+                fontWeight: 'bold', 
+                color: '#111827',
+                margin: 0,
+                lineHeight: '32px'
+              }}>
+                Latest Blogs
+              </h2>
+              {/* ✅ UPDATED: Light background with dark text */}
+              <span style={{ 
+                backgroundColor: '#dbeafe',
+                color: '#1e3a8a', 
+                padding: '6px 16px', 
+                borderRadius: '20px', 
+                fontSize: '15px', 
+                fontWeight: '700',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                flexShrink: 0,
+                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
+                border: '2px solid #bfdbfe'
+              }}>
                 {realCounts.blogs}
               </span>
             </div>
@@ -643,12 +707,48 @@ const CompleteMobileDashboard: React.FC = () => {
         {/* Display ALL podcasts (no limit) */}
         {contentByType.podcast.length > 0 && (
           <section>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <div style={{ width: '32px', height: '32px', backgroundColor: '#dcfce7', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ color: '#16a34a' }}>🎧</span>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px', 
+              marginBottom: '24px'
+            }}>
+              <div style={{ 
+                width: '32px', 
+                height: '32px', 
+                backgroundColor: '#dcfce7', 
+                borderRadius: '8px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <span style={{ color: '#16a34a', fontSize: '18px' }}>🎧</span>
               </div>
-              <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>Featured Podcasts</h2>
-              <span style={{ backgroundColor: '#dcfce7', color: '#15803d', padding: '4px 12px', borderRadius: '16px', fontSize: '14px', fontWeight: '500' }}>
+              <h2 style={{ 
+                fontSize: '20px', 
+                fontWeight: 'bold', 
+                color: '#111827',
+                margin: 0,
+                lineHeight: '32px'
+              }}>
+                Featured Podcasts
+              </h2>
+              {/* ✅ UPDATED: Light background with dark text */}
+              <span style={{ 
+                backgroundColor: '#dcfce7',
+                color: '#14532d', 
+                padding: '6px 16px', 
+                borderRadius: '20px', 
+                fontSize: '15px', 
+                fontWeight: '700',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                flexShrink: 0,
+                boxShadow: '0 2px 8px rgba(22, 163, 74, 0.2)',
+                border: '2px solid #bbf7d0'
+              }}>
                 {realCounts.podcasts}
               </span>
             </div>
@@ -664,12 +764,48 @@ const CompleteMobileDashboard: React.FC = () => {
         {/* Display ALL videos (no limit) */}
         {contentByType.video.length > 0 && (
           <section>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <div style={{ width: '32px', height: '32px', backgroundColor: '#fee2e2', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ color: '#dc2626' }}>🎥</span>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px', 
+              marginBottom: '24px'
+            }}>
+              <div style={{ 
+                width: '32px', 
+                height: '32px', 
+                backgroundColor: '#fee2e2', 
+                borderRadius: '8px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <span style={{ color: '#dc2626', fontSize: '18px' }}>🎥</span>
               </div>
-              <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>Latest Videos</h2>
-              <span style={{ backgroundColor: '#fee2e2', color: '#dc2626', padding: '4px 12px', borderRadius: '16px', fontSize: '14px', fontWeight: '500' }}>
+              <h2 style={{ 
+                fontSize: '20px', 
+                fontWeight: 'bold', 
+                color: '#111827',
+                margin: 0,
+                lineHeight: '32px'
+              }}>
+                Latest Videos
+              </h2>
+              {/* ✅ UPDATED: Light background with dark text */}
+              <span style={{ 
+                backgroundColor: '#fee2e2',
+                color: '#7f1d1d', 
+                padding: '6px 16px', 
+                borderRadius: '20px', 
+                fontSize: '15px', 
+                fontWeight: '700',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                flexShrink: 0,
+                boxShadow: '0 2px 8px rgba(220, 38, 38, 0.2)',
+                border: '2px solid #fecaca'
+              }}>
                 {realCounts.videos}
               </span>
             </div>
@@ -706,8 +842,12 @@ const CompleteMobileDashboard: React.FC = () => {
         .map(contentType => contentType.name);
 
       // Get publisher names from selected publisher IDs
+      // Clean up publishers - remove 'all' if it exists and filter to only numbers
+      const cleanedPublisherIds = userPreferences.publishers_selected
+        .filter((id: any) => id !== 'all' && typeof id === 'number') as number[];
+      
       const selectedPublisherNames = availablePublishers
-        .filter(publisher => userPreferences.publishers_selected.includes(publisher.id))
+        .filter(publisher => cleanedPublisherIds.includes(publisher.id))
         .map(publisher => publisher.name);
 
       const preferences = {
@@ -720,10 +860,10 @@ const CompleteMobileDashboard: React.FC = () => {
         content_types_selected: selectedContentTypeNames,
         publishers_selected: selectedPublisherNames,
         
-        // ID-based arrays (preferred for filtering) - SEND IDs TO BACKEND
+        // ID-based arrays (preferred for filtering) - SEND ONLY CLEAN IDS
         category_ids_selected: userPreferences.categories_selected,
         content_type_ids_selected: userPreferences.content_types_selected,
-        publisher_ids_selected: userPreferences.publishers_selected,
+        publisher_ids_selected: cleanedPublisherIds.length > 0 ? cleanedPublisherIds : [],
         
         // Additional preference fields
         newsletter_frequency: "weekly" as "weekly" | "12_hours" | "daily" | "monthly",
@@ -733,7 +873,11 @@ const CompleteMobileDashboard: React.FC = () => {
       };
 
       console.log('🔍 Saving preferences:', JSON.stringify(preferences, null, 2));
+      
+      // Update preferences - AuthContext will handle refreshing user data
       await updatePreferences(preferences);
+      
+      console.log('✅ Preferences saved successfully via AuthContext');
       
       setSettingsChanged(false);
       setCurrentView('dashboard');
@@ -750,6 +894,20 @@ const CompleteMobileDashboard: React.FC = () => {
       setSavingSettings(false);
     }
   };
+
+  // Update userPreferences when user data changes from AuthContext
+  useEffect(() => {
+    if (user?.preferences) {
+      console.log('🔄 Updating userPreferences from AuthContext user data');
+      setUserPreferences({
+        experience_level: user.preferences.experience_level || 'intermediate',
+        professional_roles: (user.preferences as any).professional_roles || ['enthusiast'],
+        categories_selected: (user.preferences as any).category_ids_selected || [],
+        content_types_selected: (user.preferences as any).content_type_ids_selected || [],
+        publishers_selected: (user.preferences as any).publisher_ids_selected || []
+      });
+    }
+  }, [user?.preferences]);
 
   // Add useEffect to update menu items when categories are loaded
   useEffect(() => {
@@ -1266,7 +1424,7 @@ const CompleteMobileDashboard: React.FC = () => {
               paddingBottom: '16px'
             }}>
             <div className="max-w-7xl mx-auto px-4">
-              <div className="horizontal-nav flex items-center justify-center h-12">
+              <div className="horizontal-nav flex items-center justify-center h-12" style={{ minHeight: '48px', paddingTop: '4px', paddingBottom: '4px' }}>
                 {/* Center: Category Menu Items */}
                 <div className="flex items-center space-x-4 overflow-x-auto">
                   {menuItems.map((menu) => (
@@ -1289,7 +1447,11 @@ const CompleteMobileDashboard: React.FC = () => {
                         backgroundColor: activeMenu === menu.id ? '#dbeafe' : '#f3f4f6',
                         color: '#1f2937',
                         boxShadow: activeMenu === menu.id ? '0 2px 8px rgba(59,130,246,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
-                        backdropFilter: 'blur(10px)'
+                        backdropFilter: 'blur(10px)',
+                        height: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                       }}
                       onMouseEnter={(e) => {
                         if (activeMenu !== menu.id) {
@@ -1311,35 +1473,167 @@ const CompleteMobileDashboard: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Right: Search Icon - Positioned absolutely */}
-                <button 
-                  onClick={() => setIsSearchOpen(!isSearchOpen)}
-                  style={{
-                    position: 'absolute',
-                    right: '16px',
-                    backgroundColor: '#ffffff',
-                    color: '#000000',
-                    padding: '8px',
-                    borderRadius: '6px',
-                    border: '1px solid #e5e7eb',
-                    transition: 'all 0.2s',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                    flexShrink: 0
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f9fafb';
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                    e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                  }}
-                  aria-label="Search"
-                  title="Search"
-                >
-                  <Search size={20} className="text-gray-700" />
-                </button>
+                {/* Right: Time Filter + Search Icons */}
+                <div style={{ 
+                  position: 'absolute', 
+                  right: '16px', 
+                  display: 'flex', 
+                  gap: '8px',
+                  alignItems: 'center'
+                }}>
+                  {/* Time Filter Dropdown */}
+                  <div style={{ position: 'relative' }}>
+                    <button 
+                      onClick={() => setIsTimeFilterOpen(!isTimeFilterOpen)}
+                      style={{
+                        backgroundColor: '#ffffff',
+                        color: '#000000',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid #e5e7eb',
+                        transition: 'all 0.2s',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '13px',
+                        fontWeight: '500'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#ffffff';
+                        e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                      }}
+                      aria-label="Time Filter"
+                      title={`Filter: ${timeFilter}`}
+                    >
+                      <Clock size={16} className="text-gray-700" />
+                      <span className="hidden sm:inline">{getTimeFilterIcon()}</span>
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {isTimeFilterOpen && (
+                      <>
+                        {/* Backdrop */}
+                        <div
+                          onClick={() => setIsTimeFilterOpen(false)}
+                          style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            zIndex: 40
+                          }}
+                        />
+                        
+                        {/* Dropdown Content */}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '100%',
+                            right: 0,
+                            marginTop: '8px',
+                            backgroundColor: '#ffffff',
+                            borderRadius: '8px',
+                            border: '1px solid #e5e7eb',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                            zIndex: 50,
+                            minWidth: '200px',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <div style={{ padding: '8px 0' }}>
+                            <div style={{
+                              padding: '8px 16px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              color: '#6b7280',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              Filter by Time
+                            </div>
+                            {timeFilterOptions.map((option) => (
+                              <button
+                                key={option}
+                                onClick={() => {
+                                  setTimeFilter(option);
+                                  setIsTimeFilterOpen(false);
+                                  hasLoadedContent.current = false;
+                                }}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  padding: '10px 16px',
+                                  fontSize: '14px',
+                                  fontWeight: timeFilter === option ? '600' : '400',
+                                  backgroundColor: timeFilter === option ? '#eff6ff' : 'transparent',
+                                  color: timeFilter === option ? '#1e40af' : '#374151',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (timeFilter !== option) {
+                                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (timeFilter !== option) {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                  }
+                                }}
+                              >
+                                <span>{option}</span>
+                                {timeFilter === option && (
+                                  <svg style={{ width: '16px', height: '16px', color: '#1e40af' }} fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Search Icon */}
+                  <button 
+                    onClick={() => setIsSearchOpen(!isSearchOpen)}
+                    style={{
+                      backgroundColor: '#ffffff',
+                      color: '#000000',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      border: '1px solid #e5e7eb',
+                      transition: 'all 0.2s',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      flexShrink: 0
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                    }}
+                    aria-label="Search"
+                    title="Search"
+                  >
+                    <Search size={20} className="text-gray-700" />
+                  </button>
+                </div>
               </div>
             </div>
           </section>

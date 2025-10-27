@@ -293,6 +293,37 @@ input[type="checkbox"]#privacy-checkbox {
   text-align: center;
 }
 
+/* ✅ NEW: Gmail-specific warning style */
+.auth-error.gmail-warning {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.auth-error.gmail-warning::before {
+  content: '⚠️';
+  font-size: 1.2rem;
+}
+
+/* ✅ NEW: Field-level Gmail error */
+.field-error.gmail-error {
+  color: #d97706;
+  background: #fef3c7;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: inline-block;
+}
+
+.field-error.gmail-error::before {
+  content: '⚠️ ';
+}
+
 /* Submit Button */
 .auth-submit {
   width: 100%;

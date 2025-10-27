@@ -736,7 +736,14 @@ export const apiService = {
     console.log('📱 Fetching personalized feed with filters:', filterRequest);
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    return await makeModularRequest('api/v1/personalized-feed', 'POST', {}, filterRequest, headers, true);
+    return await makeModularRequest('api/v1/personalized-feed', 'POST', {}, {
+      interests: filterRequest.interests || [],
+      content_types: filterRequest.content_types || [],
+      publishers: filterRequest.publishers || [],
+      time_filter: filterRequest.time_filter || '',
+      search_query: filterRequest.search_query || '',
+      limit: filterRequest.limit || 50
+    }, headers, true);
   },
 
   // Get available interests/topics

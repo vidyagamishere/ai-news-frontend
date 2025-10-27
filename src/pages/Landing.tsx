@@ -676,7 +676,7 @@ const Landing: React.FC = () => {
               border: '1px solid #e5e7eb',
               borderRadius: '6px',
               cursor: 'pointer',
-              transition: 'all 0.2s',
+              transition: 'background-color 0.2s, border-color 0.2s',
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
               display: 'flex',
               alignItems: 'center',
@@ -696,6 +696,8 @@ const Landing: React.FC = () => {
             <LogIn size={18} />
             <span className="landing-btn-text">Sign In</span>
           </button>
+          
+          {/* ✅ FIXED: Get Started button - No black hover, proper alignment */}
           <button 
             onClick={() => navigateToAuth('signup')}
             className="landing-signup-btn"
@@ -708,15 +710,17 @@ const Landing: React.FC = () => {
               border: '2px solid #000000',
               borderRadius: '6px',
               cursor: 'pointer',
-              transition: 'all 0.2s',
+              transition: 'background-color 0.2s, color 0.2s',
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              minWidth: '120px', // ✅ Fixed width prevents jumping
+              justifyContent: 'center'
             }}
             onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = '#000000';
-              e.currentTarget.style.color = '#ffffff';
+              e.currentTarget.style.backgroundColor = '#f3f4f6'; // ✅ Light gray instead of black
+              e.currentTarget.style.color = '#000000';
             }}
             onMouseOut={(e) => {
               e.currentTarget.style.backgroundColor = '#ffffff';
@@ -862,8 +866,8 @@ const Landing: React.FC = () => {
                     gap: '6px'
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#000000';
-                    e.currentTarget.style.color = '#ffffff';
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    e.currentTarget.style.color = '#000000';
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.backgroundColor = '#ffffff';
@@ -940,7 +944,8 @@ const Landing: React.FC = () => {
             paddingBottom: '16px'
           }}>
           <div className="max-w-7xl mx-auto px-4">
-            <div className="horizontal-nav flex items-center justify-center h-12 space-x-4 overflow-x-auto">
+            {/* ✅ FIXED: Added consistent vertical padding */}
+            <div className="horizontal-nav flex items-center justify-center space-x-4 overflow-x-auto" style={{ minHeight: '48px', paddingTop: '4px', paddingBottom: '4px' }}>
               {menuItems.map((menu) => (
                 <button
                   key={menu.id}
@@ -958,7 +963,12 @@ const Landing: React.FC = () => {
                     backgroundColor: activeMenu === menu.id ? '#dbeafe' : '#f3f4f6',
                     color: '#1f2937',
                     boxShadow: activeMenu === menu.id ? '0 2px 8px rgba(59,130,246,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
-                    backdropFilter: 'blur(10px)'
+                    backdropFilter: 'blur(10px)',
+                    // ✅ FIXED: Consistent height to prevent jumping
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                   onMouseEnter={(e) => {
                     if (activeMenu !== menu.id) {
@@ -1108,54 +1118,152 @@ const Landing: React.FC = () => {
                   {currentCategory.description}
                 </p>
                 
-                {/* Content Stats */}
-                <div className="content-stats" style={{ 
+                {/* ✅ NEW: Content Stats with Auth Prompt */}
+                <div style={{ 
                   display: 'flex',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  margin: '0 auto' 
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '12px',
+                  margin: '0 auto',
+                  maxWidth: '600px'
                 }}>
-                  <div style={{ 
-                    backgroundColor: '#f9fafb', 
-                    borderRadius: '6px', 
-                    padding: '6px 12px', 
-                    border: '1px solid #e5e7eb',
+                  {/* Stats Row */}
+                  <div className="content-stats" style={{ 
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
+                    justifyContent: 'center',
+                    gap: '8px',
+                    flexWrap: 'wrap'
                   }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                      {currentCategory.realCounts?.blogs || 0}
+                    <div style={{ 
+                      backgroundColor: '#f9fafb', 
+                      borderRadius: '6px', 
+                      padding: '6px 12px', 
+                      border: '1px solid #e5e7eb',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                        {currentCategory.realCounts?.blogs || 0}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>Blogs</div>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#6b7280' }}>Blogs</div>
+                    <div style={{ 
+                      backgroundColor: '#f9fafb', 
+                      borderRadius: '6px', 
+                      padding: '6px 12px', 
+                      border: '1px solid #e5e7eb',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                        {currentCategory.realCounts?.podcasts || 0}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>Podcasts</div>
+                    </div>
+                    <div style={{ 
+                      backgroundColor: '#f9fafb', 
+                      borderRadius: '6px', 
+                      padding: '6px 12px', 
+                      border: '1px solid #e5e7eb',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                        {currentCategory.realCounts?.videos || 0}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>Videos</div>
+                    </div>
                   </div>
-                  <div style={{ 
-                    backgroundColor: '#f9fafb', 
-                    borderRadius: '6px', 
-                    padding: '6px 12px', 
-                    border: '1px solid #e5e7eb',
+
+                  {/* ✅ NEW: Auth Prompt - Responsive */}
+                  <div className="auth-prompt" style={{
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '8px',
+                    padding: '12px 16px',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '8px',
+                    width: '100%',
+                    maxWidth: '500px'
                   }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                      {currentCategory.realCounts?.podcasts || 0}
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: '#1e40af', 
+                      textAlign: 'center',
+                      lineHeight: '1.5'
+                    }}>
+                      <span style={{ fontWeight: '600' }}>🔓 Access all content</span>
+                      <span style={{ display: 'block', marginTop: '4px', fontSize: '11px', color: '#3b82f6' }}>
+                        Sign in or create a free account to view all articles
+                      </span>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#6b7280' }}>Podcasts</div>
-                  </div>
-                  <div style={{ 
-                    backgroundColor: '#f9fafb', 
-                    borderRadius: '6px', 
-                    padding: '6px 12px', 
-                    border: '1px solid #e5e7eb',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                      {currentCategory.realCounts?.videos || 0}
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '8px',
+                      flexWrap: 'wrap',
+                      justifyContent: 'center',
+                      width: '100%'
+                    }}>
+                      <button
+                        onClick={() => navigateToAuth('signup')}
+                        style={{
+                          backgroundColor: '#1a202c',
+                          color: '#ffffff',
+                          padding: '6px 16px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          border: '2px solid #1a202c',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          flex: '1',
+                          minWidth: '120px',
+                          maxWidth: '180px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#2d3748';
+                          e.currentTarget.style.borderColor = '#2d3748';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#1a202c';
+                          e.currentTarget.style.borderColor = '#1a202c';
+                        }}
+                      >
+                        🚀 Unlock All Stories
+                      </button>
+                      <button
+                        onClick={() => navigateToAuth('signin')}
+                        style={{
+                          backgroundColor: '#ffffff',
+                          color: '#718096',
+                          padding: '6px 16px',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          flex: '1',
+                          minWidth: '100px',
+                          maxWidth: '150px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#718096';
+                          e.currentTarget.style.color = '#1a202c';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#e2e8f0';
+                          e.currentTarget.style.color = '#718096';
+                        }}
+                      >
+                        Sign In Instead
+                      </button>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#6b7280' }}>Videos</div>
                   </div>
                 </div>
               </div>
@@ -1165,7 +1273,12 @@ const Landing: React.FC = () => {
                 {/* Blogs */}
                 {currentCategory.content.blogs.length > 0 && (
                   <section>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px', 
+                      marginBottom: '24px'
+                    }}>
                       <div style={{ 
                         width: '32px', 
                         height: '32px', 
@@ -1173,18 +1286,34 @@ const Landing: React.FC = () => {
                         borderRadius: '8px', 
                         display: 'flex', 
                         alignItems: 'center', 
-                        justifyContent: 'center' 
+                        justifyContent: 'center',
+                        flexShrink: 0
                       }}>
-                        <span style={{ color: '#3b82f6' }}>📖</span>
+                        <span style={{ color: '#3b82f6', fontSize: '18px' }}>📖</span>
                       </div>
-                      <h2 className="section-title" style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>Latest Blogs</h2>
+                      <h2 className="section-title" style={{ 
+                        fontSize: '20px', 
+                        fontWeight: 'bold', 
+                        color: '#111827',
+                        margin: 0,
+                        lineHeight: '32px'
+                      }}>
+                        Latest Blogs
+                      </h2>
+                      {/* ✅ UPDATED: Light background with dark text */}
                       <span style={{ 
-                        backgroundColor: '#dbeafe', 
-                        color: '#1e40af', 
-                        padding: '4px 12px', 
-                        borderRadius: '16px', 
-                        fontSize: '14px', 
-                        fontWeight: '500' 
+                        backgroundColor: '#dbeafe',
+                        color: '#1e3a8a', 
+                        padding: '6px 16px', 
+                        borderRadius: '20px', 
+                        fontSize: '15px', 
+                        fontWeight: '700',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
+                        border: '2px solid #bfdbfe'
                       }}>
                         {currentCategory.realCounts?.blogs || 0}
                       </span>
@@ -1209,7 +1338,13 @@ const Landing: React.FC = () => {
                 {/* Podcasts */}
                 {currentCategory.content.podcasts.length > 0 && (
                   <section>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                    {/* ✅ FIXED: Aligned icon, heading, and count */}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px', 
+                      marginBottom: '24px'
+                    }}>
                       <div style={{ 
                         width: '32px', 
                         height: '32px', 
@@ -1217,18 +1352,34 @@ const Landing: React.FC = () => {
                         borderRadius: '8px', 
                         display: 'flex', 
                         alignItems: 'center', 
-                        justifyContent: 'center' 
+                        justifyContent: 'center',
+                        flexShrink: 0
                       }}>
-                        <span style={{ color: '#16a34a' }}>🎧</span>
+                        <span style={{ color: '#16a34a', fontSize: '18px' }}>🎧</span>
                       </div>
-                      <h2 className="section-title" style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>Featured Podcasts</h2>
+                      <h2 className="section-title" style={{ 
+                        fontSize: '20px', 
+                        fontWeight: 'bold', 
+                        color: '#111827',
+                        margin: 0,
+                        lineHeight: '32px'
+                      }}>
+                        Featured Podcasts
+                      </h2>
+                      {/* ✅ UPDATED: Light background with dark text */}
                       <span style={{ 
-                        backgroundColor: '#dcfce7', 
-                        color: '#15803d', 
-                        padding: '4px 12px', 
-                        borderRadius: '16px', 
-                        fontSize: '14px', 
-                        fontWeight: '500' 
+                        backgroundColor: '#dcfce7',
+                        color: '#14532d', 
+                        padding: '6px 16px', 
+                        borderRadius: '20px', 
+                        fontSize: '15px', 
+                        fontWeight: '700',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 8px rgba(22, 163, 74, 0.2)',
+                        border: '2px solid #bbf7d0'
                       }}>
                         {currentCategory.realCounts?.podcasts || 0}
                       </span>
@@ -1250,7 +1401,13 @@ const Landing: React.FC = () => {
                 {/* Videos */}
                 {currentCategory.content.videos.length > 0 && (
                   <section>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                    {/* ✅ FIXED: Aligned icon, heading, and count */}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px', 
+                      marginBottom: '24px'
+                    }}>
                       <div style={{ 
                         width: '32px', 
                         height: '32px', 
@@ -1258,18 +1415,34 @@ const Landing: React.FC = () => {
                         borderRadius: '8px', 
                         display: 'flex', 
                         alignItems: 'center', 
-                        justifyContent: 'center' 
+                        justifyContent: 'center',
+                        flexShrink: 0
                       }}>
-                        <span style={{ color: '#dc2626' }}>🎥</span>
+                        <span style={{ color: '#dc2626', fontSize: '18px' }}>🎥</span>
                       </div>
-                      <h2 className="section-title" style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>Latest Videos</h2>
+                      <h2 className="section-title" style={{ 
+                        fontSize: '20px', 
+                        fontWeight: 'bold', 
+                        color: '#111827',
+                        margin: 0,
+                        lineHeight: '32px'
+                      }}>
+                        Latest Videos
+                      </h2>
+                      {/* ✅ UPDATED: Light background with dark text */}
                       <span style={{ 
-                        backgroundColor: '#fee2e2', 
-                        color: '#dc2626', 
-                        padding: '4px 12px', 
-                        borderRadius: '16px', 
-                        fontSize: '14px', 
-                        fontWeight: '500' 
+                        backgroundColor: '#fee2e2',
+                        color: '#7f1d1d', 
+                        padding: '6px 16px', 
+                        borderRadius: '20px', 
+                        fontSize: '15px', 
+                        fontWeight: '700',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 8px rgba(220, 38, 38, 0.2)',
+                        border: '2px solid #fecaca'
                       }}>
                         {currentCategory.realCounts?.videos || 0}
                       </span>
@@ -1461,10 +1634,10 @@ const Landing: React.FC = () => {
             .landing-title { font-size: 18px !important; }
             .landing-subtitle { font-size: 10px !important; }
             .hamburger-menu-title { font-size: 18px !important; }
-            .hamburger-menu-subtitle { font-size: 10px !important; }
+            .hamburger-menu-subtitle { fontSize: 10px !important; }
             .landing-logo-section { margin: 0 !important; }
             .landing-auth-buttons { gap: 4px !important; }
-            .landing-auth-buttons button { padding: 8px !important; }
+            .landing-auth-buttons button { padding: 8px !important; min-width: unset !important; }
             .landing-btn-text { display: none !important; }
             .horizontal-menu-section { display: none !important; }
             .hero-title { fontSize: 22px !important; }
@@ -1478,6 +1651,20 @@ const Landing: React.FC = () => {
             .section-gap { gap: 32px !important; }
             .article-card { padding: 16px !important; }
             .cta-buttons { flex-direction: column !important; }
+            /* ✅ NEW: Auth prompt mobile */
+            .auth-prompt { 
+              padding: 10px 12px !important;
+              gap: 6px !important;
+            }
+            .auth-prompt > div:first-child {
+              fontSize: 11px !important;
+            }
+            .auth-prompt button {
+              fontSize: 11px !important;
+              padding: 5px 12px !important;
+              min-width: 80px !important;
+              max-width: 120px !important;
+            }
           }
           
           /* Tablet responsiveness */
@@ -1485,12 +1672,16 @@ const Landing: React.FC = () => {
             .landing-title { font-size: 20px !important; }
             .landing-subtitle { font-size: 11px !important; }
             .hamburger-menu-title { font-size: 20px !important; }
-            .hamburger-menu-subtitle { font-size: 11px !important; }
+            .hamburger-menu-subtitle { fontSize: 11px !important; }
             .landing-btn-text { display: none !important; }
             .landing-auth-buttons { gap: 4px !important; }
-            .landing-auth-buttons button { padding: 8px !important; }
+            .landing-auth-buttons button { padding: 8px !important; min-width: unset !important; }
             .horizontal-menu-section { display: none !important; }
             .content-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            /* ✅ NEW: Auth prompt tablet */
+            .auth-prompt {
+              max-width: 400px !important;
+            }
           }
           
           /* Small mobile devices */
@@ -1502,6 +1693,11 @@ const Landing: React.FC = () => {
             .hero-title { font-size: 20px !important; }
             .section-title { font-size: 16px !important; }
             .horizontal-nav button { font-size: 12px !important; padding: 8px 4px !important; }
+            /* ✅ NEW: Auth prompt small mobile - stacked buttons */
+            .auth-prompt button {
+              flex: 1 1 100% !important;
+              max-width: 100% !important;
+            }
           }
           
           /* Navigation specific styles */
