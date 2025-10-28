@@ -42,8 +42,8 @@ const CompleteMobileDashboard: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   
-  // Add time filter state - DEFAULT to 'Last 24 Hours'
-  const [timeFilter, setTimeFilter] = useState<'Last 24 Hours' | 'Last Week' | 'Last Month' | 'This Year'>('Last 24 Hours');
+  // Add time filter state - DEFAULT to 'Last Week' for now (until scraper runs)
+  const [timeFilter, setTimeFilter] = useState<'Last 24 Hours' | 'Last Week' | 'Last Month' | 'This Year'>('Last Week');
   const [isTimeFilterOpen, setIsTimeFilterOpen] = useState(false);
   
   // Add content counts state (similar to Landing.tsx)
@@ -1176,439 +1176,155 @@ const CompleteMobileDashboard: React.FC = () => {
             </div>
           </div>
         </div>
-      </>
-    );
-  };
-
-  // Breaking News Section
-  const renderBreakingNews = () => {
-    let breakingNews = content.filter(item => item.significance && item.significance >= 8);
-    
-    if (selectedCategory !== 'All') {
-      breakingNews = breakingNews.filter(item => item.category === selectedCategory);
-    }
-    
-    breakingNews = breakingNews.slice(0, 8);
-    
-    if (breakingNews.length === 0) return null;
-
-    const scrollingNews = [...breakingNews, ...breakingNews];
-
-    return (
-      <section style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ maxWidth: '100%', margin: '0', padding: '12px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ 
-              backgroundColor: '#dbeafe', 
-              padding: '6px 12px', 
-              borderRadius: '6px',
-              flexShrink: 0
-            }}>
-              <span style={{ alignItems: 'left', fontSize: '12px', fontWeight: '600', color: '#1e40af' }}>
-                🔥 Latest in AI
-              </span>
-            </div>
-            
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              <div style={{ 
-                display: 'flex', 
-                gap: '16px',
-                animation: 'scroll 30s linear infinite',
-                whiteSpace: 'nowrap',
-                justifyContent: 'flex-start'
-              }}>
-                {scrollingNews.map((item, index) => (
-                  <div
-                    key={`${item.id}-${index}`}
-                    onClick={() => window.open(item.sourceLink, '_blank')}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      cursor: 'pointer',
-                      padding: '6px 10px',
-                      backgroundColor: '#f9fafb',
-                      borderRadius: '6px',
-                      border: '1px solid #e5e7eb',
-                      transition: 'all 0.2s',
-                      flexShrink: 0
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f3f4f6';
-                      e.currentTarget.style.borderColor = '#d1d5db';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 2px 4px -1px rgba(0, 0, 0, 0.1)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f9fafb';
-                      e.currentTarget.style.borderColor = '#e5e7eb';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  >
-                    <span style={{
-                      backgroundColor: '#dbeafe',
-                      color: '#1e40af',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: '600',
-                      flexShrink: 0
-                    }}>
-                      {item.significance}/10
-                    </span>
-                    
-                    <span style={{
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      color: '#1f2937',
-                      maxWidth: '400px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                      {item.title}
-                    </span>
-                    
-                    <span style={{
-                      fontSize: '11px',
-                      color: '#6b7280',
-                      flexShrink: 0
-                    }}>
-                      • {item.publisher}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <style>
-          {`
-            @keyframes scroll {
-              0% { transform: translateX(0); }
-              100% { transform: translateX(-50%); }
-            }
-          `}
-        </style>
-      </section>
-    );
-  };
-
-  // Add isMobile state detection
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
+        </>
+      );
     };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
-  return (
-    <>
-      <SEO 
-        title="AI News Dashboard | Vidyagam"
-        description="Your personalized AI news dashboard"
-        keywords="AI news, dashboard, artificial intelligence"
-      />
+    // Breaking News Section
+    const renderBreakingNews = () => {
+      let breakingNews = content.filter(item => item.significance && item.significance >= 8);
       
-      <div className="landing-page">
-        {/* Header with Hamburger Menu */}
-        <header className="bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex justify-between items-center h-16">
-              
-              {/* Left: Hamburger Menu Button */}
-              <div className="flex items-center">
-                <button 
-                  onClick={() => setMenuOpen(!menuOpen)}
-                  style={{
-                    backgroundColor: '#ffffff',
-                    color: '#000000',
-                    padding: '8px',
-                    borderRadius: '6px',
-                    border: '1px solid #e5e7eb',
-                    transition: 'all 0.2s',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f9fafb';
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                    e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                  }}
-                  aria-label="Menu"
-                >
-                  <Menu size={24} className="text-gray-700" />
-                </button>
-              </div>
+      if (selectedCategory !== 'All') {
+        breakingNews = breakingNews.filter(item => item.category === selectedCategory);
+      }
+      
+      breakingNews = breakingNews.slice(0, 8);
+      
+      if (breakingNews.length === 0) return null;
 
-              {/* Center: Logo with AI Intelligence Icon and Subtitle */}
-              <div className="flex flex-col items-center flex-1">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    Vidyagam
-                  </h1>
-                </div>
-                <span 
-                  className="text-xs mt-1" 
-                  style={{ 
-                    color: '#6b7280',
-                    fontSize: '12px',
-                    fontWeight: '400',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  AI Latest, Curated and Filtered for you
+      const scrollingNews = [...breakingNews, ...breakingNews];
+
+      return (
+        <section style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
+          <div style={{ maxWidth: '100%', margin: '0', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ 
+                backgroundColor: '#dbeafe', 
+                padding: '6px 12px', 
+                borderRadius: '6px',
+                flexShrink: 0
+              }}>
+                <span style={{ alignItems: 'left', fontSize: '12px', fontWeight: '600', color: '#1e40af' }}>
+                  🔥 Latest in AI
                 </span>
               </div>
-
-              {/* Right: Sign Out Button Only */}
-              <div className="flex items-center">
-                <button 
-                  onClick={handleLogout}
-                  style={{
-                    backgroundColor: '#ffffff',
-                    color: '#dc2626',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    border: '1px solid #e5e7eb',
-                    transition: 'all 0.2s',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#dc2626';
-                    e.currentTarget.style.color = '#ffffff';
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(220, 38, 38, 0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                    e.currentTarget.style.color = '#dc2626';
-                    e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                  }}
-                  aria-label="Sign Out"
-                  title="Sign Out"
-                >
-                  <LogOut size={20} />
-                  <span className="hidden sm:inline text-sm font-medium">Sign Out</span>
-                </button>
-              </div>
-
-            </div>
-          </div>
-        </header>
-
-        {/* Horizontal Navigation Menu */}
-        {menuItems.length > 0 && (
-          <section 
-            className="horizontal-menu-section"
-            style={{ 
-              background: '#ffffff',
-              borderBottom: 'none',
-              paddingTop: '16px',
-              paddingBottom: '16px'
-            }}>
-            <div className="max-w-7xl mx-auto px-4">
-              <div className="horizontal-nav flex items-center justify-center h-12" style={{ minHeight: '48px', paddingTop: '4px', paddingBottom: '4px' }}>
-                {/* Center: Category Menu Items */}
-                <div className="flex items-center space-x-4 overflow-x-auto">
-                  {menuItems.map((menu) => (
-                    <button
-                      key={menu.id}
-                      onClick={() => {
-                        setCurrentView('dashboard');
-                        handleMenuSelection(menu.id);
-                      }}
+              
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '16px',
+                  animation: 'scroll 30s linear infinite',
+                  whiteSpace: 'nowrap',
+                  justifyContent: 'flex-start'
+                }}>
+                  {scrollingNews.map((item, index) => (
+                    <div
+                      key={`${item.id}-${index}`}
+                      onClick={() => window.open(item.sourceLink, '_blank')}
                       style={{
-                        padding: '8px 16px',
-                        margin: '0 4px',
-                        borderRadius: '6px',
-                        fontSize: '13px',
-                        fontWeight: '700',
-                        border: 'none',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        whiteSpace: 'nowrap',
-                        backgroundColor: activeMenu === menu.id ? '#dbeafe' : '#f3f4f6',
-                        color: '#1f2937',
-                        boxShadow: activeMenu === menu.id ? '0 2px 8px rgba(59,130,246,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
-                        backdropFilter: 'blur(10px)',
-                        height: '40px',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (activeMenu !== menu.id) {
-                          e.currentTarget.style.backgroundColor = '#e5e7eb';
-                          e.currentTarget.style.color = '#1f2937';
-                          e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (activeMenu !== menu.id) {
-                          e.currentTarget.style.backgroundColor = '#f3f4f6';
-                          e.currentTarget.style.color = '#1f2937';
-                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
-                        }
-                      }}
-                    >
-                      {menu.name}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Right: Time Filter + Search Icons */}
-                <div style={{ 
-                  position: 'absolute', 
-                  right: '16px', 
-                  display: 'flex', 
-                  gap: '8px',
-                  alignItems: 'center'
-                }}>
-                  {/* Time Filter Dropdown */}
-                  <div style={{ position: 'relative' }}>
-                    <button 
-                      onClick={() => setIsTimeFilterOpen(!isTimeFilterOpen)}
-                      style={{
-                        backgroundColor: '#ffffff',
-                        color: '#000000',
-                        padding: '8px 12px',
+                        gap: '8px',
+                        cursor: 'pointer',
+                        padding: '6px 10px',
+                        backgroundColor: '#f9fafb',
                         borderRadius: '6px',
                         border: '1px solid #e5e7eb',
                         transition: 'all 0.2s',
-                        cursor: 'pointer',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontSize: '13px',
-                        fontWeight: '500'
+                        flexShrink: 0
                       }}
-                      onMouseEnter={(e) => {
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f3f4f6';
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px -1px rgba(0, 0, 0, 0.1)';
+                      }}
+                      onMouseOut={(e) => {
                         e.currentTarget.style.backgroundColor = '#f9fafb';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'none';
                       }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#ffffff';
-                        e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                      }}
-                      aria-label="Time Filter"
-                      title={`Filter: ${timeFilter}`}
                     >
-                      <Clock size={16} className="text-gray-700" />
-                      <span className="hidden sm:inline">{getTimeFilterIcon()}</span>
-                    </button>
+                      <span style={{
+                        backgroundColor: '#dbeafe',
+                        color: '#1e40af',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        flexShrink: 0
+                      }}>
+                        {item.significance}/10
+                      </span>
+                      
+                      <span style={{
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: '#1f2937',
+                        maxWidth: '400px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {item.title}
+                      </span>
+                      
+                      <span style={{
+                        fontSize: '11px',
+                        color: '#6b7280',
+                        flexShrink: 0
+                      }}>
+                        • {item.publisher}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <style>
+            {`
+              @keyframes scroll {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+              }
+            `}
+          </style>
+        </section>
+      );
+    };
 
-                    {/* Dropdown Menu */}
-                    {isTimeFilterOpen && (
-                      <>
-                        {/* Backdrop */}
-                        <div
-                          onClick={() => setIsTimeFilterOpen(false)}
-                          style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            zIndex: 40
-                          }}
-                        />
-                        
-                        {/* Dropdown Content */}
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '100%',
-                            right: 0,
-                            marginTop: '8px',
-                            backgroundColor: '#ffffff',
-                            borderRadius: '8px',
-                            border: '1px solid #e5e7eb',
-                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                            zIndex: 50,
-                            minWidth: '200px',
-                            overflow: 'hidden'
-                          }}
-                        >
-                          <div style={{ padding: '8px 0' }}>
-                            <div style={{
-                              padding: '8px 16px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              color: '#6b7280',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.05em'
-                            }}>
-                              Filter by Time
-                            </div>
-                            {timeFilterOptions.map((option) => (
-                              <button
-                                key={option}
-                                onClick={() => {
-                                  setTimeFilter(option);
-                                  setIsTimeFilterOpen(false);
-                                  hasLoadedContent.current = false;
-                                }}
-                                style={{
-                                  width: '100%',
-                                  textAlign: 'left',
-                                  padding: '10px 16px',
-                                  fontSize: '14px',
-                                  fontWeight: timeFilter === option ? '600' : '400',
-                                  backgroundColor: timeFilter === option ? '#eff6ff' : 'transparent',
-                                  color: timeFilter === option ? '#1e40af' : '#374151',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between'
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (timeFilter !== option) {
-                                    e.currentTarget.style.backgroundColor = '#f9fafb';
-                                  }
-                                }}
-                                onMouseLeave={(e) => {
-                                  if (timeFilter !== option) {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                  }
-                                }}
-                              >
-                                <span>{option}</span>
-                                {timeFilter === option && (
-                                  <svg style={{ width: '16px', height: '16px', color: '#1e40af' }} fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
+    // Add isMobile state detection
+    const [isMobile, setIsMobile] = useState(false);
 
-                  {/* Search Icon */}
+    useEffect(() => {
+      const handleResize = () => {
+        setIsMobile(window.innerWidth < 768);
+      };
+      handleResize();
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    return (
+      <>
+        <SEO 
+          title="AI News Dashboard | Vidyagam"
+          description="Your personalized AI news dashboard"
+          keywords="AI news, dashboard, artificial intelligence"
+        />
+        
+        <div className="landing-page">
+          {/* Header with Hamburger Menu */}
+          <header className="bg-white shadow-sm">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="flex justify-between items-center h-16">
+                
+                {/* Left: Hamburger Menu Button */}
+                <div className="flex items-center">
                   <button 
-                    onClick={() => setIsSearchOpen(!isSearchOpen)}
+                    onClick={() => setMenuOpen(!menuOpen)}
                     style={{
                       backgroundColor: '#ffffff',
                       color: '#000000',
@@ -1617,8 +1333,7 @@ const CompleteMobileDashboard: React.FC = () => {
                       border: '1px solid #e5e7eb',
                       transition: 'all 0.2s',
                       cursor: 'pointer',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                      flexShrink: 0
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#f9fafb';
@@ -1628,16 +1343,327 @@ const CompleteMobileDashboard: React.FC = () => {
                       e.currentTarget.style.backgroundColor = '#ffffff';
                       e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
                     }}
-                    aria-label="Search"
-                    title="Search"
+                    aria-label="Menu"
                   >
-                    <Search size={20} className="text-gray-700" />
+                    <Menu size={24} className="text-gray-700" />
                   </button>
                 </div>
+
+                {/* Center: Logo with AI Intelligence Icon and Subtitle */}
+                <div className="flex flex-col items-center flex-1">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <h1 className="text-2xl font-bold text-gray-900">
+                      Vidyagam
+                    </h1>
+                  </div>
+                  <span 
+                    className="text-xs mt-1" 
+                    style={{ 
+                      color: '#6b7280',
+                      fontSize: '12px',
+                      fontWeight: '400',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    AI Latest, Curated and Filtered for you
+                  </span>
+                </div>
+
+                {/* Right: Sign Out Button Only */}
+                <div className="flex items-center">
+                  <button 
+                    onClick={handleLogout}
+                    style={{
+                      backgroundColor: '#ffffff',
+                      color: '#dc2626',
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      border: '1px solid #e5e7eb',
+                      transition: 'all 0.2s',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dc2626';
+                      e.currentTarget.style.color = '#ffffff';
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(220, 38, 38, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.color = '#dc2626';
+                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                    }}
+                    aria-label="Sign Out"
+                    title="Sign Out"
+                  >
+                    <LogOut size={20} />
+                    <span className="hidden sm:inline text-sm font-medium">Sign Out</span>
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          </header>
+
+          {/* Horizontal Navigation Menu - Desktop Only */}
+          {menuItems.length > 0 && (
+            <section className="horizontal-menu-section">
+              <div className="max-w-7xl mx-auto px-4">
+                <div className="horizontal-nav flex items-center justify-center h-12" style={{ minHeight: '48px', paddingTop: '4px', paddingBottom: '4px' }}>
+                  {/* Center: Category Menu Items */}
+                  <div className="flex items-center space-x-4 overflow-x-auto">
+                    {menuItems.map((menu) => (
+                      <button
+                        key={menu.id}
+                        onClick={() => {
+                          setCurrentView('dashboard');
+                          handleMenuSelection(menu.id);
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          margin: '0 4px',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: '700',
+                          border: 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          whiteSpace: 'nowrap',
+                          backgroundColor: activeMenu === menu.id ? '#dbeafe' : '#f3f4f6',
+                          color: '#1f2937',
+                          boxShadow: activeMenu === menu.id ? '0 2px 8px rgba(59,130,246,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+                          backdropFilter: 'blur(10px)',
+                          height: '40px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (activeMenu !== menu.id) {
+                            e.currentTarget.style.backgroundColor = '#e5e7eb';
+                            e.currentTarget.style.color = '#1f2937';
+                            e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (activeMenu !== menu.id) {
+                            e.currentTarget.style.backgroundColor = '#f3f4f6';
+                            e.currentTarget.style.color = '#1f2937';
+                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+                          }
+                        }}
+                      >
+                        {menu.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* ✅ FIXED: Responsive Filter Section with proper closing brace */}
+          <section style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb', padding: '16px 0' }}>
+            <div className="max-w-7xl mx-auto px-4">
+              <div 
+                style={{ 
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  gap: '12px',
+                  alignItems: isMobile ? 'stretch' : 'center',
+                  justifyContent: 'space-between'
+                }}
+              >
+                {/* Left: Time Filter */}
+                <div style={{ position: 'relative', flex: isMobile ? '1' : '0 0 auto' }}>
+                  <button 
+                    onClick={() => setIsTimeFilterOpen(!isTimeFilterOpen)}
+                    style={{
+                      width: isMobile ? '100%' : 'auto',
+                      backgroundColor: '#ffffff',
+                      color: '#000000',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      border: '2px solid #e5e7eb',
+                      transition: 'all 0.2s',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Clock size={18} style={{ color: '#6366f1' }} />
+                      <span style={{ color: '#111827' }}>{timeFilter}</span>
+                    </div>
+                    <svg 
+                      style={{ 
+                        width: '16px', 
+                        height: '16px', 
+                        color: '#6b7280',
+                        transform: isTimeFilterOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s'
+                      }} 
+                      fill="currentColor" 
+                      viewBox="0 0 20 20"
+                    >
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+
+                  {/* Time Filter Dropdown */}
+                  {isTimeFilterOpen && (
+                    <>
+                      <div
+                        onClick={() => setIsTimeFilterOpen(false)}
+                        style={{
+                          position: 'fixed',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          zIndex: 40
+                        }}
+                      />
+                      
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: isMobile ? 0 : 'auto',
+                          right: isMobile ? 0 : 'auto',
+                          marginTop: '8px',
+                          backgroundColor: '#ffffff',
+                          borderRadius: '12px',
+                          border: '2px solid #e5e7eb',
+                          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                          zIndex: 50,
+                          minWidth: isMobile ? '100%' : '220px',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <div style={{ padding: '8px 0' }}>
+                          <div style={{
+                            padding: '12px 16px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            color: '#6b7280',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            borderBottom: '1px solid #f3f4f6'
+                          }}>
+                            Filter by Time
+                          </div>
+                          {timeFilterOptions.map((option) => (
+                            <button
+                              key={option}
+                              onClick={() => {
+                                setTimeFilter(option);
+                                setIsTimeFilterOpen(false);
+                                hasLoadedContent.current = false;
+                            }}
+                            style={{
+                              width: '100%',
+                              textAlign: 'left',
+                              padding: '12px 16px',
+                              fontSize: '14px',
+                              fontWeight: timeFilter === option ? '600' : '400',
+                              backgroundColor: timeFilter === option ? '#eff6ff' : 'transparent',
+                              color: timeFilter === option ? '#1e40af' : '#374151',
+                              border: 'none',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (timeFilter !== option) {
+                                e.currentTarget.style.backgroundColor = '#f9fafb';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (timeFilter !== option) {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                              }
+                            }}
+                          >
+                            <span>{option}</span>
+                            {timeFilter === option && (
+                              <svg style={{ width: '18px', height: '18px', color: '#1e40af' }} fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Right: Search Button */}
+                <button 
+                  onClick={() => setIsSearchOpen(!isSearchOpen)}
+                  style={{
+                    flex: isMobile ? '1' : '0 0 auto',
+                    backgroundColor: '#eff6ff', // ✅ CHANGED: Very light blue background
+                    color: '#1e40af', // ✅ CHANGED: Dark blue text for contrast
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    border: '2px solid #bfdbfe', // ✅ CHANGED: Light blue border
+                    transition: 'all 0.2s',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(59, 130, 246, 0.15)', // ✅ CHANGED: Subtle blue shadow
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#dbeafe'; // ✅ CHANGED: Slightly darker blue on hover
+                    e.currentTarget.style.borderColor = '#93c5fd';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#eff6ff'; // ✅ CHANGED: Back to light blue
+                    e.currentTarget.style.borderColor = '#bfdbfe';
+                    e.currentTarget.style.boxShadow = '0 2px 6px rgba(59, 130, 246, 0.15)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  <Search size={18} />
+                  <span>Search AI News</span>
+                </button>
               </div>
             </div>
           </section>
-        )}
+        )
 
         {/* Render Hamburger Menu */}
         {renderHamburgerMenu()}
@@ -1663,14 +1689,9 @@ const CompleteMobileDashboard: React.FC = () => {
         {/* Breaking News */}
         {renderBreakingNews()}
 
-        {/* Search Section - Inline below breaking news */}
+        {/* Search Section */}
         {isSearchOpen && (
-          <section style={{
-            backgroundColor: '#f9fafb',
-            borderBottom: '1px solid #e5e7eb',
-            padding: '24px 0',
-            animation: 'slideDown 0.3s ease-out'
-          }}>
+          <section style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', padding: isMobile ? '20px 0' : '24px 0', animation: 'slideDown 0.3s ease-out' }}>
             <div className="max-w-3xl mx-auto px-4">
               {/* Search Header */}
               <div style={{ 
@@ -1680,7 +1701,7 @@ const CompleteMobileDashboard: React.FC = () => {
                 marginBottom: '16px'
               }}>
                 <h2 style={{ 
-                  fontSize: '18px', 
+                  fontSize: isMobile ? '16px' : '18px',
                   fontWeight: '600', 
                   color: '#111827',
                   display: 'flex',
@@ -1696,8 +1717,8 @@ const CompleteMobileDashboard: React.FC = () => {
                     setSearchQuery('');
                   }}
                   style={{
-                    padding: '4px',
-                    borderRadius: '6px',
+                    padding: '6px',
+                    borderRadius: '8px',
                     border: 'none',
                     backgroundColor: 'transparent',
                     cursor: 'pointer',
@@ -1713,7 +1734,7 @@ const CompleteMobileDashboard: React.FC = () => {
                     e.currentTarget.style.color = '#6b7280';
                   }}
                 >
-                  <X size={20} />
+                  <X size={22} />
                 </button>
               </div>
 
@@ -1721,7 +1742,7 @@ const CompleteMobileDashboard: React.FC = () => {
               <div style={{ position: 'relative', marginBottom: '16px' }}>
                 <input
                   type="text"
-                  placeholder="Search for AI topics, research papers, tutorials... (Press Enter to search)"
+                  placeholder={isMobile ? "Search AI topics..." : "Search for AI topics, research papers, tutorials... (Press Enter to search)"}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -1735,8 +1756,8 @@ const CompleteMobileDashboard: React.FC = () => {
                   }}
                   style={{
                     width: '100%',
-                    padding: '16px 48px 16px 48px',
-                    fontSize: '16px',
+                    padding: isMobile ? '14px 44px' : '16px 48px',
+                    fontSize: isMobile ? '15px' : '16px',
                     border: '2px solid #e5e7eb',
                     borderRadius: '12px',
                     outline: 'none',
@@ -1755,10 +1776,10 @@ const CompleteMobileDashboard: React.FC = () => {
                   autoFocus
                 />
                 <Search 
-                  size={20} 
+                  size={isMobile ? 18 : 20}
                   style={{ 
                     position: 'absolute', 
-                    left: '16px', 
+                    left: isMobile ? '14px' : '16px',
                     top: '50%', 
                     transform: 'translateY(-50%)',
                     color: '#9ca3af'
@@ -1769,10 +1790,10 @@ const CompleteMobileDashboard: React.FC = () => {
                     onClick={() => setSearchQuery('')}
                     style={{
                       position: 'absolute',
-                      right: '16px',
+                      right: isMobile ? '14px' : '16px',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      padding: '4px',
+                      padding: '6px',
                       borderRadius: '50%',
                       border: 'none',
                       backgroundColor: '#f3f4f6',
@@ -1804,7 +1825,12 @@ const CompleteMobileDashboard: React.FC = () => {
                 }}>
                   Popular searches:
                 </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: '8px',
+                  justifyContent: isMobile ? 'flex-start' : 'flex-start'
+                }}>
                   {['Latest GPT-4 updates', 'AI ethics', 'Machine learning tutorials', 'AI startups'].map((suggestion, index) => (
                     <button
                       key={index}
@@ -1814,15 +1840,16 @@ const CompleteMobileDashboard: React.FC = () => {
                         setIsSearchOpen(false);
                       }}
                       style={{
-                        padding: '6px 12px',
-                        fontSize: '13px',
+                        padding: isMobile ? '8px 12px' : '6px 12px',
+                        fontSize: isMobile ? '12px' : '13px',
                         backgroundColor: '#ffffff',
                         border: '1px solid #e5e7eb',
                         borderRadius: '20px',
                         cursor: 'pointer',
                         color: '#374151',
                         transition: 'all 0.2s',
-                        fontWeight: '500'
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.backgroundColor = '#6366f1';
@@ -1841,32 +1868,34 @@ const CompleteMobileDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Hint */}
-              <div style={{ 
-                marginTop: '16px', 
-                padding: '12px', 
-                backgroundColor: '#eff6ff',
-                borderRadius: '8px',
-                border: '1px solid #dbeafe'
-              }}>
-                <p style={{ fontSize: '12px', color: '#1e40af', margin: 0 }}>
-                  💡 <strong>Tip:</strong> Press <kbd style={{ 
-                    padding: '2px 6px', 
-                    backgroundColor: '#ffffff', 
-                    borderRadius: '4px',
-                    border: '1px solid #bfdbfe',
-                    fontFamily: 'monospace',
-                    fontSize: '11px'
-                  }}>Enter</kbd> to search or <kbd style={{ 
-                    padding: '2px 6px', 
-                    backgroundColor: '#ffffff', 
-                    borderRadius: '4px',
-                    border: '1px solid #bfdbfe',
-                    fontFamily: 'monospace',
-                    fontSize: '11px'
-                  }}>Esc</kbd> to close
-                </p>
-              </div>
+              {/* Hint - Hide on mobile */}
+              {!isMobile && (
+                <div style={{ 
+                  marginTop: '16px', 
+                  padding: '12px', 
+                  backgroundColor: '#eff6ff',
+                  borderRadius: '8px',
+                  border: '1px solid #dbeafe'
+                }}>
+                  <p style={{ fontSize: '12px', color: '#1e40af', margin: 0 }}>
+                    💡 <strong>Tip:</strong> Press <kbd style={{ 
+                      padding: '2px 6px', 
+                      backgroundColor: '#ffffff', 
+                      borderRadius: '4px',
+                      border: '1px solid #bfdbfe',
+                      fontFamily: 'monospace',
+                      fontSize: '11px'
+                    }}>Enter</kbd> to search or <kbd style={{ 
+                      padding: '2px 6px', 
+                      backgroundColor: '#ffffff', 
+                      borderRadius: '4px',
+                      border: '1px solid #bfdbfe',
+                      fontFamily: 'monospace',
+                      fontSize: '11px'
+                    }}>Esc</kbd> to close
+                  </p>
+                </div>
+              )}
             </div>
           </section>
         )}
@@ -1921,23 +1950,13 @@ const CompleteMobileDashboard: React.FC = () => {
       <style>
         {`
           @keyframes fadeIn {
-            from {
-              opacity: 0;
-            }
-            to {
-              opacity: 1;
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
           }
 
           @keyframes slideDown {
-            from {
-              opacity: 0;
-              transform: translateY(-10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
           }
 
           .horizontal-nav {
@@ -1950,7 +1969,6 @@ const CompleteMobileDashboard: React.FC = () => {
             display: none;
           }
           
-          /* Hide horizontal menu on mobile and tablet - use hamburger menu instead */
           @media (max-width: 1024px) {
             .horizontal-menu-section { display: none !important; }
           }
