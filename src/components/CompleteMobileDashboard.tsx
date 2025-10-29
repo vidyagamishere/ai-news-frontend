@@ -191,13 +191,14 @@ const CompleteMobileDashboard: React.FC = () => {
           .filter(Boolean) as string[];
       }
       
+      // ✅ FIXED: Increase limit significantly for better content coverage
       const filterRequest = {
         interests: categoryNames.length > 0 ? categoryNames : ['Generative AI', 'Machine Learning'],
         content_types: contentTypeNames.length > 0 ? contentTypeNames : ['blog', 'video', 'podcast'],
         publishers: publisherNames.length > 0 ? publisherNames : ['all'],
         time_filter: timeFilter, // Use selected time filter
         search_query: searchQuery,
-        limit: 50
+        limit: 500 // ✅ INCREASED: From 50 to 500 to get more content
       };
 
       console.log('📤 Sending feed request:', filterRequest);
@@ -290,6 +291,24 @@ const CompleteMobileDashboard: React.FC = () => {
   useEffect(() => { 
     hasLoadedContent.current = false;
   }, [timeFilter, userPreferences.categories_selected, userPreferences.content_types_selected, userPreferences.publishers_selected]);
+
+  // Fetch content counts on component mount and when filters change
+  useEffect(() => {
+    const fetchContentCounts = async () => {
+      try {
+        console.log('📊 Fetching content counts for category:', selectedCategory);
+        const countsResponse = await apiService.getContentCounts(selectedCategory === 'All' ? 'all' : selectedCategory);
+        setContentCounts(countsResponse);
+        console.log('✅ Content counts loaded:', countsResponse);
+      } catch (error) {
+        console.error('❌ Failed to fetch content counts:', error);
+      }
+    };
+
+    if (availableCategories.length > 0) {
+      fetchContentCounts();
+    }
+  }, [selectedCategory, availableCategories.length]);
 
   const formatTimeAgo = (dateString: string | null) => {
     if (!dateString) return 'Unknown';
@@ -402,6 +421,7 @@ const CompleteMobileDashboard: React.FC = () => {
     );
   };
 
+  // Render content by type (blogs, podcasts, videos)
   const renderContentByType = () => {
     console.log('🎨 renderContentByType called, content state:', content);
     console.log('🎨 Content length:', content?.length || 0);
@@ -470,11 +490,11 @@ const CompleteMobileDashboard: React.FC = () => {
       videos: contentByType.video.length
     };
 
-    // If we have API counts, use those for display
+    // If we have API counts, use those for display (shows total available, not just loaded)
     if (contentCounts) {
       if (selectedCategory === 'All') {
         realCounts = {
-          blogs: contentCounts.total_blogs || contentByType.blog.length,
+          blogs: contentCounts.total_blogs || contentCounts.total_articles || contentByType.blog.length,
           podcasts: contentCounts.total_podcasts || contentByType.podcast.length,
           videos: contentCounts.total_videos || contentByType.video.length
         };
@@ -485,7 +505,7 @@ const CompleteMobileDashboard: React.FC = () => {
         if (categoryKey) {
           const categoryCounts = contentCounts.by_category[categoryKey];
           realCounts = {
-            blogs: categoryCounts.blogs || contentByType.blog.length,
+            blogs: categoryCounts.blogs || categoryCounts.articles || contentByType.blog.length,
             podcasts: categoryCounts.podcasts || contentByType.podcast.length,
             videos: categoryCounts.videos || contentByType.video.length
           };
@@ -494,7 +514,12 @@ const CompleteMobileDashboard: React.FC = () => {
     }
 
     console.log('📊 Content grouped by type:', contentByType);
-    console.log('📊 Real counts:', realCounts);
+    console.log('📊 Real counts (API or filtered):', realCounts);
+    console.log('📊 Showing counts for loaded content:', {
+      blogs: contentByType.blog.length,
+      podcasts: contentByType.podcast.length,
+      videos: contentByType.video.length
+    });
 
     // Show message if no content after filtering
     if (filteredContent.length === 0) {
@@ -952,11 +977,12 @@ const CompleteMobileDashboard: React.FC = () => {
       setSelectedCategory('All');
       // Get counts for all categories (similar to Landing.tsx)
       try {
+        console.log('📊 Fetching content counts for all categories...');
         const countsResponse = await apiService.getContentCounts('all');
         setContentCounts(countsResponse);
         console.log('✅ Content counts loaded for All:', countsResponse);
       } catch (error) {
-        console.error('Failed to fetch content counts:', error);
+        console.error('❌ Failed to fetch content counts:', error);
       }
     } else {
       // Find the category name from menuItems
@@ -966,11 +992,12 @@ const CompleteMobileDashboard: React.FC = () => {
         setSelectedCategory(menuItem.name);
         // Get counts for specific category
         try {
+          console.log('📊 Fetching content counts for category:', menuItem.name);
           const countsResponse = await apiService.getContentCounts(menuItem.name);
           setContentCounts(countsResponse);
           console.log('✅ Content counts loaded for', menuItem.name, ':', countsResponse);
         } catch (error) {
-          console.error('Failed to fetch content counts:', error);
+          console.error('❌ Failed to fetch content counts:', error);
         }
       }
     }
@@ -1629,14 +1656,14 @@ const CompleteMobileDashboard: React.FC = () => {
                   onClick={() => setIsSearchOpen(!isSearchOpen)}
                   style={{
                     flex: isMobile ? '1' : '0 0 auto',
-                    backgroundColor: '#eff6ff', // ✅ CHANGED: Very light blue background
-                    color: '#1e40af', // ✅ CHANGED: Dark blue text for contrast
+                    backgroundColor: '#eff6ff',
+                    color: '#1e40af',
                     padding: '12px 20px',
                     borderRadius: '8px',
-                    border: '2px solid #bfdbfe', // ✅ CHANGED: Light blue border
+                    border: '2px solid #bfdbfe',
                     transition: 'all 0.2s',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(59, 130, 246, 0.15)', // ✅ CHANGED: Subtle blue shadow
+                    boxShadow: '0 2px 6px rgba(59, 130, 246, 0.15)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1645,13 +1672,13 @@ const CompleteMobileDashboard: React.FC = () => {
                     fontWeight: '600'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#dbeafe'; // ✅ CHANGED: Slightly darker blue on hover
+                    e.currentTarget.style.backgroundColor = '#dbeafe';
                     e.currentTarget.style.borderColor = '#93c5fd';
                     e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)';
                     e.currentTarget.style.transform = 'translateY(-1px)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#eff6ff'; // ✅ CHANGED: Back to light blue
+                    e.currentTarget.style.backgroundColor = '#eff6ff';
                     e.currentTarget.style.borderColor = '#bfdbfe';
                     e.currentTarget.style.boxShadow = '0 2px 6px rgba(59, 130, 246, 0.15)';
                     e.currentTarget.style.transform = 'translateY(0)';
@@ -1663,7 +1690,6 @@ const CompleteMobileDashboard: React.FC = () => {
               </div>
             </div>
           </section>
-        )
 
         {/* Render Hamburger Menu */}
         {renderHamburgerMenu()}
@@ -1848,18 +1874,17 @@ const CompleteMobileDashboard: React.FC = () => {
                         cursor: 'pointer',
                         color: '#374151',
                         transition: 'all 0.2s',
-                        fontWeight: '500',
-                        whiteSpace: 'nowrap'
+                        fontWeight: '500'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#6366f1';
-                        e.currentTarget.style.color = '#ffffff';
-                        e.currentTarget.style.borderColor = '#6366f1';
+                        e.currentTarget.style.backgroundColor = '#f3f4f6';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,  0, 0, 0.1)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = '#ffffff';
-                        e.currentTarget.style.color = '#374151';
-                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'none';
                       }}
                     >
                       {suggestion}
@@ -1868,16 +1893,25 @@ const CompleteMobileDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Hint - Hide on mobile */}
-              {!isMobile && (
+              {/* Tip for using search */}
+              {searchQuery && (
                 <div style={{ 
-                  marginTop: '16px', 
-                  padding: '12px', 
-                  backgroundColor: '#eff6ff',
+                  marginTop: '16px',
+                  padding: '12px',
                   borderRadius: '8px',
-                  border: '1px solid #dbeafe'
+                  backgroundColor: '#eef2ff',
+                  border: '1px solid #cbd5e1',
+                  color: '#1e3a8a',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}>
-                  <p style={{ fontSize: '12px', color: '#1e40af', margin: 0 }}>
+                  <svg style={{ width: '20px', height: '20px', color: '#4f46e5' }} fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p style={{ margin: 0 }}>
                     💡 <strong>Tip:</strong> Press <kbd style={{ 
                       padding: '2px 6px', 
                       backgroundColor: '#ffffff', 
