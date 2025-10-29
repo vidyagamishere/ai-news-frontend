@@ -191,6 +191,7 @@ const Admin: React.FC = () => {
   };
 
   const [selectedModel, setSelectedModel] = useState<'claude' | 'gemini' | 'huggingface'>('gemini');
+  const [selectedFrequency, setSelectedFrequency] = useState<1 | 7 | 30>(1); // ✅ NEW: Frequency state
   const [scrapingLoading, setScrapingLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -217,16 +218,41 @@ const Admin: React.FC = () => {
     }
   ];
 
+  // ✅ NEW: Frequency options
+  const frequencies = [
+    {
+      value: 1,
+      label: 'Daily (1 day)',
+      description: 'Scrape sources configured for daily updates',
+      icon: '📅',
+      color: '#10b981'
+    },
+    {
+      value: 7,
+      label: 'Weekly (7 days)',
+      description: 'Scrape sources configured for weekly updates',
+      icon: '📆',
+      color: '#3b82f6'
+    },
+    {
+      value: 30,
+      label: 'Monthly (30 days)',
+      description: 'Scrape sources configured for monthly updates',
+      icon: '🗓️',
+      color: '#6366f1'
+    }
+  ];
+
   const handleTriggerScraping = async () => {
-    console.log('🎯 handleTriggerScraping called with model:', selectedModel);
+    console.log('🎯 handleTriggerScraping called with model:', selectedModel, 'frequency:', selectedFrequency);
     setScrapingLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      // Use the admin API service with model parameter
+      // ✅ UPDATED: Include frequency parameter
       const response = await apiService.callEndpoint(
-        `admin/scrape?llm_model=${selectedModel}`, 
+        `admin/scrape?llm_model=${selectedModel}&scrape_frequency=${selectedFrequency}`, 
         'POST', 
         {}, 
         false, 
@@ -242,6 +268,7 @@ const Admin: React.FC = () => {
           success: true,
           message: response.message || 'Scraping completed successfully',
           llm_model_used: selectedModel,
+          scrape_frequency_days: selectedFrequency,
           details: {
             sources_scraped: response.sources_scraped || 0,
             articles_found: response.articles_found || 0,
@@ -383,62 +410,82 @@ const Admin: React.FC = () => {
         </div>
       )}
 
-      {/* Model Selection Section - MOVED HERE BEFORE SOURCES TABLE */}
+      {/* Model Selection Section */}
       <div className="model-selection" style={{ marginTop: '0', marginBottom: '32px' }}>
         <h2>🤖 Select LLM Model for Content Processing</h2>
         <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
-          Choose the AI model to process and analyze scraped content. Each model has different strengths:
+          Choose the AI model to process and analyze scraped content.
         </p>
         
-        {/* Debug indicator */}
-        <div style={{ 
-          padding: '8px 12px', 
-          backgroundColor: '#f0fdf4', 
-          borderRadius: '6px',
-          marginBottom: '12px',
-          fontSize: '12px',
-          color: '#15803d',
-          border: '1px solid #86efac'
-        }}>
-          ✅ Model Selection Panel Loaded • Currently Selected: <strong>{selectedModel}</strong>
+        <div className="model-options">
+          {models.map((model) => (
+            <div
+              key={model.id}
+              className={`model-option ${selectedModel === model.id ? 'selected' : ''}`}
+              onClick={() => setSelectedModel(model.id)}
+              style={{ borderColor: selectedModel === model.id ? model.color : '#e5e7eb' }}
+            >
+              {model.recommended && <div className="recommended-badge">RECOMMENDED</div>}
+              <div className="model-name" style={{ color: model.color }}>
+                {model.name}
+              </div>
+              <div className="model-description">
+                {model.description}
+              </div>
+              {selectedModel === model.id && (
+                <div className="selected-indicator" style={{ color: model.color }}>
+                  ✓ Selected
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
-        <div className="model-options">
-          {models.map((model) => {
-            console.log('🎨 Rendering model option:', model.name, 'Selected:', selectedModel === model.id);
-            return (
+        {/* ✅ NEW: Frequency Selection */}
+        <div style={{ marginTop: '24px' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '12px', color: '#111827' }}>
+            ⏰ Select Scraping Frequency
+          </h3>
+          <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+            Choose which sources to scrape based on their configured update frequency.
+          </p>
+          
+          <div className="frequency-options">
+            {frequencies.map((freq) => (
               <div
-                key={model.id}
-                className={`model-option ${selectedModel === model.id ? 'selected' : ''}`}
-                onClick={() => {
-                  console.log('🖱️ Model clicked:', model.id);
-                  setSelectedModel(model.id);
+                key={freq.value}
+                className={`frequency-option ${selectedFrequency === freq.value ? 'selected' : ''}`}
+                onClick={() => setSelectedFrequency(freq.value as 1 | 7 | 30)}
+                style={{ 
+                  borderColor: selectedFrequency === freq.value ? freq.color : '#e5e7eb',
+                  backgroundColor: selectedFrequency === freq.value ? `${freq.color}10` : '#ffffff'
                 }}
-                style={{ borderColor: selectedModel === model.id ? model.color : '#e5e7eb' }}
               >
-                {model.recommended && <div className="recommended-badge">RECOMMENDED</div>}
-                <div className="model-name" style={{ color: model.color }}>
-                  {model.name}
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>{freq.icon}</div>
+                <div className="frequency-label" style={{ color: freq.color, fontWeight: '600' }}>
+                  {freq.label}
                 </div>
-                <div className="model-description">
-                  {model.description}
+                <div className="frequency-description">
+                  {freq.description}
                 </div>
-                {selectedModel === model.id && (
-                  <div className="selected-indicator" style={{ color: model.color }}>
+                {selectedFrequency === freq.value && (
+                  <div className="selected-indicator" style={{ color: freq.color }}>
                     ✓ Selected
                   </div>
                 )}
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
+
         <button
           onClick={handleTriggerScraping}
           disabled={scrapingLoading}
           className="btn-scraping"
           style={{ 
             backgroundColor: scrapingLoading ? '#9ca3af' : models.find(m => m.id === selectedModel)?.color,
-            cursor: scrapingLoading ? 'not-allowed' : 'pointer'
+            cursor: scrapingLoading ? 'not-allowed' : 'pointer',
+            marginTop: '24px'
           }}
         >
           {scrapingLoading ? (
@@ -447,12 +494,12 @@ const Admin: React.FC = () => {
               ⏳ Scraping in progress...
             </>
           ) : (
-            `🚀 Start Scraping with ${models.find(m => m.id === selectedModel)?.name}`
+            `🚀 Start ${frequencies.find(f => f.value === selectedFrequency)?.label} Scraping with ${models.find(m => m.id === selectedModel)?.name}`
           )}
         </button>
       </div>
 
-      {/* Result Display - ALSO MOVED UP */}
+      {/* Result Display */}
       {result && (
         <div className={`result-display ${result.success ? 'success' : 'error'}`}>
           <h3>{result.success ? '✅ Scraping Completed Successfully' : '❌ Scraping Failed'}</h3>
@@ -461,6 +508,10 @@ const Admin: React.FC = () => {
             <div className="detail-item">
               <span className="detail-label">🤖 Model Used:</span>
               <strong>{models.find(m => m.id === selectedModel)?.name || result.llm_model_used}</strong>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">⏰ Frequency:</span>
+              <strong>{frequencies.find(f => f.value === selectedFrequency)?.label}</strong>
             </div>
             <div className="detail-item">
               <span className="detail-label">📡 Sources Scraped:</span>
@@ -963,6 +1014,47 @@ const Admin: React.FC = () => {
           border-radius: 4px;
           font-family: 'Courier New', monospace;
           font-size: 0.875rem;
+        }
+
+        .frequency-options {
+          display: grid;
+          gap: 1rem;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          margin-bottom: 1.5rem;
+        }
+
+        .frequency-option {
+          padding: 1.5rem;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          background-color: #ffffff;
+          cursor: pointer;
+          text-align: center;
+          transition: all 0.2s;
+          position: relative;
+        }
+
+        .frequency-option:hover {
+          border-color: #d1d5db;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          transform: translateY(-2px);
+        }
+
+        .frequency-option.selected {
+          border-width: 2px;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .frequency-label {
+          font-size: 1rem;
+          font-weight: 600;
+          margin-bottom: 6px;
+        }
+
+        .frequency-description {
+          font-size: 0.875rem;
+          color: #6b7280;
+          line-height: 1.4;
         }
 
         /* ...rest of existing styles... */
