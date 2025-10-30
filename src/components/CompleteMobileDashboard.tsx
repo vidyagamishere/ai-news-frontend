@@ -296,10 +296,14 @@ const CompleteMobileDashboard: React.FC = () => {
   useEffect(() => {
     const fetchContentCounts = async () => {
       try {
-        console.log('📊 Fetching content counts for category:', selectedCategory);
-        const countsResponse = await apiService.getContentCounts(selectedCategory === 'All' ? 'all' : selectedCategory);
+        console.log('📊 Fetching content counts for category:', selectedCategory, 'time filter:', timeFilter);
+        // ✅ FIXED: Pass timeFilter to API to get matching counts
+        const countsResponse = await apiService.getContentCounts(
+          selectedCategory === 'All' ? 'all' : selectedCategory,
+          timeFilter  // ✅ ADD: Pass current time filter
+        );
         setContentCounts(countsResponse);
-        console.log('✅ Content counts loaded:', countsResponse);
+        console.log('✅ Content counts loaded for', timeFilter, ':', countsResponse);
       } catch (error) {
         console.error('❌ Failed to fetch content counts:', error);
       }
@@ -308,7 +312,7 @@ const CompleteMobileDashboard: React.FC = () => {
     if (availableCategories.length > 0) {
       fetchContentCounts();
     }
-  }, [selectedCategory, availableCategories.length]);
+  }, [selectedCategory, timeFilter, availableCategories.length]);  // ✅ ADD: timeFilter dependency
 
   const formatTimeAgo = (dateString: string | null) => {
     if (!dateString) return 'Unknown';

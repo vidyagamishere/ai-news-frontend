@@ -831,6 +831,24 @@ export const apiService = {
       debug.error('getContentCounts', error);
       throw error;
     }
+  },
+
+  // ✅ UPDATED: Add timeFilter parameter to match backend
+  async getContentCounts(categoryId: string = 'all', timeFilter: string = 'All Time'): Promise<any> {
+    try {
+      return await this.callEndpoint(
+        `content-counts?category_id=${categoryId}&time_filter=${encodeURIComponent(timeFilter)}`,
+        'GET'
+      );
+    } catch (error) {
+      console.error('Failed to fetch content counts:', error);
+      return {
+        total_blogs: 0,
+        total_podcasts: 0,
+        total_videos: 0,
+        by_category: {}
+      };
+    }
   }
 };
 
