@@ -818,30 +818,28 @@ export const apiService = {
   },
 
   // Content counts endpoint
-  getContentCounts: async (categoryId?: string): Promise<any> => {
-    debug.enter('getContentCounts', { categoryId });
+  getContentCounts: async (categoryId?: string, timeFilter: string = 'All Time'): Promise<any> => {
+    debug.enter('getContentCounts', { categoryId, timeFilter });
     
-    const params = categoryId ? { category_id: categoryId } : {};
+    const params: any = {};
+    if (categoryId && categoryId !== 'all') {
+      params.category_id = categoryId;
+    }
+    if (timeFilter) {
+      params.time_filter = timeFilter;
+    }
     
     try {
       const response = await makeModularRequest('content-counts', 'GET', params, null, {}, true);
-      debug.exit('getContentCounts', { totalArticles: response.total_articles, totalPodcasts: response.total_podcasts, totalVideos: response.total_videos });
+      debug.exit('getContentCounts', { 
+        totalArticles: response.total_blogs || 0, 
+        totalPodcasts: response.total_podcasts || 0, 
+        totalVideos: response.total_videos || 0 
+      });
       return response;
     } catch (error) {
       debug.error('getContentCounts', error);
-      throw error;
-    }
-  },
-
-  // ✅ UPDATED: Add timeFilter parameter to match backend
-  async getContentCounts(categoryId: string = 'all', timeFilter: string = 'All Time'): Promise<any> {
-    try {
-      return await this.callEndpoint(
-        `content-counts?category_id=${categoryId}&time_filter=${encodeURIComponent(timeFilter)}`,
-        'GET'
-      );
-    } catch (error) {
-      console.error('Failed to fetch content counts:', error);
+      // Return fallback data on error
       return {
         total_blogs: 0,
         total_podcasts: 0,
@@ -849,7 +847,7 @@ export const apiService = {
         by_category: {}
       };
     }
-  }
+  },
 };
 
 console.log('✅ API Service initialized with complete modular FastAPI architecture');
