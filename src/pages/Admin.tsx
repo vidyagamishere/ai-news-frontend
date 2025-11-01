@@ -243,46 +243,85 @@ const Admin: React.FC = () => {
     }
   ];
 
+  // ...existing code...
+
   const handleTriggerScraping = async () => {
-    console.log('🎯 handleTriggerScraping called with model:', selectedModel, 'frequency:', selectedFrequency);
-    setScrapingLoading(true);
-    setError(null);
-    setResult(null);
-
     try {
-      // ✅ UPDATED: Include frequency parameter
-      const response = await apiService.callEndpoint(
-        `admin/scrape?llm_model=${selectedModel}&scrape_frequency=${selectedFrequency}`, 
-        'POST', 
-        {}, 
-        false, 
-        {
-          'X-Admin-API-Key': adminApiKey
-        }
-      );
-
-      console.log('✅ Scraping response:', response);
+      setScrapingLoading(true); // ✅ FIX: Changed from setIsScrapingLoading
+      setError(null);
+      setResult(null);
       
-      if (response.success) {
-        setResult({
-          success: true,
-          message: response.message || 'Scraping completed successfully',
-          llm_model_used: selectedModel,
-          scrape_frequency_days: selectedFrequency,
-          details: {
-            sources_scraped: response.sources_scraped || 0,
-            articles_found: response.articles_found || 0,
-            articles_processed: response.articles_processed || 0
+      const endpoint = `admin/scrape?llm_model=${selectedModel}&scrape_frequency=${selectedFrequency}`;
+      console.log('🚀 Triggering scraping with endpoint:', endpoint);      
+
+      // Start scraping job
+      const response = await apiService.callEndpoint(
+        endpoint,
+        'POST',
+        {},
+        false,
+        {
+          'X-Admin-API-Key': adminApiKey,
+          'Content-Type': 'application/json'
+        },
+      );
+      
+      const jobId = response.job_id;
+      console.log('✅ Scraping job started:', jobId);
+      console.log('ℹ️ Polling for job status...');
+      console.log('Response:', response);
+      // Poll for status every 5 seconds
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await apiService.callEndpoint(
+            `admin/scrape-status/${jobId}`,
+            'GET',
+            {},
+            false,
+            {
+              'X-Admin-API-Key': adminApiKey
+            }
+          );
+          
+          const status = statusResponse.status;
+          console.log(`🔄 Job status: ${status}`);
+          
+          if (status === 'completed') {
+            clearInterval(pollInterval);
+            setScrapingLoading(false); // ✅ FIX: Changed from setIsScrapingLoading
+            setResult({
+              success: true,
+              message: 'Scraping completed successfully!',
+              llm_model_used: selectedModel,
+              details: statusResponse.result
+            });
+            console.log('📊 Result:', statusResponse.result);
+          } else if (status === 'failed') {
+            clearInterval(pollInterval);
+            setScrapingLoading(false); // ✅ FIX: Changed from setIsScrapingLoading
+            setError(statusResponse.error || 'Scraping failed');
           }
-        });
-      } else {
-        throw new Error(response.message || 'Scraping failed');
-      }
-    } catch (err: any) {
-      console.error('Scraping error:', err);
-      setError(err.message || 'Failed to trigger scraping');
-    } finally {
-      setScrapingLoading(false);
+        } catch (pollError) {
+          console.error('❌ Polling error:', pollError);
+          clearInterval(pollInterval);
+          setScrapingLoading(false); // ✅ FIX: Changed from setIsScrapingLoading
+          setError('Failed to check scraping status');
+        }
+      }, 5000); // Poll every 5 seconds
+      
+      // ✅ ADD TIMEOUT: Stop polling after 10 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (scrapingLoading) {
+          setScrapingLoading(false);
+          setError('Scraping timeout - job may still be running in background');
+        }
+      }, 600000); // 10 minutes timeout
+      
+    } catch (error) {
+      console.error('❌ Scraping error:', error);
+      setScrapingLoading(false); // ✅ FIX: Changed from setIsScrapingLoading
+      setError(error instanceof Error ? error.message : 'Failed to start scraping');
     }
   };
 
