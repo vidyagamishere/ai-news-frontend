@@ -1,0 +1,540 @@
+/* =====================================================
+   SWIPEABLE CARDS - RESPONSIVE DESIGN
+   Optimized for Mobile, Tablet, and Desktop
+   ===================================================== */
+
+/* Base Card Styles */
+.swipeable-card-wrapper {
+  padding: 0 16px;
+  margin-bottom: 24px;
+}
+
+.swipeable-card {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.swipeable-card:active {
+  cursor: grabbing;
+}
+
+/* Thumbnail Section */
+.card-thumbnail {
+  width: 100%;
+  height: 250px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbnail-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+}
+
+.type-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(8px);
+}
+
+/* Content Section */
+.card-content {
+  padding: 24px;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.publisher {
+  font-weight: 600;
+}
+
+.separator {
+  color: #d1d5db;
+}
+
+.read-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.card-summary {
+  font-size: 15px;
+  color: #4b5563;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+/* Tags */
+.card-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.tag {
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.category-tag {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.significance-tag {
+  background-color: #fef3c7;
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Engagement Stats */
+.engagement-stats {
+  display: flex;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 16px;
+}
+
+.stat-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.stat-button:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.stat-button.active {
+  color: #ef4444;
+}
+
+/* Action Buttons */
+.card-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.bookmark-btn,
+.share-btn {
+  border: 2px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+}
+
+.bookmark-btn:hover,
+.share-btn:hover {
+  background-color: #f9fafb;
+  border-color: #3b82f6;
+}
+
+.bookmark-btn.active {
+  background-color: #dbeafe;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.read-btn {
+  background-color: #3b82f6;
+  color: #ffffff;
+  border: none;
+}
+
+.read-btn:hover {
+  background-color: #2563eb;
+}
+
+/* Swipe Indicators */
+.swipe-indicator {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 48px;
+  opacity: 0.2;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.swipe-indicator.left {
+  left: 20px;
+}
+
+.swipe-indicator.right {
+  right: 20px;
+}
+
+.swipeable-card:active .swipe-indicator {
+  opacity: 0.5;
+}
+
+.swipe-hint {
+  text-align: center;
+  margin-top: 16px;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* =====================================================
+   FEED CONTAINER STYLES
+   ===================================================== */
+
+.swipeable-feed {
+  padding: 24px 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.feed-progress {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.progress-text {
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 4px;
+  background-color: #e5e7eb;
+  border-radius: 2px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #3b82f6;
+  border-radius: 2px;
+}
+
+/* Loading State */
+.feed-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  color: #3b82f6;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.feed-empty {
+  text-align: center;
+  padding: 48px 24px;
+  background-color: #f9fafb;
+  border-radius: 20px;
+  margin: 24px;
+}
+
+.empty-icon {
+  color: #3b82f6;
+  margin: 0 auto 24px;
+}
+
+.feed-empty h3 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.feed-empty p {
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+.refresh-btn {
+  padding: 12px 24px;
+  background-color: #3b82f6;
+  color: #ffffff;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.refresh-btn:hover {
+  background-color: #2563eb;
+}
+
+/* Navigation Buttons */
+.feed-navigation {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+  justify-content: center;
+}
+
+.nav-btn {
+  padding: 16px 32px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.2s;
+  border: none;
+}
+
+.skip-btn {
+  border: 2px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+}
+
+.skip-btn:hover:not(:disabled) {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.save-btn {
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
+.save-btn:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =====================================================
+   RESPONSIVE BREAKPOINTS
+   ===================================================== */
+
+/* Mobile Devices (< 768px) */
+@media (max-width: 767px) {
+  .swipeable-card-wrapper {
+    padding: 0 12px;
+  }
+  
+  .card-content {
+    padding: 20px;
+  }
+  
+  .card-title {
+    font-size: 18px;
+  }
+  
+  .card-summary {
+    font-size: 14px;
+  }
+  
+  .card-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .action-btn {
+    width: 100%;
+  }
+  
+  .feed-navigation {
+    flex-direction: column;
+  }
+  
+  .nav-btn {
+    width: 100%;
+  }
+  
+  .card-thumbnail {
+    height: 200px;
+  }
+  
+  .swipe-hint {
+    font-size: 12px;
+  }
+}
+
+/* Tablet Devices (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .swipeable-feed {
+    max-width: 700px;
+  }
+  
+  .card-thumbnail {
+    height: 280px;
+  }
+  
+  .card-title {
+    font-size: 22px;
+  }
+  
+  .action-btn {
+    padding: 14px;
+    font-size: 15px;
+  }
+}
+
+/* Desktop (> 1024px) */
+@media (min-width: 1025px) {
+  .swipeable-feed {
+    max-width: 800px;
+  }
+  
+  .card-thumbnail {
+    height: 320px;
+  }
+  
+  .card-content {
+    padding: 28px;
+  }
+  
+  .card-title {
+    font-size: 24px;
+  }
+  
+  .card-summary {
+    font-size: 16px;
+  }
+  
+  /* Show hover effects on desktop */
+  .swipeable-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .swipeable-card {
+    touch-action: pan-y;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* Larger touch targets for mobile */
+  .action-btn {
+    min-height: 48px;
+  }
+  
+  .stat-button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  .swipeable-card {
+    background: #1f2937;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  }
+  
+  .card-title {
+    color: #f9fafb;
+  }
+  
+  .card-summary {
+    color: #d1d5db;
+  }
+  
+  .card-meta {
+    color: #9ca3af;
+  }
+  
+  .category-tag {
+    background-color: #374151;
+    color: #d1d5db;
+  }
+  
+  .bookmark-btn,
+  .share-btn {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+  
+  .feed-empty {
+    background-color: #1f2937;
+  }
+}

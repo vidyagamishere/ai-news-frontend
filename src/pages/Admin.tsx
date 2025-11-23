@@ -4,6 +4,12 @@ import apiService from '../services/api';
 import AdminValidation from '../components/AdminValidation';
 import { useAdminAuth } from '../contexts/AdminAuthContext';
 
+import { CheckSquare } from 'lucide-react';
+
+import axios from "axios";
+
+const PAGE_SIZE = 20;
+
 interface AISource {
   name: string;
   rss_url: string;
@@ -11,6 +17,15 @@ interface AISource {
   enabled: boolean;
   priority: number;
   category: string;
+}
+
+// At the top of Admin.tsx or in your types file
+interface Article {
+  id: number;
+  title: string;
+  summary: string;
+  is_yt_shorts: boolean;
+  is_insta_reels: boolean;
 }
 
 const Admin: React.FC = () => {
@@ -29,6 +44,13 @@ const Admin: React.FC = () => {
   });
 
   const categories = ['company', 'research', 'news', 'blog', 'podcast', 'video', 'events', 'learning', 'demos', 'other'];
+  
+  const [shortsArticles, setShortsArticles] = useState<Article[]>([]);  
+  const [selectedShorts, setSelectedShorts] = useState<number[]>([]);
+  const [shortsLoading, setShortsLoading] = useState(false);
+  const [shortsMsg, setShortsMsg] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   // Add authentication check on component mount
   useEffect(() => {
@@ -190,7 +212,63 @@ const Admin: React.FC = () => {
     }
   };
 
-  const [selectedModel, setSelectedModel] = useState<'claude' | 'gemini' | 'huggingface'>('gemini');
+  useEffect(() => {
+  if (isAdminAuthenticated && adminApiKey) {
+    fetchShortsArticles(page);
+  }
+}, [isAdminAuthenticated, adminApiKey]);
+
+  const fetchShortsArticles = async (pg: number) => {
+    try {
+      setLoading(true);
+      
+      // Check if admin is authenticated
+      if (!isAdminAuthenticated || !adminApiKey) {
+        console.log('❌ Not authenticated in fetchArticles');
+        return; // Don't show alert here, the redirect will happen in the mount effect
+      }
+      
+      // Use admin API key instead of JWT token
+      const response = await apiService.callEndpoint('admin/articles', 'GET', {}, false, {
+        'X-Admin-API-Key': adminApiKey
+      });
+      setShortsArticles(response.articles || []);
+    } catch (error: unknown) {
+      console.error('Failed to fetch articles:', error);
+      if (error instanceof Error && (error.message.includes('Authentication required') || error.message.includes('Admin access'))) {
+        console.log('❌ Authentication error - will redirect to login');
+        // Redirect will happen via the mount effect
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShortsSelect = (id: number) => {
+    setSelectedShorts(sel =>
+      sel.includes(id) ? sel.filter(i => i !== id) : [...sel, id]
+    );
+  };
+
+  const handleGenerateShorts = async () => {
+    setShortsLoading(true);
+    setShortsMsg("");
+    try {
+      await apiService.callEndpoint('admin/generate-shorts', 'POST', selectedShorts, false, {
+      'X-Admin-API-Key': adminApiKey
+       });
+      setShortsMsg("Shorts processed successfully!");
+      setSelectedShorts([]);
+      fetchShortsArticles(page);
+    } catch (err: any) {
+      setShortsMsg("Error: " + (err?.response?.data?.detail || err?.message));
+    } finally {
+      setShortsLoading(false);
+    }
+  };
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  const [selectedModel, setSelectedModel] = useState<'claude' | 'gemini' | 'ollama'>('gemini');
   const [selectedFrequency, setSelectedFrequency] = useState<1 | 7 | 30>(1); // ✅ NEW: Frequency state
   const [scrapingLoading, setScrapingLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -211,10 +289,11 @@ const Admin: React.FC = () => {
       color: '#d97706'
     },
     {
-      id: 'huggingface' as const,
-      name: 'Llama 3.1 8B Instruct',
-      description: 'FREE • Good quality • HuggingFace',
-      color: '#6366f1'
+      id: 'ollama' as const,
+      name: '🦙 Local Ollama (Llama 3.2)',
+      description: 'FREE • Privacy-focused • Runs locally • No API needed',
+      color: '#10b981',
+      recommended: false
     }
   ];
 
@@ -388,6 +467,63 @@ const Admin: React.FC = () => {
         </div>
       </div>
 
+    <div className="admin-shorts-section" style={{marginTop: '2rem', marginBottom: '2rem', background: '#f9fafb', padding: '1.5rem', borderRadius: '8px'}}>
+          <h2 style={{fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem'}}>
+            Generate Shorts for Articles
+          </h2>
+          {shortsMsg && <div style={{marginBottom: '1rem', color: shortsMsg.startsWith("Error") ? '#dc2626' : '#10b981'}}>{shortsMsg}</div>}
+          <button
+            className="btn btn-primary"
+            onClick={handleGenerateShorts}
+            disabled={selectedShorts.length === 0 || shortsLoading}
+            style={{marginBottom: '1rem'}}
+          >
+            {shortsLoading ? "Processing..." : "Generate Shorts"}
+          </button>
+          <ul style={{maxHeight: '300px', overflowY: 'auto', background: '#fff', borderRadius: '6px', border: '1px solid #e5e7eb', padding: '1rem'}}>
+            {(shortsArticles ?? []).map(article => {
+              const hasShorts = article.is_yt_shorts || article.is_insta_reels;
+              return (
+                <li key={article.id} style={{marginBottom: '0.75rem', display: 'flex', alignItems: 'center'}}>
+                  <input
+                    type="checkbox"
+                    checked={selectedShorts.includes(article.id)}
+                    onChange={() => handleShortsSelect(article.id)}
+                    disabled={hasShorts}
+                    style={{marginRight: '0.75rem'}}
+                  />
+                  <span style={{fontWeight: 500}}>{article.title}</span>
+                  <span style={{marginLeft: '1rem', color: '#6b7280', fontSize: '0.95rem'}}>{article.summary}</span>
+                  {hasShorts && (
+                    <span style={{
+                      marginLeft: '1rem',
+                      background: '#e0e7ff',
+                      color: '#3730a3',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '0.85rem'
+                    }}>
+                      Shorts Created
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+            {shortsArticles.length === 0 && <li>No articles found.</li>}
+          </ul>
+          <div style={{marginTop: '1rem', display: 'flex', justifyContent: 'center', gap: '8px'}}>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >Prev</button>
+            <span>Page {page} of {totalPages}</span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >Next</button>
+          </div>
+        </div>
+
       {showAddForm && (
         <div className="add-form">
           <h3>Add New AI Source</h3>
@@ -448,8 +584,7 @@ const Admin: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Model Selection Section */}
+     {/* ✅ UPDATED: Model Selection Section */}
       <div className="model-selection" style={{ marginTop: '0', marginBottom: '32px' }}>
         <h2>🤖 Select LLM Model for Content Processing</h2>
         <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
@@ -479,8 +614,82 @@ const Admin: React.FC = () => {
             </div>
           ))}
         </div>
+        
+        {selectedModel === 'ollama' && (
+          <div style={{
+            marginTop: '16px',
+            padding: '12px',
+            backgroundColor: '#fef3c7',
+            border: '2px solid #f59e0b',
+            borderRadius: '8px',
+            fontSize: '0.875rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '20px' }}>⚠️</span>
+              <strong style={{ color: '#92400e' }}>Ollama Setup Required</strong>
+            </div>
+            <ul style={{ margin: '0', paddingLeft: '1.5rem', color: '#78350f' }}>
+              <li>Make sure Ollama is running: <code style={{ backgroundColor: '#1e293b', color: '#e0e7ff', padding: '2px 6px', borderRadius: '4px' }}>ollama serve</code></li>
+              <li>Model must be installed: <code style={{ backgroundColor: '#1e293b', color: '#e0e7ff', padding: '2px 6px', borderRadius: '4px' }}>ollama pull llama3.2:3b</code></li>
+              <li>Backend must be configured with <code style={{ backgroundColor: '#1e293b', color: '#e0e7ff', padding: '2px 6px', borderRadius: '4px' }}>OLLAMA_MODEL=llama3.2:3b</code></li>
+            </ul>
+            <p style={{ margin: '8px 0 0 0', fontSize: '0.8rem', color: '#92400e' }}>
+              ✅ Test connection: <code style={{ backgroundColor: '#1e293b', color: '#e0e7ff', padding: '2px 6px', borderRadius: '4px' }}>curl http://localhost:11434/api/tags</code>
+            </p>
+          </div>
+        )}
 
-        {/* ✅ NEW: Frequency Selection */}
+        {/* ✅ NEW: Model Performance Comparison */}
+        <div style={{ 
+          marginTop: '16px', 
+          padding: '12px', 
+          backgroundColor: '#f3f4f6', 
+          borderRadius: '8px',
+          fontSize: '0.875rem'
+        }}>
+          <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#374151' }}>
+            📊 Model Performance Comparison
+          </h4>
+          <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #d1d5db' }}>
+                <th style={{ textAlign: 'left', padding: '8px 4px' }}>Model</th>
+                <th style={{ textAlign: 'center', padding: '8px 4px' }}>Speed</th>
+                <th style={{ textAlign: 'center', padding: '8px 4px' }}>Quality</th>
+                <th style={{ textAlign: 'center', padding: '8px 4px' }}>Cost</th>
+                <th style={{ textAlign: 'center', padding: '8px 4px' }}>Privacy</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                <td style={{ padding: '8px 4px' }}>Gemini 2.0</td>
+                <td style={{ textAlign: 'center', padding: '8px 4px' }}>⚡⚡⚡</td>
+                <td style={{ textAlign: 'center', padding: '8px 4px' }}>⭐⭐⭐⭐</td>
+                <td style={{ textAlign: 'center', padding: '8px 4px', color: '#10b981', fontWeight: 'bold' }}>FREE</td>
+                <td style={{ textAlign: 'center', padding: '8px 4px' }}>☁️ Cloud</td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                <td style={{ padding: '8px 4px' }}>Claude 3</td>
+                <td style={{ textAlign: 'center', padding: '8px 4px' }}>⚡⚡</td>
+                <td style={{ textAlign: 'center', padding: '8px 4px' }}>⭐⭐⭐⭐⭐</td>
+                <td style={{ textAlign: 'center', padding: '8px 4px', color: '#ef4444', fontWeight: 'bold' }}>PAID</td>
+                <td style={{ textAlign: 'center', padding: '8px 4px' }}>☁️ Cloud</td>
+              </tr>
+              <tr style={{ backgroundColor: '#d1fae5', borderBottom: '1px solid #10b981' }}>
+                <td style={{ padding: '8px 4px', fontWeight: '600' }}>🦙 Ollama</td>
+                <td style={{ textAlign: 'center', padding: '8px 4px' }}>⚡⚡⚡⚡</td>
+                <td style={{ textAlign: 'center', padding: '8px 4px' }}>⭐⭐⭐</td>
+                <td style={{ textAlign: 'center', padding: '8px 4px', color: '#10b981', fontWeight: 'bold' }}>FREE</td>
+                <td style={{ textAlign: 'center', padding: '8px 4px', color: '#10b981', fontWeight: 'bold' }}>🔒 Local</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style={{ margin: '8px 0 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
+            💡 <strong>Tip:</strong> Use Ollama for free, private processing. Use Gemini for fastest results. Use Claude for best quality.
+          </p>
+        </div>
+
+        {/* Frequency Selection - Already good! */}
         <div style={{ marginTop: '24px' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '12px', color: '#111827' }}>
             ⏰ Select Scraping Frequency
@@ -517,6 +726,7 @@ const Admin: React.FC = () => {
           </div>
         </div>
 
+        {/* Scraping Button - Already good! */}
         <button
           onClick={handleTriggerScraping}
           disabled={scrapingLoading}
@@ -533,7 +743,11 @@ const Admin: React.FC = () => {
               ⏳ Scraping in progress...
             </>
           ) : (
-            `🚀 Start ${frequencies.find(f => f.value === selectedFrequency)?.label} Scraping with ${models.find(m => m.id === selectedModel)?.name}`
+            <>
+              {selectedModel === 'ollama' ? '🦙' : selectedModel === 'gemini' ? '🤖' : selectedModel === 'claude' ? '🧠' : '🚀'}
+              {' '}Start {frequencies.find(f => f.value === selectedFrequency)?.label} Scraping with{' '}
+              {models.find(m => m.id === selectedModel)?.name}
+            </> 
           )}
         </button>
       </div>
@@ -611,15 +825,77 @@ const Admin: React.FC = () => {
       </div>
 
       {/* API Key Info - Keep at bottom */}
+      {/* ✅ UPDATED: API Key Info with Ollama Setup Guide */}
       <div className="api-key-info">
-        <h3>API Keys Required</h3>
+        <h3>🔑 LLM Configuration</h3>
         <ul>
-          <li><strong>Claude:</strong> ANTHROPIC_API_KEY (paid)</li>
-          <li><strong>Gemini:</strong> GOOGLE_API_KEY (FREE - get from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">here</a>)</li>
-          <li><strong>HuggingFace:</strong> HUGGINGFACE_API_KEY (FREE - get from <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">here</a>)</li>
+          <li>
+            <strong>Claude:</strong> ANTHROPIC_API_KEY (paid) - <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Get Key</a>
+          </li>
+          <li>
+            <strong>Gemini:</strong> GOOGLE_API_KEY (FREE) - <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Get Key</a>
+          </li>
+          <li>
+            <strong>🦙 Ollama:</strong> No API key needed! Runs 100% locally on your machine
+          </li>
         </ul>
-        <p>
-          💡 Add keys to your <code>.env</code> file in the backend directory
+        
+        {/* ✅ NEW: Ollama Setup Guide */}
+        <div style={{ 
+          marginTop: '1rem', 
+          padding: '1rem', 
+          backgroundColor: '#d1fae5', 
+          borderRadius: '8px', 
+          borderLeft: '4px solid #10b981' 
+        }}>
+          <h4 style={{ 
+            margin: '0 0 0.5rem 0', 
+            color: '#065f46', 
+            fontSize: '0.95rem',
+            fontWeight: '600'
+          }}>
+            🦙 Setting Up Ollama (Local & Free)
+          </h4>
+          <ol style={{ 
+            margin: '0.5rem 0', 
+            paddingLeft: '1.5rem', 
+            fontSize: '0.875rem', 
+            color: '#047857',
+            lineHeight: '1.8'
+          }}>
+            <li>
+              Install Ollama: <code style={{ backgroundColor: '#1e293b', color: '#e0e7ff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>brew install ollama</code> (macOS)
+            </li>
+            <li>
+              Pull model: <code style={{ backgroundColor: '#1e293b', color: '#e0e7ff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>ollama pull llama3.2:3b</code>
+            </li>
+            <li>
+              Start service: <code style={{ backgroundColor: '#1e293b', color: '#e0e7ff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>ollama serve</code>
+            </li>
+            <li>
+              Update backend <code>.env</code>: <code style={{ backgroundColor: '#1e293b', color: '#e0e7ff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>OLLAMA_MODEL=llama3.2:3b</code>
+            </li>
+          </ol>
+          <p style={{ 
+            margin: '0.5rem 0 0 0', 
+            fontSize: '0.875rem', 
+            color: '#065f46',
+            fontWeight: '500'
+          }}>
+            ✅ <strong>Benefits:</strong> 100% free, runs offline, complete privacy, no rate limits!
+          </p>
+          <p style={{ 
+            margin: '0.5rem 0 0 0', 
+            fontSize: '0.8rem', 
+            color: '#059669',
+            fontStyle: 'italic'
+          }}>
+            💡 <strong>Verify setup:</strong> <code style={{ backgroundColor: '#1e293b', color: '#e0e7ff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>curl http://localhost:11434/api/tags</code>
+          </p>
+        </div>
+        
+        <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+          💡 Add API keys to your <code>.env</code> file in the backend directory
         </p>
       </div>
 

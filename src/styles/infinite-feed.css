@@ -1,0 +1,526 @@
+/* =====================================================
+   INFINITE FEED COMPONENT STYLES
+   Responsive design for Mobile, Tablet, and Desktop
+   ===================================================== */
+
+/* Main Container */
+.infinite-feed-container {
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #f9fafb, #ffffff);
+}
+
+/* =====================================================
+   VIEW MODE TOGGLE
+   ===================================================== */
+.infinite-feed-view-toggle {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.infinite-feed-mode-btn {
+  padding: 10px 24px;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 140px;
+}
+
+.infinite-feed-mode-btn:hover {
+  border-color: #3b82f6;
+  background: #f0f9ff;
+  transform: translateY(-1px);
+}
+
+.infinite-feed-mode-btn.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* =====================================================
+   SWIPE MODE CONTAINER
+   ===================================================== */
+.infinite-feed-swipe-container {
+  padding: 24px 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Progress Section */
+.infinite-feed-progress {
+  margin-bottom: 20px;
+}
+
+.infinite-feed-progress-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.infinite-feed-progress-text {
+  color: #6b7280;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.infinite-feed-more-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(30, 64, 175, 0.15);
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.infinite-feed-progress-bar-container {
+  width: 100%;
+  height: 6px;
+  background-color: #e5e7eb;
+  border-radius: 3px;
+  margin-bottom: 28px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.infinite-feed-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 3px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+/* =====================================================
+   LOADING STATES
+   ===================================================== */
+.infinite-feed-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 20px;
+}
+
+.infinite-feed-loading p {
+  color: #6b7280;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.infinite-feed-spinner {
+  animation: spin 1s linear infinite;
+  color: #3b82f6;
+  filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3));
+}
+
+.infinite-feed-spinner-small {
+  animation: spin 1s linear infinite;
+  color: #3b82f6;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.infinite-feed-loading-next {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 16px 20px;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* =====================================================
+   EMPTY STATE
+   ===================================================== */
+.infinite-feed-empty {
+  text-align: center;
+  padding: 60px 24px;
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  border-radius: 24px;
+  margin: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.infinite-feed-empty-icon {
+  color: #3b82f6;
+  margin: 0 auto 28px;
+  filter: drop-shadow(0 4px 8px rgba(59, 130, 246, 0.2));
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.infinite-feed-empty h3 {
+  font-size: 26px;
+  font-weight: 800;
+  margin-bottom: 14px;
+  color: #111827;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.infinite-feed-empty p {
+  color: #6b7280;
+  margin-bottom: 28px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.infinite-feed-refresh-btn {
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+}
+
+.infinite-feed-refresh-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.infinite-feed-refresh-btn:active {
+  transform: translateY(0);
+}
+
+/* =====================================================
+   NAVIGATION BUTTONS
+   ===================================================== */
+.infinite-feed-navigation {
+  display: flex;
+  gap: 16px;
+  margin-top: 28px;
+  justify-content: center;
+}
+
+.infinite-feed-nav-btn {
+  flex: 1;
+  max-width: 180px;
+  padding: 16px 24px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+}
+
+.infinite-feed-skip-btn {
+  border: 2px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+}
+
+.infinite-feed-skip-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.infinite-feed-save-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+}
+
+.infinite-feed-save-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.infinite-feed-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* =====================================================
+   SCROLL MODE
+   ===================================================== */
+.infinite-feed-scroll-container {
+  padding: 28px 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.infinite-feed-articles-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+}
+
+/* Load More Trigger */
+.infinite-feed-load-trigger {
+  margin-top: 48px;
+  min-height: 120px;
+}
+
+.infinite-feed-loading-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 48px 24px;
+}
+
+.infinite-feed-loading-more p {
+  color: #6b7280;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.infinite-feed-error {
+  text-align: center;
+  padding: 48px 24px;
+  color: #ef4444;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-radius: 20px;
+  margin: 24px;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.15);
+}
+
+.infinite-feed-error p {
+  margin-bottom: 20px;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.infinite-feed-retry-btn {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.infinite-feed-retry-btn:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.infinite-feed-end {
+  text-align: center;
+  padding: 48px 24px;
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  border-radius: 20px;
+  margin: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.infinite-feed-end p {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #111827;
+}
+
+/* =====================================================
+   RESPONSIVE BREAKPOINTS
+   ===================================================== */
+
+/* Mobile Devices (< 640px) */
+@media (max-width: 639px) {
+  .infinite-feed-view-toggle {
+    padding: 12px;
+    gap: 8px;
+  }
+  
+  .infinite-feed-mode-btn {
+    flex: 1;
+    padding: 12px 16px;
+    font-size: 13px;
+    min-width: auto;
+  }
+  
+  .infinite-feed-swipe-container {
+    padding: 16px 12px;
+  }
+  
+  .infinite-feed-navigation {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .infinite-feed-nav-btn {
+    max-width: none;
+    width: 100%;
+    padding: 14px 20px;
+  }
+  
+  .infinite-feed-empty h3 {
+    font-size: 22px;
+  }
+  
+  .infinite-feed-empty p {
+    font-size: 14px;
+  }
+  
+  .infinite-feed-progress-text {
+    font-size: 13px;
+  }
+}
+
+/* Tablet (640px - 1024px) */
+@media (min-width: 640px) and (max-width: 1024px) {
+  .infinite-feed-articles-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+  
+  .infinite-feed-swipe-container {
+    max-width: 700px;
+  }
+}
+
+/* Desktop (> 1024px) */
+@media (min-width: 1025px) {
+  .infinite-feed-articles-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+  
+  .infinite-feed-swipe-container {
+    max-width: 800px;
+  }
+}
+
+/* Large Desktop (> 1536px) */
+@media (min-width: 1536px) {
+  .infinite-feed-articles-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* =====================================================
+   DARK MODE SUPPORT
+   ===================================================== */
+@media (prefers-color-scheme: dark) {
+  .infinite-feed-container {
+    background: linear-gradient(to bottom, #111827, #1f2937);
+  }
+  
+  .infinite-feed-view-toggle {
+    background: rgba(31, 41, 55, 0.95);
+    border-bottom-color: #374151;
+  }
+  
+  .infinite-feed-mode-btn {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+  
+  .infinite-feed-mode-btn:hover {
+    background: #4b5563;
+  }
+  
+  .infinite-feed-empty {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  }
+  
+  .infinite-feed-empty h3 {
+    color: #f9fafb;
+    -webkit-text-fill-color: #f9fafb;
+  }
+  
+  .infinite-feed-end {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  }
+  
+  .infinite-feed-end p {
+    color: #f9fafb;
+  }
+  
+  .infinite-feed-error {
+    background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+    color: #fecaca;
+  }
+  
+  .infinite-feed-loading-next {
+    background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  }
+  
+  .infinite-feed-progress-bar-container {
+    background-color: #374151;
+  }
+}
+
+/* =====================================================
+   ACCESSIBILITY
+   ===================================================== */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus states for keyboard navigation */
+.infinite-feed-mode-btn:focus-visible,
+.infinite-feed-nav-btn:focus-visible,
+.infinite-feed-refresh-btn:focus-visible,
+.infinite-feed-retry-btn:focus-visible {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}

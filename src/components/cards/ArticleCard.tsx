@@ -1,8 +1,8 @@
 import React from 'react';
 import { ExternalLink, Clock, Star, Play, Headphones } from 'lucide-react';
-import type { Article } from '../services/api';
-import SmartImage from './SmartImage';
-import TopicLabels from './TopicLabels';
+import type { Article } from '../../services/api';
+import SmartImage from '../SmartImage';
+import TopicLabels from '../TopicLabels';
 
 interface ArticleCardProps {
   article: Article;

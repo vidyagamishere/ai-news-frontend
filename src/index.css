@@ -5,6 +5,10 @@
 
 /* CRITICAL: High contrast fixes - must be last to override everything */
 @import './styles/high-contrast-fix.css';
+/* ...existing code... */
+
+@import './styles/swipeable-cards.css';
+@import './styles/infinite-feed.css';  /* ✅ ADD THIS LINE */
 
 @tailwind base;
 @tailwind components;

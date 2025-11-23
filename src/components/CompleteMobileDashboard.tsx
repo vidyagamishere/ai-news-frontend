@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Settings, Menu, X, LogOut, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
+import { apiService, type Article } from '../services/api';
 import Footer from './Footer';
 import SEO from './SEO';
 import { DashboardSkeleton } from './LoadingSkeleton';
@@ -10,64 +10,34 @@ import SettingsFullScreen from './SettingsFullScreen';
 import '../styles/design-tokens.css';
 import '../styles/components.css';
 import '../styles/dashboard.css';
-
-interface ContentItem {
-  id: string;
-  category: string;
-  type: 'BLOGS' | 'VIDEOS' | 'PODCASTS';
-  title: string;
-  summary: string;
-  content_summary?: string;
-  sourceLink: string;
-  publishDate: string;
-  publisher: string;
-  significance?: number;
-  readTime?: string;
-  complexity?: string;
-  impact?: string;
-  duration?: number;
-  thumbnail_url?: string;
-  rankingScore?: number;
-  topics?: string[];
-  topic_names?: string[];
-}
+import SwipeableFeed from './feeds/SwipeableFeed';
+import InfiniteFeed from './feeds/InfiniteFeed';
 
 const CompleteMobileDashboard: React.FC = () => {
   const { user, isAuthenticated, updatePreferences, logout } = useAuth();
   const navigate = useNavigate();
-  const [content, setContent] = useState<ContentItem[]>([]);
+  
+  const [content, setContent] = useState<Article[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  
-  // Add time filter state - DEFAULT to 'Last Week' for now (until scraper runs)
   const [timeFilter, setTimeFilter] = useState<'Last 24 Hours' | 'Last Week' | 'Last Month' | 'This Year'>('Last Week');
   const [isTimeFilterOpen, setIsTimeFilterOpen] = useState(false);
-  
-  // Add content counts state (similar to Landing.tsx)
+  const [viewMode, setViewMode] = useState<'list' | 'swipe' | 'infinite'>('list');
+  const [savedArticles, setSavedArticles] = useState<Set<string>>(new Set());
   const [contentCounts, setContentCounts] = useState<any>(null);
-
   const hasLoadedContent = useRef(false);
-  // Hamburger Menu State
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'dashboard' | 'categories' | 'settings'>('dashboard');
-  
-  // Settings State
   const [savingSettings, setSavingSettings] = useState(false);
-  // @ts-ignore - Used in SettingsFullScreen component
   const [settingsChanged, setSettingsChanged] = useState(false);
-  
-  // Add menu items state similar to Landing.tsx
   const [menuItems, setMenuItems] = useState<Array<{id: string, name: string, icon: string, description: string}>>([
     { id: 'home', name: 'Home', icon: '🏠', description: 'All Categories Overview' }
   ]);
-  
-  // Add active menu state
   const [activeMenu, setActiveMenu] = useState<string>('home');
   
-  // User Preferences (editable in settings)
   const [userPreferences, setUserPreferences] = useState({
     experience_level: user?.preferences?.experience_level || 'intermediate',
     professional_roles: (user?.preferences as any)?.professional_roles || ['enthusiast'],
@@ -76,12 +46,10 @@ const CompleteMobileDashboard: React.FC = () => {
     publishers_selected: (user?.preferences as any)?.publisher_ids_selected || []
   });
 
-  // Available options for settings
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [availableContentTypes, setAvailableContentTypes] = useState<any[]>([]);
   const [availablePublishers, setAvailablePublishers] = useState<any[]>([]);
 
-  // Time filter options
   const timeFilterOptions: Array<'Last 24 Hours' | 'Last Week' | 'Last Month' | 'This Year'> = [
     'Last 24 Hours',
     'Last Week',
@@ -91,219 +59,230 @@ const CompleteMobileDashboard: React.FC = () => {
 
   const getTimeFilterIcon = () => {
     switch (timeFilter) {
-      case 'Last 24 Hours':
-        return '⏰';
-      case 'Last Week':
-        return '📅';
-      case 'Last Month':
-        return '🗓️';
-      case 'This Year':
-        return '📆';
-      default:
-        return '⏰';
+      case 'Last 24 Hours': return '⏰';
+      case 'Last Week': return '📅';
+      case 'Last Month': return '🗓️';
+      case 'This Year': return '📆';
+      default: return '⏰';
     }
   };
 
   // Load available options for settings
   useEffect(() => {
+    let isMounted = true;
+    
     const loadOptions = async () => {
       console.log('🔄 [loadOptions] Loading available options...');
       
       try {
-        console.log('📡 [loadOptions] Fetching categories, content types, and publishers...');
-        
         const [categoriesRes, contentTypesRes, publishersRes] = await Promise.all([
           apiService.getAvailableCategories(),
           apiService.getAvailableContentTypes(),
           apiService.getAvailablePublishers()
         ]);
         
-        console.log('✅ [loadOptions] Categories:', categoriesRes.categories?.length || 0);
-        console.log('✅ [loadOptions] Content types:', contentTypesRes.content_types?.length || 0);
-        console.log('✅ [loadOptions] Publishers:', publishersRes.publishers?.length || 0);
-        
-        setAvailableCategories(categoriesRes.categories || []);
-        setAvailableContentTypes(contentTypesRes.content_types || []);
-        setAvailablePublishers(publishersRes.publishers || []);
-        
-        console.log('✅ [loadOptions] All lookup data loaded successfully');
+        if (isMounted) {
+          console.log('✅ [loadOptions] Categories:', categoriesRes.categories?.length || 0);
+          console.log('✅ [loadOptions] Content types:', contentTypesRes.content_types?.length || 0);
+          console.log('✅ [loadOptions] Publishers:', publishersRes.publishers?.length || 0);
+          
+          setAvailableCategories(categoriesRes.categories || []);
+          setAvailableContentTypes(contentTypesRes.content_types || []);
+          setAvailablePublishers(publishersRes.publishers || []);
+          
+          console.log('✅ [loadOptions] All lookup data loaded successfully');
+        }
       } catch (err) {
-        console.error('❌ [loadOptions] Error loading options:', err);
-        // Set empty arrays as fallback
-        setAvailableCategories([]);
-        setAvailableContentTypes([]);
-        setAvailablePublishers([]);
+        if (isMounted) {
+          console.error('❌ [loadOptions] Error loading options:', err);
+          setAvailableCategories([]);
+          setAvailableContentTypes([]);
+          setAvailablePublishers([]);
+        }
       }
     };
     
     loadOptions();
-    }, []);
-  // Load available options for settings
-  useEffect(() => {
-  if (!isAuthenticated || !user) return;
-
-  const loadFeed = async () => {
-    setLoading(true);
-    setError(null);
     
-    try {
-      console.log('📱 Loading personalized feed...');
-      
-      // WAIT for lookup data to be available - CHECK THIS FIRST
-      if (availableCategories.length === 0 || availableContentTypes.length === 0 || availablePublishers.length === 0) {
-        console.log('⏳ Waiting for lookup data...', {
-          categories: availableCategories.length,
-          contentTypes: availableContentTypes.length,
-          publishers: availablePublishers.length
-        });
-        setLoading(false);
-        return;
-      }
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-      // NOW check if already loaded (after lookup data is available)
-      if (hasLoadedContent.current && !searchQuery) {
-        console.log('⏭️ Skipping duplicate load - content already loaded');
-        setLoading(false);
-        return;
+  // Load bookmarks
+  useEffect(() => {
+    const loadBookmarks = async () => {
+      if (!isAuthenticated || !user) return;
+      
+      try {
+        console.log('📚 Loading user bookmarks...');
+        const bookmarks = await apiService.getBookmarks();
+        const bookmarkIds = new Set(
+          bookmarks.articles.map(a => a.id?.toString() || '')
+        );
+        setSavedArticles(bookmarkIds);
+        console.log('✅ Loaded', bookmarkIds.size, 'bookmarks');
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('not found')) {
+          console.log('⚠️ Bookmarks feature not available yet - using empty state');
+          setSavedArticles(new Set());
+        } else {
+          console.error('❌ Failed to load bookmarks:', error);
+        }
       }
+    };
+    
+    loadBookmarks();
+  }, [isAuthenticated, user]);
+
+  // Load feed
+  useEffect(() => {
+    const loadFeed = async () => {
+      setLoading(true);
+      setError(null);
       
-      // Convert IDs to names for API request
-      const categoryNames = userPreferences.categories_selected
-        .map((id: any) => availableCategories.find(cat => cat.id === id)?.name)
-        .filter(Boolean) as string[];
-      
-      const contentTypeNames = userPreferences.content_types_selected
-        .map((id: any) => availableContentTypes.find(ct => ct.id === id)?.name)
-        .filter(Boolean) as string[];
-      
-      // Handle publishers - 'all' or convert IDs to names
-      let publisherNames: string[];
-      if (userPreferences.publishers_selected.includes('all')) {
-        publisherNames = ['all'];
-      } else {
-        publisherNames = userPreferences.publishers_selected
-          .map((id: any) => {
-            if (typeof id === 'number') {
-              return availablePublishers.find(pub => pub.id === id)?.name;
-            }
-            return id; // Already a string
-          })
+      try {
+        console.log('📱 Loading personalized feed...');
+        
+        if (availableCategories.length === 0 || availableContentTypes.length === 0 || availablePublishers.length === 0) {
+          console.log('⏳ Waiting for lookup data...');
+          setLoading(false);
+          return;
+        }
+
+        if (hasLoadedContent.current && !searchQuery) {
+          console.log('⏭️ Skipping duplicate load - content already loaded');
+          setLoading(false);
+          return;
+        }
+        
+        const categoryNames = userPreferences.categories_selected
+          .map((id: any) => availableCategories.find(cat => cat.id === id)?.name)
           .filter(Boolean) as string[];
-      }
-      
-      // ✅ FIXED: Increase limit significantly for better content coverage
-      const filterRequest = {
-        interests: categoryNames.length > 0 ? categoryNames : ['Generative AI', 'Machine Learning'],
-        content_types: contentTypeNames.length > 0 ? contentTypeNames : ['blog', 'video', 'podcast'],
-        publishers: publisherNames.length > 0 ? publisherNames : ['all'],
-        time_filter: timeFilter, // Use selected time filter
-        search_query: searchQuery,
-        limit: 500 // ✅ INCREASED: From 50 to 500 to get more content
-      };
+        
+        const contentTypeNames = userPreferences.content_types_selected
+          .map((id: any) => availableContentTypes.find(ct => ct.id === id)?.name)
+          .filter(Boolean) as string[];
+        
+        let publisherNames: string[];
+        if (userPreferences.publishers_selected.includes('all')) {
+          publisherNames = ['all'];
+        } else {
+          publisherNames = userPreferences.publishers_selected
+            .map((id: any) => {
+              if (typeof id === 'number') {
+                return availablePublishers.find(pub => pub.id === id)?.name;
+              }
+              return id;
+            })
+            .filter(Boolean) as string[];
+        }
+        
+        const filterRequest = {
+          interests: categoryNames.length > 0 ? categoryNames : ['Generative AI', 'Machine Learning'],
+          content_types: contentTypeNames.length > 0 ? contentTypeNames : ['blog', 'video', 'podcast'],
+          publishers: publisherNames.length > 0 ? publisherNames : ['all'],
+          time_filter: timeFilter,
+          search_query: searchQuery,
+          limit: 500
+        };
 
-      console.log('📤 Sending feed request:', filterRequest);
-      
-      const response = await apiService.getPersonalizedFeed(filterRequest);
-      
-      // Convert grouped content to flat array with proper type mapping
-      const flatContent: ContentItem[] = [];
-      response.grouped_content?.forEach((group: any) => {
-        group.items?.forEach((item: any) => {
-          const mapContentType = (apiType: string): 'BLOGS' | 'VIDEOS' | 'PODCASTS' => {
-            const normalizedType = apiType?.toLowerCase();
-            switch (normalizedType) {
-              case 'blog':
-              case 'blogs':
-              case 'article':
-              case 'articles':
-              case 'post':
-              case 'posts':
-                return 'BLOGS';
-              case 'video':
-              case 'videos':
-              case 'youtube':
-              case 'vimeo':
-                return 'VIDEOS';
-              case 'podcast':
-              case 'podcasts':
-              case 'audio':
-              case 'sound':
-                return 'PODCASTS';
-              default:
-                console.warn('Unknown content type:', apiType, 'defaulting to BLOGS');
-                return 'BLOGS';
-            }
-          };
-
-          flatContent.push({
-            id: item.id?.toString() || Math.random().toString(),
-            category: group.category,
-            type: mapContentType(item.content_type_label || item.content_type || item.type || 'BLOGS'),
-            title: item.title || 'Untitled',
-            summary: item.summary || item.description || 'No description available',
-            content_summary: item.content_summary,
-            sourceLink: item.url || '#',
-            publishDate: item.published_date || new Date().toISOString(),
-            publisher: item.source || 'Unknown',
-            significance: item.significance_score || 5,
-            readTime: item.read_time || item.readTime || item.estimated_read_time,
-            complexity: item.complexity || item.complexity_level,
-            impact: item.impact || item.impact_level,
-            duration: item.duration,
-            thumbnail_url: item.thumbnail_url || item.thumbnail,
-            rankingScore: item.ranking_score || item.rankingScore,
-            topics: item.topics,
-            topic_names: item.topic_names
+        console.log('📤 Sending feed request:', filterRequest);
+        
+        const response = await apiService.getPersonalizedFeed(filterRequest);
+        
+        const articles: Article[] = [];
+        
+        response.grouped_content?.forEach((group: any) => {
+          group.items?.forEach((item: any) => {
+            articles.push({
+              id: item.id?.toString() || Math.random().toString(),
+              title: item.title || 'Untitled',
+              url: item.url || '#',
+              source: item.source || 'Unknown',
+              source_name: item.source || 'Unknown',
+              time: item.published_date || new Date().toISOString(),
+              published_date: item.published_date || new Date().toISOString(),
+              significanceScore: item.significance_score || 5,
+              summary: item.summary || item.description || 'No description available',
+              description: item.summary || item.description,
+              content_summary: item.content_summary,
+              type: item.content_type_label || item.content_type || item.type || 'BLOGS',
+              content_type: item.content_type_label || item.content_type || item.type,
+              content_type_name: item.content_type_label || item.content_type || item.type,
+              significance: item.significance_score || 5,
+              significance_score: item.significance_score,
+              read_time: item.read_time || item.readTime || item.estimated_read_time,
+              readTime: item.read_time || item.readTime,
+              complexity: item.complexity || item.complexity_level,
+              impact: item.impact || item.impact_level || 'medium',
+              duration: item.duration,
+              category: group.category,
+              category_name: group.category,
+              thumbnail_url: item.thumbnail_url || item.thumbnail,
+              thumbnail: item.thumbnail_url || item.thumbnail,
+              imageUrl: item.thumbnail_url || item.thumbnail,
+              ranking_score: item.ranking_score || item.rankingScore,
+              rankingScore: item.ranking_score || item.rankingScore,
+              topics: item.topics ? item.topics.map((t: any) => ({
+                id: 0,
+                name: typeof t === 'string' ? t : t.name,
+                category: '',
+                significance_weight: 1
+              })) : undefined,
+              topic_names: item.topic_names,
+              is_bookmarked: savedArticles.has(item.id?.toString() || ''),
+              is_liked: false,
+              likes_count: 0,
+              views_count: 0,
+              bookmarks_count: 0,
+              engagement_score: 0
+            });
           });
         });
-      });
-      
-      setContent(flatContent);
-      hasLoadedContent.current = true;
-      
-      console.log('✅ Feed loaded successfully:', flatContent.length, 'items');
-      console.log('📊 Content breakdown:', {
-        total: flatContent.length,
-        blogs: flatContent.filter(item => item.type === 'BLOGS').length,
-        videos: flatContent.filter(item => item.type === 'VIDEOS').length,
-        podcasts: flatContent.filter(item => item.type === 'PODCASTS').length
-      });
-      
-    } catch (err) {
-      console.error('❌ Error loading feed:', err);
-      setError('Failed to load content');
-    } finally {
-      setLoading(false);
-    }
-  };
+        
+        setContent(articles);
+        hasLoadedContent.current = true;
+        
+        console.log('✅ Feed loaded successfully:', articles.length, 'items');
+        
+      } catch (err) {
+        console.error('❌ Error loading feed:', err);
+        setError('Failed to load content');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  loadFeed();
-}, [isAuthenticated, user?.id, searchQuery, 
-    timeFilter, // Add timeFilter to dependencies
+    loadFeed();
+  }, [
+    isAuthenticated,
+    user?.id,
+    searchQuery,
+    timeFilter,
     JSON.stringify(userPreferences.categories_selected),
-    JSON.stringify(userPreferences.content_types_selected), 
+    JSON.stringify(userPreferences.content_types_selected),
     JSON.stringify(userPreferences.publishers_selected),
     availableCategories.length,
     availableContentTypes.length,
-    availablePublishers.length
-]);
-  // Reset load flag when time filter changes
-  useEffect(() => { 
+    availablePublishers.length,
+    savedArticles
+  ]);
+
+  // Reset load flag when filters change
+  useEffect(() => {
     hasLoadedContent.current = false;
   }, [timeFilter, userPreferences.categories_selected, userPreferences.content_types_selected, userPreferences.publishers_selected]);
 
-  // Fetch content counts on component mount and when filters change
+  // Fetch content counts
   useEffect(() => {
     const fetchContentCounts = async () => {
       try {
-        console.log('📊 Fetching content counts for category:', selectedCategory, 'time filter:', timeFilter);
-        // ✅ FIXED: Pass timeFilter to API to get matching counts
         const countsResponse = await apiService.getContentCounts(
           selectedCategory === 'All' ? 'all' : selectedCategory,
-          timeFilter  // ✅ ADD: Pass current time filter
+          timeFilter
         );
         setContentCounts(countsResponse);
-        console.log('✅ Content counts loaded for', timeFilter, ':', countsResponse);
       } catch (error) {
         console.error('❌ Failed to fetch content counts:', error);
       }
@@ -312,7 +291,45 @@ const CompleteMobileDashboard: React.FC = () => {
     if (availableCategories.length > 0) {
       fetchContentCounts();
     }
-  }, [selectedCategory, timeFilter, availableCategories.length]);  // ✅ ADD: timeFilter dependency
+  }, [selectedCategory, timeFilter, availableCategories.length]);
+
+  const handleArticleAction = async (articleId: string, action: 'like' | 'bookmark' | 'skip' | 'view') => {
+    try {
+      switch (action) {
+        case 'bookmark':
+          await handleBookmark(articleId);
+          break;
+        case 'skip':
+          await apiService.trackInteraction(articleId, 'skip');
+          break;
+        case 'view':
+          await apiService.trackInteraction(articleId, 'read');
+          break;
+      }
+    } catch (error) {
+      console.error('❌ Failed to handle article action:', error);
+    }
+  };
+
+  const handleBookmark = async (articleId: string) => {
+    const isCurrentlyBookmarked = savedArticles.has(articleId);
+    
+    try {
+      if (isCurrentlyBookmarked) {
+        await apiService.removeBookmark(articleId);
+        setSavedArticles(prev => {
+          const next = new Set(prev);
+          next.delete(articleId);
+          return next;
+        });
+      } else {
+        await apiService.bookmarkArticle(articleId);
+        setSavedArticles(prev => new Set([...prev, articleId]));
+      }
+    } catch (error) {
+      console.error('❌ Failed to toggle bookmark:', error);
+    }
+  };
 
   const formatTimeAgo = (dateString: string | null) => {
     if (!dateString) return 'Unknown';
@@ -329,22 +346,26 @@ const CompleteMobileDashboard: React.FC = () => {
     }
   };
   
-  const ArticleCard = ({ article, contentType }: { article: any; contentType: string }) => {
+  const ArticleCard = ({ article }: { article: Article }) => {
     const getContentTypeInfo = (type: string) => {
-      switch (type.toLowerCase()) {
+      const normalizedType = type?.toLowerCase();
+      switch (normalizedType) {
         case 'podcast':
+        case 'podcasts':
           return { label: 'PODCAST', bgColor: '#dcfce7', textColor: '#15803d' };
         case 'video':
+        case 'videos':
           return { label: 'VIDEO', bgColor: '#fee2e2', textColor: '#dc2626' };
         default:
           return { label: 'ARTICLE', bgColor: '#dbeafe', textColor: '#1e40af' };
       }
     };
-    const typeInfo = getContentTypeInfo(contentType);
+    
+    const typeInfo = getContentTypeInfo(article.type || article.content_type_name || 'blog');
 
     return (
       <article
-        onClick={() => window.open(article.sourceLink || article.url, '_blank', 'noopener,noreferrer')}
+        onClick={() => window.open(article.url, '_blank', 'noopener,noreferrer')}
         style={{
           backgroundColor: '#ffffff',
           borderRadius: '12px',
@@ -379,7 +400,7 @@ const CompleteMobileDashboard: React.FC = () => {
           }}>
             {typeInfo.label}
           </span>
-          {(article.significanceScore || article.significance) && (
+          {article.significanceScore && (
             <span style={{ 
               backgroundColor: '#fef3c7', 
               color: '#92400e', 
@@ -388,7 +409,7 @@ const CompleteMobileDashboard: React.FC = () => {
               fontSize: '12px', 
               fontWeight: '500' 
             }}>
-              Score: {article.significanceScore || article.significance}
+              Score: {article.significanceScore}
             </span>
           )}
         </div>
@@ -415,23 +436,17 @@ const CompleteMobileDashboard: React.FC = () => {
           flex: '1',
           overflow: 'auto'
         }}>
-          {article.summary || article.content_summary}
+          {article.summary || article.description || article.content_summary}
         </p>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#9ca3af', marginTop: 'auto' }}>
-          <span style={{ fontWeight: '500' }}>{article.publisher || article.source || 'Unknown'}</span>
-          <span>{formatTimeAgo(article.publishDate || article.published_date)}</span>
+          <span style={{ fontWeight: '500' }}>{article.source || article.source_name || 'Unknown'}</span>
+          <span>{formatTimeAgo(article.published_date || article.time)}</span>
         </div>
       </article>
     );
   };
 
-  // Render content by type (blogs, podcasts, videos)
   const renderContentByType = () => {
-    console.log('🎨 renderContentByType called, content state:', content);
-    console.log('🎨 Content length:', content?.length || 0);
-    console.log('🎨 Selected category:', selectedCategory);
-    console.log('🎨 Content counts:', contentCounts);
-
     if (!content || content.length === 0) {
       return (
         <div style={{ textAlign: 'center', padding: '64px 16px' }}>
@@ -446,55 +461,38 @@ const CompleteMobileDashboard: React.FC = () => {
       );
     }
 
-    // Filter content by selected category (similar to Landing.tsx getCurrentCategory logic)
     let filteredContent = content;
     if (selectedCategory && selectedCategory !== 'All') {
-      console.log('🔍 Filtering content by category:', selectedCategory);
-      filteredContent = content.filter(item => {
-        const categoryMatch = item.category.toLowerCase() === selectedCategory.toLowerCase();
-        console.log(`Item: ${item.title}, Category: ${item.category}, Match: ${categoryMatch}`);
-        return categoryMatch;
-      });
-      console.log('🔍 Filtered content length:', filteredContent.length);
+      filteredContent = content.filter(item => 
+        item.category?.toLowerCase() === selectedCategory.toLowerCase() ||
+        item.category_name?.toLowerCase() === selectedCategory.toLowerCase()
+      );
     }
 
-    // Calculate real counts from filtered content
-    const contentByType: { [key: string]: any[] } = {
+    const contentByType: { [key: string]: Article[] } = {
       blog: [],
       podcast: [],
       video: []
     };
 
     filteredContent.forEach(item => {
-      let type: string;
-      switch (item.type) {
-        case 'BLOGS':
-          type = 'blog';
-          break;
-        case 'VIDEOS':
-          type = 'video';
-          break;
-        case 'PODCASTS':
-          type = 'podcast';
-          break;
-        default:
-          type = 'blog';
-      }
-      if (contentByType[type]) {
-        contentByType[type].push(item);
+      const normalizedType = (item.type || item.content_type_name || 'blog').toLowerCase();
+      
+      if (normalizedType.includes('podcast')) {
+        contentByType.podcast.push(item);
+      } else if (normalizedType.includes('video')) {
+        contentByType.video.push(item);
       } else {
         contentByType.blog.push(item);
       }
     });
 
-    // Get real counts (similar to Landing.tsx)
     let realCounts = {
       blogs: contentByType.blog.length,
       podcasts: contentByType.podcast.length,
       videos: contentByType.video.length
     };
 
-    // If we have API counts, use those for display (shows total available, not just loaded)
     if (contentCounts) {
       if (selectedCategory === 'All') {
         realCounts = {
@@ -517,15 +515,6 @@ const CompleteMobileDashboard: React.FC = () => {
       }
     }
 
-    console.log('📊 Content grouped by type:', contentByType);
-    console.log('📊 Real counts (API or filtered):', realCounts);
-    console.log('📊 Showing counts for loaded content:', {
-      blogs: contentByType.blog.length,
-      podcasts: contentByType.podcast.length,
-      videos: contentByType.video.length
-    });
-
-    // Show message if no content after filtering
     if (filteredContent.length === 0) {
       return (
         <div style={{ textAlign: 'center', padding: '64px 16px' }}>
@@ -552,12 +541,6 @@ const CompleteMobileDashboard: React.FC = () => {
               cursor: 'pointer',
               transition: 'all 0.2s'
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#dbeafe';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#f3f4f6';
-            }}
           >
             View All Categories
           </button>
@@ -567,65 +550,32 @@ const CompleteMobileDashboard: React.FC = () => {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '48px', padding: '16px' }}>
-        {/* Category Header with Stats (similar to Landing.tsx) */}
         <div style={{ textAlign: 'center', marginBottom: '-24px' }}>
           <h1 style={{ fontSize: '14px', fontWeight: 'bold', color: '#111827', marginBottom: '6px' }}>
             {selectedCategory === 'All' ? 'All Categories' : selectedCategory}
           </h1>
           
-          {/* Content Stats */}
           <div style={{ 
             display: 'flex',
             justifyContent: 'center',
             gap: '8px',
             margin: '0 auto' 
           }}>
-            <div style={{ 
-              backgroundColor: '#f9fafb', 
-              borderRadius: '6px', 
-              padding: '6px 12px', 
-              border: '1px solid #e5e7eb',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                {realCounts.blogs}
-              </div>
+            <div style={{ backgroundColor: '#f9fafb', borderRadius: '6px', padding: '6px 12px', border: '1px solid #e5e7eb' }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{realCounts.blogs}</div>
               <div style={{ fontSize: '11px', color: '#6b7280' }}>Blogs</div>
             </div>
-            <div style={{ 
-              backgroundColor: '#f9fafb', 
-              borderRadius: '6px', 
-              padding: '6px 12px', 
-              border: '1px solid #e5e7eb',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                {realCounts.podcasts}
-              </div>
+            <div style={{ backgroundColor: '#f9fafb', borderRadius: '6px', padding: '6px 12px', border: '1px solid #e5e7eb' }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{realCounts.podcasts}</div>
               <div style={{ fontSize: '11px', color: '#6b7280' }}>Podcasts</div>
             </div>
-            <div style={{ 
-              backgroundColor: '#f9fafb', 
-              borderRadius: '6px', 
-              padding: '6px 12px', 
-              border: '1px solid #e5e7eb',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                {realCounts.videos}
-              </div>
+            <div style={{ backgroundColor: '#f9fafb', borderRadius: '6px', padding: '6px 12px', border: '1px solid #e5e7eb' }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{realCounts.videos}</div>
               <div style={{ fontSize: '11px', color: '#6b7280' }}>Videos</div>
             </div>
           </div>
         </div>
 
-        {/* Category Filter Indicator */}
         {selectedCategory && selectedCategory !== 'All' && (
           <div style={{
             backgroundColor: '#eff6ff',
@@ -661,14 +611,7 @@ const CompleteMobileDashboard: React.FC = () => {
                 fontWeight: '600',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#dbeafe';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#f3f4f6';
+                cursor: 'pointer'
               }}
             >
               Clear Filter
@@ -676,172 +619,64 @@ const CompleteMobileDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Display ALL blogs (no limit) */}
         {contentByType.blog.length > 0 && (
           <section>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '12px', 
-              marginBottom: '24px'
-            }}>
-              <div style={{ 
-                width: '32px', 
-                height: '32px', 
-                backgroundColor: '#dbeafe', 
-                borderRadius: '8px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <div style={{ width: '32px', height: '32px', backgroundColor: '#dbeafe', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ color: '#3b82f6', fontSize: '18px' }}>📖</span>
               </div>
-              <h2 style={{ 
-                fontSize: '20px', 
-                fontWeight: 'bold', 
-                color: '#111827',
-                margin: 0,
-                lineHeight: '32px'
-              }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827', margin: 0 }}>
                 Latest Blogs
               </h2>
-              {/* ✅ UPDATED: Light background with dark text */}
-              <span style={{ 
-                backgroundColor: '#dbeafe',
-                color: '#1e3a8a', 
-                padding: '6px 16px', 
-                borderRadius: '20px', 
-                fontSize: '15px', 
-                fontWeight: '700',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                flexShrink: 0,
-                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
-                border: '2px solid #bfdbfe'
-              }}>
+              <span style={{ backgroundColor: '#dbeafe', color: '#1e3a8a', padding: '6px 16px', borderRadius: '20px', fontSize: '15px', fontWeight: '700' }}>
                 {realCounts.blogs}
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-              {/* Display ALL blogs, not just first 3 */}
               {contentByType.blog.map((article, index) => (
-                <ArticleCard key={index} article={article} contentType="blog" />
+                <ArticleCard key={index} article={article} />
               ))}
             </div>
           </section>
         )}
 
-        {/* Display ALL podcasts (no limit) */}
         {contentByType.podcast.length > 0 && (
           <section>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '12px', 
-              marginBottom: '24px'
-            }}>
-              <div style={{ 
-                width: '32px', 
-                height: '32px', 
-                backgroundColor: '#dcfce7', 
-                borderRadius: '8px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <div style={{ width: '32px', height: '32px', backgroundColor: '#dcfce7', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ color: '#16a34a', fontSize: '18px' }}>🎧</span>
               </div>
-              <h2 style={{ 
-                fontSize: '20px', 
-                fontWeight: 'bold', 
-                color: '#111827',
-                margin: 0,
-                lineHeight: '32px'
-              }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827', margin: 0 }}>
                 Featured Podcasts
               </h2>
-              {/* ✅ UPDATED: Light background with dark text */}
-              <span style={{ 
-                backgroundColor: '#dcfce7',
-                color: '#14532d', 
-                padding: '6px 16px', 
-                borderRadius: '20px', 
-                fontSize: '15px', 
-                fontWeight: '700',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                flexShrink: 0,
-                boxShadow: '0 2px 8px rgba(22, 163, 74, 0.2)',
-                border: '2px solid #bbf7d0'
-              }}>
+              <span style={{ backgroundColor: '#dcfce7', color: '#14532d', padding: '6px 16px', borderRadius: '20px', fontSize: '15px', fontWeight: '700' }}>
                 {realCounts.podcasts}
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-              {/* Display ALL podcasts, not just first 3 */}
               {contentByType.podcast.map((article, index) => (
-                <ArticleCard key={index} article={article} contentType="podcast" />
+                <ArticleCard key={index} article={article} />
               ))}
             </div>
           </section>
         )}
 
-        {/* Display ALL videos (no limit) */}
         {contentByType.video.length > 0 && (
           <section>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '12px', 
-              marginBottom: '24px'
-            }}>
-              <div style={{ 
-                width: '32px', 
-                height: '32px', 
-                backgroundColor: '#fee2e2', 
-                borderRadius: '8px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <div style={{ width: '32px', height: '32px', backgroundColor: '#fee2e2', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ color: '#dc2626', fontSize: '18px' }}>🎥</span>
               </div>
-              <h2 style={{ 
-                fontSize: '20px', 
-                fontWeight: 'bold', 
-                color: '#111827',
-                margin: 0,
-                lineHeight: '32px'
-              }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827', margin: 0 }}>
                 Latest Videos
               </h2>
-              {/* ✅ UPDATED: Light background with dark text */}
-              <span style={{ 
-                backgroundColor: '#fee2e2',
-                color: '#7f1d1d', 
-                padding: '6px 16px', 
-                borderRadius: '20px', 
-                fontSize: '15px', 
-                fontWeight: '700',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                flexShrink: 0,
-                boxShadow: '0 2px 8px rgba(220, 38, 38, 0.2)',
-                border: '2px solid #fecaca'
-              }}>
+              <span style={{ backgroundColor: '#fee2e2', color: '#7f1d1d', padding: '6px 16px', borderRadius: '20px', fontSize: '15px', fontWeight: '700' }}>
                 {realCounts.videos}
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-              {/* Display ALL videos, not just first 3 */}
               {contentByType.video.map((article, index) => (
-                <ArticleCard key={index} article={article} contentType="video" />
+                <ArticleCard key={index} article={article} />
               ))}
             </div>
           </section>
@@ -850,28 +685,22 @@ const CompleteMobileDashboard: React.FC = () => {
     );
   };
 
-  // Handle logout
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
-  // Save settings - Following onboarding logic
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
-      // Get category names from selected category IDs
       const selectedCategoryNames = availableCategories
         .filter(category => userPreferences.categories_selected.includes(category.id))
         .map(category => category.name);
 
-      // Get content type names from selected content type IDs
       const selectedContentTypeNames = availableContentTypes
         .filter(contentType => userPreferences.content_types_selected.includes(contentType.id))
         .map(contentType => contentType.name);
 
-      // Get publisher names from selected publisher IDs
-      // Clean up publishers - remove 'all' if it exists and filter to only numbers
       const cleanedPublisherIds = userPreferences.publishers_selected
         .filter((id: any) => id !== 'all' && typeof id === 'number') as number[];
       
@@ -880,41 +709,26 @@ const CompleteMobileDashboard: React.FC = () => {
         .map(publisher => publisher.name);
 
       const preferences = {
-        // Core user_preferences table fields
         experience_level: userPreferences.experience_level,
         professional_roles: userPreferences.professional_roles,
-        
-        // Name-based arrays (backward compatibility)
         categories_selected: selectedCategoryNames,
         content_types_selected: selectedContentTypeNames,
         publishers_selected: selectedPublisherNames,
-        
-        // ID-based arrays (preferred for filtering) - SEND ONLY CLEAN IDS
         category_ids_selected: userPreferences.categories_selected,
         content_type_ids_selected: userPreferences.content_types_selected,
         publisher_ids_selected: cleanedPublisherIds.length > 0 ? cleanedPublisherIds : [],
-        
-        // Additional preference fields
         newsletter_frequency: "weekly" as "weekly" | "12_hours" | "daily" | "monthly",
         email_notifications: true,
         breaking_news_alerts: false,
         onboarding_completed: true
       };
 
-      console.log('🔍 Saving preferences:', JSON.stringify(preferences, null, 2));
-      
-      // Update preferences - AuthContext will handle refreshing user data
       await updatePreferences(preferences);
-      
-      console.log('✅ Preferences saved successfully via AuthContext');
       
       setSettingsChanged(false);
       setCurrentView('dashboard');
-      
-      // Reset content load flag to reload with new preferences
       hasLoadedContent.current = false;
       
-      // Show success message
       alert('✅ Settings saved successfully! Reloading your personalized feed...');
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -924,10 +738,8 @@ const CompleteMobileDashboard: React.FC = () => {
     }
   };
 
-  // Update userPreferences when user data changes from AuthContext
   useEffect(() => {
     if (user?.preferences) {
-      console.log('🔄 Updating userPreferences from AuthContext user data');
       setUserPreferences({
         experience_level: user.preferences.experience_level || 'intermediate',
         professional_roles: (user.preferences as any).professional_roles || ['enthusiast'],
@@ -938,22 +750,12 @@ const CompleteMobileDashboard: React.FC = () => {
     }
   }, [user?.preferences]);
 
-  // Add useEffect to update menu items when categories are loaded
   useEffect(() => {
-    console.log('🔄 [menuItems useEffect] Checking if we should update menu items...', {
-      availableCategoriesLength: availableCategories.length,
-      userCategoriesSelectedLength: userPreferences.categories_selected.length
-    });
-
     if (availableCategories.length > 0 && userPreferences.categories_selected.length > 0) {
-      // Get user's selected categories
       const userCategories = availableCategories.filter(cat => 
         userPreferences.categories_selected.includes(cat.id)
       );
       
-      console.log('📋 [menuItems useEffect] User selected categories:', userCategories);
-      
-      // Create menu items from user's selected categories (WITHOUT ICONS)
       const categoryMenus = userCategories.map(cat => ({
         id: cat.name.toLowerCase().replace(/\s+/g, '-'),
         name: cat.name,
@@ -966,739 +768,380 @@ const CompleteMobileDashboard: React.FC = () => {
         ...categoryMenus
       ];
 
-      console.log('✅ [menuItems useEffect] Setting menu items:', newMenuItems);
       setMenuItems(newMenuItems);
     }
   }, [availableCategories, userPreferences.categories_selected]);
 
-  // Add menu selection handler
   const handleMenuSelection = async (menuId: string) => {
-    console.log('🎯 [handleMenuSelection] Menu selected:', menuId);
     setActiveMenu(menuId);
     setMenuOpen(false);
     
     if (menuId === 'home') {
       setSelectedCategory('All');
-      // Get counts for all categories (similar to Landing.tsx)
       try {
-        console.log('📊 Fetching content counts for all categories...');
         const countsResponse = await apiService.getContentCounts('all');
         setContentCounts(countsResponse);
-        console.log('✅ Content counts loaded for All:', countsResponse);
       } catch (error) {
         console.error('❌ Failed to fetch content counts:', error);
       }
     } else {
-      // Find the category name from menuItems
       const menuItem = menuItems.find(item => item.id === menuId);
       if (menuItem && menuItem.name !== 'Home') {
-        console.log('🎯 [handleMenuSelection] Setting category filter:', menuItem.name);
         setSelectedCategory(menuItem.name);
-        // Get counts for specific category
         try {
-          console.log('📊 Fetching content counts for category:', menuItem.name);
           const countsResponse = await apiService.getContentCounts(menuItem.name);
           setContentCounts(countsResponse);
-          console.log('✅ Content counts loaded for', menuItem.name, ':', countsResponse);
         } catch (error) {
           console.error('❌ Failed to fetch content counts:', error);
         }
       }
     }
     
-    // Reset content load flag to reload with new filter
     hasLoadedContent.current = false;
   };
 
-  // Render Hamburger Menu (with Landing.tsx styling)
-  const renderHamburgerMenu = () => {
-    return (
-      <>
-        {/* Overlay */}
+  return (
+    <>
+      <SEO 
+        title="AI News Dashboard | Vidyagam"
+        description="Your personalized AI news dashboard"
+        keywords="AI news, dashboard, artificial intelligence"
+      />
+      
+      <div className="landing-page">
+        {/* ✅ RESTORED: HEADER */}
+        <header style={{
+          position: 'sticky', 
+          top: 0,
+          zIndex: 1000,
+          backgroundColor: '#ffffff',
+          borderBottom: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+        }}>
+          <div style={{
+            maxWidth: '1280px',
+            margin: '0 auto',
+            padding: '16px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            {/* Logo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                style={{
+                  padding: '8px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  borderRadius: '8px',
+                  transition: 'background-color 0.2s'
+                }}
+              >
+                {menuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+              <h1 style={{
+                fontSize: '24px',
+                fontWeight: 'bold',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                margin: 0
+              }}>
+                Vidyagam
+              </h1>
+            </div>
+
+            {/* Header Actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {/* Search Button */}
+              <button
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                style={{
+                  padding: '10px',
+                  backgroundColor: isSearchOpen ? '#f3f4f6' : 'transparent',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Search size={20} />
+              </button>
+
+              {/* Settings Button */}
+              <button
+                onClick={() => setCurrentView('settings')}
+                style={{
+                  padding: '10px',
+                  backgroundColor: currentView === 'settings' ? '#f3f4f6' : 'transparent',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Settings size={20} />
+              </button>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: '#fee2e2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#dc2626',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <LogOut size={16} />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+
+          {/* ✅ RESTORED: SEARCH BAR */}
+          {isSearchOpen && (
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid #e5e7eb',
+              backgroundColor: '#f9fafb'
+            }}>
+              <input
+                type="text"
+                placeholder="Search articles, podcasts, videos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  fontSize: '14px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  outline: 'none'
+                }}
+              />
+            </div>
+          )}
+        </header>
+
+        {/* ✅ RESTORED: HAMBURGER MENU */}
         {menuOpen && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
-            onClick={() => setMenuOpen(false)}
-          />
+          <div style={{
+            position: 'fixed',
+            top: '73px',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999
+          }}
+          onClick={() => setMenuOpen(false)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '300px',
+                height: '100%',
+                backgroundColor: '#ffffff',
+                boxShadow: '2px 0 8px rgba(0, 0, 0, 0.1)',
+                overflowY: 'auto',
+                padding: '24px'
+              }}
+            >
+              <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '24px' }}>
+                Categories
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {menuItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleMenuSelection(item.id)}
+                    style={{
+                      padding: '12px 16px',
+                      backgroundColor: activeMenu === item.id ? '#eff6ff' : 'transparent',
+                      border: activeMenu === item.id ? '1px solid #bfdbfe' : '1px solid transparent',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontSize: '14px',
+                      fontWeight: activeMenu === item.id ? '600' : '400',
+                      color: activeMenu === item.id ? '#1e40af' : '#374151',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span>{item.name}</span>
+                      {item.description && (
+                        <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                          {item.description}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* Sidebar Menu */}
-        <div 
-          className={`fixed top-0 left-0 h-full bg-white shadow-xl z-50 transform transition-transform duration-300 ${
-            menuOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-          style={{ width: isMobile ? '100vw' : '480px', overflowY: 'auto' }}
-        >
-          <div className="flex flex-col h-full">
-            {/* Menu Header - Same layout as Landing.tsx */}
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                {/* Left: Close Button */}
-                <button 
-                  onClick={() => setMenuOpen(false)}
+        {/* ✅ RESTORED: FILTERS & VIEW MODE */}
+        {currentView === 'dashboard' && (
+          <div style={{
+            padding: '16px 24px',
+            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: '#ffffff'
+          }}>
+            <div style={{
+              maxWidth: '1280px',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '16px'
+            }}>
+              {/* Time Filter */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setIsTimeFilterOpen(!isTimeFilterOpen)}
                   style={{
+                    padding: '10px 16px',
                     backgroundColor: '#ffffff',
-                    color: '#000000',
-                    padding: '8px',
-                    borderRadius: '6px',
                     border: '1px solid #e5e7eb',
-                    transition: 'all 0.2s',
+                    borderRadius: '8px',
                     cursor: 'pointer',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f9fafb';
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                    e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500'
                   }}
                 >
-                  <X size={24} />
+                  <Clock size={16} />
+                  <span>{getTimeFilterIcon()} {timeFilter}</span>
                 </button>
 
-                {/* Center: Logo + Subtitle */}
-                <div className="flex flex-col items-center flex-1 mx-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <h1 className="dashboard-hamburger-title text-2xl font-bold text-gray-900">
-                      Vidyagam
-                    </h1>
-                  </div>
-                  <span 
-                    className="dashboard-hamburger-subtitle text-xs mt-1" 
-                    style={{ 
-                      color: '#6b7280',
-                      fontSize: '12px',
-                      fontWeight: '400',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    AI Latest, Curated and Filtered for you
-                  </span>
-                </div>
-
-                {/* Right: User Avatar */}
-                <div className="flex items-center">
-                  {user?.profileImage ? (
-                    <img
-                      src={user.profileImage}
-                      alt={user.name}
-                      className="w-10 h-10 rounded-full border-2 border-gray-200"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-pink-600 flex items-center justify-center text-white font-bold text-lg border-2 border-gray-200">
-                      {user?.name?.charAt(0).toUpperCase() || 'U'}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Menu Items */}
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Categories</h3>
-                <nav className="space-y-1">
-                  {menuItems.map((menu) => (
-                    <button
-                      key={menu.id}
-                      onClick={() => handleMenuSelection(menu.id)}
-                      style={{
-                        width: '100%',
-                        textAlign: 'left',
-                        padding: '12px 16px',
-                        fontSize: '14px',
-                        fontWeight: '700',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '6px',
-                        marginBottom: '4px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        backgroundColor: activeMenu === menu.id ? '#dbeafe' : '#f9fafb',
-                        color: '#1f2937',
-                        boxShadow: activeMenu === menu.id ? '0 2px 4px rgba(59,130,246,0.15)' : '0 1px 2px rgba(0,0,0,0.05)'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (activeMenu !== menu.id) {
-                          e.currentTarget.style.backgroundColor = '#e5e7eb';
-                          e.currentTarget.style.color = '#1f2937';
-                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (activeMenu !== menu.id) {
-                          e.currentTarget.style.backgroundColor = '#f9fafb';
-                          e.currentTarget.style.color = '#1f2937';
-                          e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                        }
-                      }}
-                    >
-                      {menu.name}
-                    </button>
-                  ))}
-                </nav>
-
-                {/* Settings & Logout */}
-                <div className="border-t border-gray-200 pt-4 mt-4 space-y-2">
-                  <button
-                    onClick={() => {
-                      setCurrentView('settings');
-                      setMenuOpen(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      padding: '12px 16px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      backgroundColor: '#f9fafb',
-                      color: '#000000'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#ffffff';
-                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f9fafb';
-                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                    }}
-                  >
-                    <Settings size={16} style={{ display: 'inline', marginRight: '12px' }} />
-                    Settings
-                  </button>
-
-                  <button
-                    onClick={handleLogout}
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      padding: '12px 16px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      border: '2px solid #dc2626',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      backgroundColor: '#ffffff',
-                      color: '#dc2626'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#dc2626';
-                      e.currentTarget.style.color = '#ffffff';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#ffffff';
-                      e.currentTarget.style.color = '#dc2626';
-                    }}
-                  >
-                    <LogOut size={16} style={{ display: 'inline', marginRight: '12px' }} />
-                    Sign Out
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        </>
-      );
-    };
-
-    // Breaking News Section
-    const renderBreakingNews = () => {
-      let breakingNews = content.filter(item => item.significance && item.significance >= 8);
-      
-      if (selectedCategory !== 'All') {
-        breakingNews = breakingNews.filter(item => item.category === selectedCategory);
-      }
-      
-      breakingNews = breakingNews.slice(0, 8);
-      
-      if (breakingNews.length === 0) return null;
-
-      const scrollingNews = [...breakingNews, ...breakingNews];
-
-      return (
-        <section style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
-          <div style={{ maxWidth: '100%', margin: '0', padding: '12px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ 
-                backgroundColor: '#dbeafe', 
-                padding: '6px 12px', 
-                borderRadius: '6px',
-                flexShrink: 0
-              }}>
-                <span style={{ alignItems: 'left', fontSize: '12px', fontWeight: '600', color: '#1e40af' }}>
-                  🔥 Latest in AI
-                </span>
-              </div>
-              
-              <div style={{ flex: 1, overflow: 'hidden' }}>
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '16px',
-                  animation: 'scroll 30s linear infinite',
-                  whiteSpace: 'nowrap',
-                  justifyContent: 'flex-start'
-                }}>
-                  {scrollingNews.map((item, index) => (
-                    <div
-                      key={`${item.id}-${index}`}
-                      onClick={() => window.open(item.sourceLink, '_blank')}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'pointer',
-                        padding: '6px 10px',
-                        backgroundColor: '#f9fafb',
-                        borderRadius: '6px',
-                        border: '1px solid #e5e7eb',
-                        transition: 'all 0.2s',
-                        flexShrink: 0
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f3f4f6';
-                        e.currentTarget.style.borderColor = '#d1d5db';
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px -1px rgba(0, 0, 0, 0.1)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f9fafb';
-                        e.currentTarget.style.borderColor = '#e5e7eb';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    >
-                      <span style={{
-                        backgroundColor: '#dbeafe',
-                        color: '#1e40af',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        flexShrink: 0
-                      }}>
-                        {item.significance}/10
-                      </span>
-                      
-                      <span style={{
-                        fontSize: '13px',
-                        fontWeight: '500',
-                        color: '#1f2937',
-                        maxWidth: '400px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>
-                        {item.title}
-                      </span>
-                      
-                      <span style={{
-                        fontSize: '11px',
-                        color: '#6b7280',
-                        flexShrink: 0
-                      }}>
-                        • {item.publisher}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <style>
-            {`
-              @keyframes scroll {
-                0% { transform: translateX(0); }
-                100% { transform: translateX(-50%); }
-              }
-            `}
-          </style>
-        </section>
-      );
-    };
-
-    // Add isMobile state detection
-    const [isMobile, setIsMobile] = useState(false);
-
-    useEffect(() => {
-      const handleResize = () => {
-        setIsMobile(window.innerWidth < 768);
-      };
-      handleResize();
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    return (
-      <>
-        <SEO 
-          title="AI News Dashboard | Vidyagam"
-          description="Your personalized AI news dashboard"
-          keywords="AI news, dashboard, artificial intelligence"
-        />
-        
-        <div className="landing-page">
-          {/* Header with Hamburger Menu */}
-          <header className="bg-white shadow-sm">
-            <div className="max-w-7xl mx-auto px-4">
-              <div className="flex justify-between items-center h-16">
-                
-                {/* Left: Hamburger Menu Button */}
-                <div className="flex items-center">
-                  <button 
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    style={{
-                      backgroundColor: '#ffffff',
-                      color: '#000000',
-                      padding: '8px',
-                      borderRadius: '6px',
-                      border: '1px solid #e5e7eb',
-                      transition: 'all 0.2s',
-                      cursor: 'pointer',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f9fafb';
-                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#ffffff';
-                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                    }}
-                    aria-label="Menu"
-                  >
-                    <Menu size={24} className="text-gray-700" />
-                  </button>
-                </div>
-
-                {/* Center: Logo with AI Intelligence Icon and Subtitle */}
-                <div className="flex flex-col items-center flex-1">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900">
-                      Vidyagam
-                    </h1>
-                  </div>
-                  <span 
-                    className="text-xs mt-1" 
-                    style={{ 
-                      color: '#6b7280',
-                      fontSize: '12px',
-                      fontWeight: '400',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    AI Latest, Curated and Filtered for you
-                  </span>
-                </div>
-
-                {/* Right: Sign Out Button Only */}
-                <div className="flex items-center">
-                  <button 
-                    onClick={handleLogout}
-                    style={{
-                      backgroundColor: '#ffffff',
-                      color: '#dc2626',
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      border: '1px solid #e5e7eb',
-                      transition: 'all 0.2s',
-                      cursor: 'pointer',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#dc2626';
-                      e.currentTarget.style.color = '#ffffff';
-                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(220, 38, 38, 0.2)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#ffffff';
-                      e.currentTarget.style.color = '#dc2626';
-                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                    }}
-                    aria-label="Sign Out"
-                    title="Sign Out"
-                  >
-                    <LogOut size={20} />
-                    <span className="hidden sm:inline text-sm font-medium">Sign Out</span>
-                  </button>
-                </div>
-
-              </div>
-            </div>
-          </header>
-
-          {/* Horizontal Navigation Menu - Desktop Only */}
-          {menuItems.length > 0 && (
-            <section className="horizontal-menu-section">
-              <div className="max-w-7xl mx-auto px-4">
-                <div className="horizontal-nav flex items-center justify-center h-12" style={{ minHeight: '48px', paddingTop: '4px', paddingBottom: '4px' }}>
-                  {/* Center: Category Menu Items */}
-                  <div className="flex items-center space-x-4 overflow-x-auto">
-                    {menuItems.map((menu) => (
+                {isTimeFilterOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    left: 0,
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    zIndex: 1000,
+                    minWidth: '200px'
+                  }}>
+                    {timeFilterOptions.map(option => (
                       <button
-                        key={menu.id}
+                        key={option}
                         onClick={() => {
-                          setCurrentView('dashboard');
-                          handleMenuSelection(menu.id);
+                          setTimeFilter(option);
+                          setIsTimeFilterOpen(false);
                         }}
                         style={{
-                          padding: '8px 16px',
-                          margin: '0 4px',
-                          borderRadius: '6px',
-                          fontSize: '13px',
-                          fontWeight: '700',
+                          width: '100%',
+                          padding: '12px 16px',
+                          backgroundColor: timeFilter === option ? '#f3f4f6' : 'transparent',
                           border: 'none',
+                          textAlign: 'left',
                           cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          whiteSpace: 'nowrap',
-                          backgroundColor: activeMenu === menu.id ? '#dbeafe' : '#f3f4f6',
-                          color: '#1f2937',
-                          boxShadow: activeMenu === menu.id ? '0 2px 8px rgba(59,130,246,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
-                          backdropFilter: 'blur(10px)',
-                          height: '40px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (activeMenu !== menu.id) {
-                            e.currentTarget.style.backgroundColor = '#e5e7eb';
-                            e.currentTarget.style.color = '#1f2937';
-                            e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (activeMenu !== menu.id) {
-                            e.currentTarget.style.backgroundColor = '#f3f4f6';
-                            e.currentTarget.style.color = '#1f2937';
-                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
-                          }
+                          fontSize: '14px',
+                          fontWeight: timeFilter === option ? '600' : '400'
                         }}
                       >
-                        {menu.name}
+                        {option}
                       </button>
                     ))}
                   </div>
-                </div>
+                )}
               </div>
-            </section>
-          )}
 
-          {/* ✅ FIXED: Responsive Filter Section with proper closing brace */}
-          <section style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb', padding: '16px 0' }}>
-            <div className="max-w-7xl mx-auto px-4">
-              <div 
-                style={{ 
-                  display: 'flex',
-                  flexDirection: isMobile ? 'column' : 'row',
-                  gap: '12px',
-                  alignItems: isMobile ? 'stretch' : 'center',
-                  justifyContent: 'space-between'
-                }}
-              >
-                {/* Left: Time Filter */}
-                <div style={{ position: 'relative', flex: isMobile ? '1' : '0 0 auto' }}>
-                  <button 
-                    onClick={() => setIsTimeFilterOpen(!isTimeFilterOpen)}
-                    style={{
-                      width: isMobile ? '100%' : 'auto',
-                      backgroundColor: '#ffffff',
-                      color: '#000000',
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      border: '2px solid #e5e7eb',
-                      transition: 'all 0.2s',
-                      cursor: 'pointer',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '8px',
-                      fontSize: '14px',
-                      fontWeight: '600'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f9fafb';
-                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
-                      e.currentTarget.style.borderColor = '#d1d5db';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#ffffff';
-                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-                      e.currentTarget.style.borderColor = '#e5e7eb';
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Clock size={18} style={{ color: '#6366f1' }} />
-                      <span style={{ color: '#111827' }}>{timeFilter}</span>
-                    </div>
-                    <svg 
-                      style={{ 
-                        width: '16px', 
-                        height: '16px', 
-                        color: '#6b7280',
-                        transform: isTimeFilterOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s'
-                      }} 
-                      fill="currentColor" 
-                      viewBox="0 0 20 20"
-                    >
-                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-
-                  {/* Time Filter Dropdown */}
-                  {isTimeFilterOpen && (
-                    <>
-                      <div
-                        onClick={() => setIsTimeFilterOpen(false)}
-                        style={{
-                          position: 'fixed',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          zIndex: 40
-                        }}
-                      />
-                      
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '100%',
-                          left: isMobile ? 0 : 'auto',
-                          right: isMobile ? 0 : 'auto',
-                          marginTop: '8px',
-                          backgroundColor: '#ffffff',
-                          borderRadius: '12px',
-                          border: '2px solid #e5e7eb',
-                          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                          zIndex: 50,
-                          minWidth: isMobile ? '100%' : '220px',
-                          overflow: 'hidden'
-                        }}
-                      >
-                        <div style={{ padding: '8px 0' }}>
-                          <div style={{
-                            padding: '12px 16px',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            color: '#6b7280',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            borderBottom: '1px solid #f3f4f6'
-                          }}>
-                            Filter by Time
-                          </div>
-                          {timeFilterOptions.map((option) => (
-                            <button
-                              key={option}
-                              onClick={() => {
-                                setTimeFilter(option);
-                                setIsTimeFilterOpen(false);
-                                hasLoadedContent.current = false;
-                            }}
-                            style={{
-                              width: '100%',
-                              textAlign: 'left',
-                              padding: '12px 16px',
-                              fontSize: '14px',
-                              fontWeight: timeFilter === option ? '600' : '400',
-                              backgroundColor: timeFilter === option ? '#eff6ff' : 'transparent',
-                              color: timeFilter === option ? '#1e40af' : '#374151',
-                              border: 'none',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (timeFilter !== option) {
-                                e.currentTarget.style.backgroundColor = '#f9fafb';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (timeFilter !== option) {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                              }
-                            }}
-                          >
-                            <span>{option}</span>
-                            {timeFilter === option && (
-                              <svg style={{ width: '18px', height: '18px', color: '#1e40af' }} fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            )}
-                          </button>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Right: Search Button */}
-                <button 
-                  onClick={() => setIsSearchOpen(!isSearchOpen)}
+              {/* View Mode Toggle */}
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                padding: '4px',
+                backgroundColor: '#f3f4f6',
+                borderRadius: '8px'
+              }}>
+                <button
+                  onClick={() => setViewMode('list')}
                   style={{
-                    flex: isMobile ? '1' : '0 0 auto',
-                    backgroundColor: '#eff6ff',
-                    color: '#1e40af',
-                    padding: '12px 20px',
-                    borderRadius: '8px',
-                    border: '2px solid #bfdbfe',
-                    transition: 'all 0.2s',
+                    padding: '8px 16px',
+                    backgroundColor: viewMode === 'list' ? '#ffffff' : 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(59, 130, 246, 0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
                     fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#dbeafe';
-                    e.currentTarget.style.borderColor = '#93c5fd';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#eff6ff';
-                    e.currentTarget.style.borderColor = '#bfdbfe';
-                    e.currentTarget.style.boxShadow = '0 2px 6px rgba(59, 130, 246, 0.15)';
-                    e.currentTarget.style.transform = 'translateY(0)';
+                    fontWeight: '600',
+                    color: viewMode === 'list' ? '#111827' : '#6b7280',
+                    boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                    transition: 'all 0.2s'
                   }}
                 >
-                  <Search size={18} />
-                  <span>Search AI News</span>
+                  📋 List
+                </button>
+                <button
+                  onClick={() => setViewMode('swipe')}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: viewMode === 'swipe' ? '#ffffff' : 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: viewMode === 'swipe' ? '#111827' : '#6b7280',
+                    boxShadow: viewMode === 'swipe' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  👆 Swipe
+                </button>
+                <button
+                  onClick={() => setViewMode('infinite')}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: viewMode === 'infinite' ? '#ffffff' : 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: viewMode === 'infinite' ? '#111827' : '#6b7280',
+                    boxShadow: viewMode === 'infinite' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  ∞ Feed
                 </button>
               </div>
             </div>
-          </section>
+          </div>
+        )}
 
-        {/* Render Hamburger Menu */}
-        {renderHamburgerMenu()}
-
-        {/* Render Settings Full Screen */}
+        {/* Settings View */}
         {currentView === 'settings' && (
           <SettingsFullScreen
             userPreferences={userPreferences}
@@ -1716,309 +1159,62 @@ const CompleteMobileDashboard: React.FC = () => {
           />
         )}
 
-        {/* Breaking News */}
-        {renderBreakingNews()}
-
-        {/* Search Section */}
-        {isSearchOpen && (
-          <section style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', padding: isMobile ? '20px 0' : '24px 0', animation: 'slideDown 0.3s ease-out' }}>
-            <div className="max-w-3xl mx-auto px-4">
-              {/* Search Header */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                marginBottom: '16px'
-              }}>
-                <h2 style={{ 
-                  fontSize: isMobile ? '16px' : '18px',
-                  fontWeight: '600', 
-                  color: '#111827',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <Search size={20} style={{ color: '#6366f1' }} />
-                  Search AI News
-                </h2>
+        {/* Content */}
+        {currentView === 'dashboard' && (
+          <>
+            {loading ? (
+              <div className="p-4"><DashboardSkeleton /></div>
+            ) : error ? (
+              <div style={{ textAlign: 'center', padding: '64px 16px' }}>
+                <p style={{ color: '#dc2626', marginBottom: '16px' }}>{error}</p>
                 <button
-                  onClick={() => {
-                    setIsSearchOpen(false);
-                    setSearchQuery('');
-                  }}
+                  onClick={() => window.location.reload()}
                   style={{
-                    padding: '6px',
-                    borderRadius: '8px',
+                    padding: '12px 24px',
+                    backgroundColor: '#3b82f6',
+                    color: '#ffffff',
                     border: 'none',
-                    backgroundColor: 'transparent',
+                    borderRadius: '8px',
                     cursor: 'pointer',
-                    color: '#6b7280',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#e5e7eb';
-                    e.currentTarget.style.color = '#111827';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = '#6b7280';
+                    fontSize: '14px',
+                    fontWeight: '600'
                   }}
                 >
-                  <X size={22} />
+                  Retry
                 </button>
               </div>
-
-              {/* Search Input */}
-              <div style={{ position: 'relative', marginBottom: '16px' }}>
-                <input
-                  type="text"
-                  placeholder={isMobile ? "Search AI topics..." : "Search for AI topics, research papers, tutorials... (Press Enter to search)"}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchQuery.trim()) {
-                      hasLoadedContent.current = false;
-                      setIsSearchOpen(false);
-                    } else if (e.key === 'Escape') {
-                      setIsSearchOpen(false);
-                      setSearchQuery('');
-                    }
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: isMobile ? '14px 44px' : '16px 48px',
-                    fontSize: isMobile ? '15px' : '16px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '12px',
-                    outline: 'none',
-                    transition: 'all 0.2s',
-                    backgroundColor: '#ffffff',
-                    color: '#111827'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = '#6366f1';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                  autoFocus
-                />
-                <Search 
-                  size={isMobile ? 18 : 20}
-                  style={{ 
-                    position: 'absolute', 
-                    left: isMobile ? '14px' : '16px',
-                    top: '50%', 
-                    transform: 'translateY(-50%)',
-                    color: '#9ca3af'
-                  }} 
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    style={{
-                      position: 'absolute',
-                      right: isMobile ? '14px' : '16px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      padding: '6px',
-                      borderRadius: '50%',
-                      border: 'none',
-                      backgroundColor: '#f3f4f6',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'background-color 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#e5e7eb';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f3f4f6';
-                    }}
-                  >
-                    <X size={16} style={{ color: '#6b7280' }} />
-                  </button>
-                )}
+            ) : content.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '64px 16px' }}>
+                <p style={{ color: '#6b7280' }}>No content found. Try adjusting your search or settings.</p>
               </div>
-
-              {/* Quick Suggestions */}
-              <div>
-                <p style={{ 
-                  fontSize: '12px', 
-                  color: '#6b7280', 
-                  marginBottom: '8px',
-                  fontWeight: '500'
-                }}>
-                  Popular searches:
-                </p>
-                <div style={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: '8px',
-                  justifyContent: isMobile ? 'flex-start' : 'flex-start'
-                }}>
-                  {['Latest GPT-4 updates', 'AI ethics', 'Machine learning tutorials', 'AI startups'].map((suggestion, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        setSearchQuery(suggestion);
-                        hasLoadedContent.current = false;
-                        setIsSearchOpen(false);
-                      }}
-                      style={{
-                        padding: isMobile ? '8px 12px' : '6px 12px',
-                        fontSize: isMobile ? '12px' : '13px',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '20px',
-                        cursor: 'pointer',
-                        color: '#374151',
-                        transition: 'all 0.2s',
-                        fontWeight: '500'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f3f4f6';
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,  0, 0, 0.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#ffffff';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Tip for using search */}
-              {searchQuery && (
-                <div style={{ 
-                  marginTop: '16px',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  backgroundColor: '#eef2ff',
-                  border: '1px solid #cbd5e1',
-                  color: '#1e3a8a',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <svg style={{ width: '20px', height: '20px', color: '#4f46e5' }} fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p style={{ margin: 0 }}>
-                    💡 <strong>Tip:</strong> Press <kbd style={{ 
-                      padding: '2px 6px', 
-                      backgroundColor: '#ffffff', 
-                      borderRadius: '4px',
-                      border: '1px solid #bfdbfe',
-                      fontFamily: 'monospace',
-                      fontSize: '11px'
-                    }}>Enter</kbd> to search or <kbd style={{ 
-                      padding: '2px 6px', 
-                      backgroundColor: '#ffffff', 
-                      borderRadius: '4px',
-                      border: '1px solid #bfdbfe',
-                      fontFamily: 'monospace',
-                      fontSize: '11px'
-                    }}>Esc</kbd> to close
-                  </p>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* Content */}
-        {loading ? (
-          <div className="p-4"><DashboardSkeleton /></div>
-        ) : error ? (
-          <div className="content-notice">
-            <p>{error}</p>
-            <button onClick={() => window.location.reload()} className="btn-base btn-md btn-primary">
-              Retry
-            </button>
-          </div>
-        ) : content.length === 0 ? (
-          <div className="content-notice">
-            <p>No content found. Try adjusting your search or settings.</p>
-          </div>
-        ) : (
-          <>
-            {currentView === 'dashboard' && (
+            ) : (
               <>
-                {renderContentByType()}
+                {viewMode === 'swipe' ? (
+                  <SwipeableFeed
+                    content={content}
+                    onRefresh={() => {
+                      hasLoadedContent.current = false;
+                      setContent([]);
+                    }}
+                    loading={loading}
+                    onArticleAction={handleArticleAction}
+                  />
+                ) : viewMode === 'infinite' ? (
+                  <InfiniteFeed
+                    initialContent={content}
+                    feedType="personalized"
+                    onArticleAction={handleArticleAction}
+                  />
+                ) : (
+                  renderContentByType()
+                )}
               </>
-            )}
-            
-            {currentView === 'categories' && (
-              <section className="hero-section">
-                <div className="hero-content text-center">
-                  <h2 className="section-title">📚 My Categories</h2>
-                  <p className="section-subtitle">Your personalized AI topic preferences</p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
-                    {availableCategories
-                      .filter(cat => userPreferences.categories_selected.includes(cat.id))
-                      .map(category => (
-                        <div key={category.id} className="p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
-                          <h3 className="font-semibold text-lg">{category.name}</h3>
-                          <p className="text-sm text-gray-600">{category.description}</p>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              </section>
             )}
           </>
         )}
 
         <Footer />
       </div>
-
-      {/* Add responsive styles */}
-      <style>
-        {`
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-
-          @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-
-          .horizontal-nav {
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-            position: relative;
-          }
-          
-          .horizontal-nav::-webkit-scrollbar {
-            display: none;
-          }
-          
-          @media (max-width: 1024px) {
-            .horizontal-menu-section { display: none !important; }
-          }
-
-          @media (max-width: 640px) {
-            .text-2xl { font-size: 1.25rem !important; }
-            .text-sm { font-size: 0.75rem !important; }
-            .dashboard-hamburger-title { font-size: 1.25rem !important; }
-            .dashboard-hamburger-subtitle { fontSize: 0.625rem !important; }
-          }
-        `}
-      </style>
     </>
   );
 };
