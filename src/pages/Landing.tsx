@@ -182,7 +182,7 @@ const Landing: React.FC = () => {
   // Update the ContentTypeCTA component to be more informative
   const ContentTypeCTA = ({ contentType, count }: { contentType: string; count: number }) => {
     const getCtaText = (type: string) => {
-      const remainingCount = count > 3 ? count - 3 : 0;
+      const remainingCount = count > 10 ? count - 10 : 0;
       switch (type.toLowerCase()) {
         case 'podcast':
           return {
@@ -210,7 +210,7 @@ const Landing: React.FC = () => {
 
     const ctaInfo = getCtaText(contentType);
 
-    if (count <= 3) return null;
+    if (count <= 10) return null;
 
     return (
       <div style={{
@@ -336,8 +336,8 @@ const Landing: React.FC = () => {
       console.log('🔍 DEBUG: Starting fetchLandingContent...');
       
       const [breakingResponse, landingResponse, countsResponse] = await Promise.all([
-        apiService.getBreakingNewsAlerts(8),
-        apiService.getLandingContent(3),
+        apiService.getBreakingNewsAlerts(10),
+        apiService.getLandingContent(10),
         apiService.getContentCounts('all')
       ]);
       
