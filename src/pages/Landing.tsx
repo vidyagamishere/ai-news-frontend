@@ -525,9 +525,9 @@ const Landing: React.FC = () => {
         priority: 1,
         description: 'Latest content from all AI categories - your comprehensive overview',
         content: {
-          blogs: allBlogs.slice(0, 3),
-          podcasts: allPodcasts.slice(0, 3),
-          videos: allVideos.slice(0, 3)
+          blogs: allBlogs.slice(0, 10),
+          podcasts: allPodcasts.slice(0, 10),
+          videos: allVideos.slice(0, 10)
         },
         realCounts: contentCounts ? {
           blogs: contentCounts.total_blogs || allBlogs.length,
@@ -550,9 +550,9 @@ const Landing: React.FC = () => {
           return {
             ...category,
             content: {
-              blogs: category.content.blogs.slice(0, 3),
-              podcasts: category.content.podcasts.slice(0, 3),
-              videos: category.content.videos.slice(0, 3)
+              blogs: category.content.blogs.slice(0, 10),
+              podcasts: category.content.podcasts.slice(0, 10),
+              videos: category.content.videos.slice(0, 10)
             },
             realCounts: {
               blogs: categoryCounts.blogs || category.content.blogs.length,
