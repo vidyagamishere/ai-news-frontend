@@ -565,9 +565,9 @@ const Landing: React.FC = () => {
       return {
         ...category,
         content: {
-          blogs: category?.content.blogs.slice(0, 3) || [],
-          podcasts: category?.content.podcasts.slice(0, 3) || [],
-          videos: category?.content.videos.slice(0, 3) || []
+          blogs: category?.content.blogs.slice(0, 10) || [],
+          podcasts: category?.content.podcasts.slice(0, 10) || [],
+          videos: category?.content.videos.slice(0, 10) || []
         },
         realCounts: {
           blogs: category?.content.blogs.length || 0,
