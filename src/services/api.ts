@@ -456,7 +456,7 @@ export const apiService = {
 
   // Get all landing page content organized by categories and content types
   // Backend endpoint: GET /landing-content (mobile dashboard style organization)
-  getLandingContent: async (limitPerType: number = 3): Promise<{
+  getLandingContent: async (limitPerType: number = 10): Promise<{
     categories: Array<{
       id: number;
       name: string;
