@@ -1108,7 +1108,7 @@ const Landing: React.FC = () => {
           }
 
           return (
-            <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+            <div style={{ width: '100%', margin: '0 auto', padding: '0 16px' }}>
               {/* Category Header */}
               <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                 <h1 className="hero-title" style={{ fontSize: '14px', fontWeight: 'bold', color: '#111827', marginBottom: '6px' }}>
@@ -1235,7 +1235,7 @@ const Landing: React.FC = () => {
                     </div>
                     <div className="content-grid" style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
                       gap: '24px' 
                     }}>
                       {currentCategory.content.blogs.slice(0, 10).map((article, index) => (
@@ -1301,7 +1301,7 @@ const Landing: React.FC = () => {
                     </div>
                     <div className="content-grid" style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
                       gap: '24px' 
                     }}>
                       {currentCategory.content.podcasts.slice(0, 10).map((article, index) => (
@@ -1364,7 +1364,7 @@ const Landing: React.FC = () => {
                     </div>
                     <div className="content-grid" style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
                       gap: '24px' 
                     }}>
                       {currentCategory.content.videos.slice(0, 10).map((article, index) => (
