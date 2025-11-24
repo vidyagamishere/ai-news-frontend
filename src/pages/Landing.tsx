@@ -1323,7 +1323,7 @@ const Landing: React.FC = () => {
                       gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
                       gap: '24px' 
                     }}>
-                      {currentCategory.content.blogs.slice(0, 3).map((article, index) => (
+                      {currentCategory.content.blogs.slice(0, 10).map((article, index) => (
                         <ArticleCard key={index} article={article} contentType="article" />
                       ))}
                     </div>
@@ -1389,7 +1389,7 @@ const Landing: React.FC = () => {
                       gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
                       gap: '24px' 
                     }}>
-                      {currentCategory.content.podcasts.slice(0, 3).map((article, index) => (
+                      {currentCategory.content.podcasts.slice(0, 10).map((article, index) => (
                         <ArticleCard key={index} article={article} contentType="podcast" />
                       ))}
                     </div>
@@ -1452,7 +1452,7 @@ const Landing: React.FC = () => {
                       gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
                       gap: '24px' 
                     }}>
-                      {currentCategory.content.videos.slice(0, 3).map((article, index) => (
+                      {currentCategory.content.videos.slice(0, 10).map((article, index) => (
                         <ArticleCard key={index} article={article} contentType="video" />
                       ))}
                     </div>
