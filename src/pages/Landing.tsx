@@ -1235,7 +1235,7 @@ const Landing: React.FC = () => {
                     </div>
                     <div className="content-grid" style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+                      gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', 
                       gap: '24px' 
                     }}>
                       {currentCategory.content.blogs.slice(0, 10).map((article, index) => (
@@ -1301,7 +1301,7 @@ const Landing: React.FC = () => {
                     </div>
                     <div className="content-grid" style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+                      gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', 
                       gap: '24px' 
                     }}>
                       {currentCategory.content.podcasts.slice(0, 10).map((article, index) => (
@@ -1364,7 +1364,7 @@ const Landing: React.FC = () => {
                     </div>
                     <div className="content-grid" style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+                      gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', 
                       gap: '24px' 
                     }}>
                       {currentCategory.content.videos.slice(0, 10).map((article, index) => (
