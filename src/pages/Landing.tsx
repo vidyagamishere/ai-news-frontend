@@ -1,764 +1,1638 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { List, Grid, TrendingUp, BookOpen, Mic, Video, Menu, X, Home, ChevronRight, LogIn, UserCircle, UserPlus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDeviceType } from '../hooks/useDeviceType';
-import Loading from '../components/Loading';
-import { 
-  apiService, 
-  getArticleSource,
-  getArticleSummary,
-  getArticlePublishedDate,
-  normalizeArticle
-} from '../services/api';
+import { LogIn, UserPlus } from 'lucide-react';
+import SEO from '../components/SEO';
+import { LandingSkeleton } from '../components/LoadingSkeleton';
+import { apiService } from '../services/api';
 
-import type { Article } from '../services/api';
+interface Article {
+  title: string;
+  summary: string;
+  url: string;
+  source: string;
+  significanceScore: number;
+  published_date: string | null;
+  author: string;
+  category: string;
+  content_type: string;
+}
 
-interface LandingCategory {
+interface Category {
   id: number;
   name: string;
-  slug?: string;
-  description?: string;
-  priority?: number;
-  content?: {
-    blogs: any[];
-    podcasts: any[];
-    videos: any[];
+  priority: number;
+  description: string;
+  content: {
+    blogs: Article[];
+    podcasts: Article[];
+    videos: Article[];
   };
 }
 
+interface LandingContent {
+  categories: Category[];
+  total_categories: number;
+}
+
 interface MenuItem {
-  id: number | null;
+  id: string;
   name: string;
+  icon: string;
   description: string;
 }
 
 const Landing: React.FC = () => {
+  const [landingContent, setLandingContent] = useState<LandingContent | null>(null);
+  const [breakingNews, setBreakingNews] = useState<Article[]>([]);
+  const [contentCounts, setContentCounts] = useState<any>(null);
+  const [activeMenu, setActiveMenu] = useState<string>('home');
+  const [activeCategory, setActiveCategory] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const { isMobile, isTablet, isDesktop, type, width } = useDeviceType();
-  
-  // ==================== STATE ====================
-  const [viewMode, setViewMode] = useState<'swipe' | 'list'>('swipe');
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [selectedContentType, setSelectedContentType] = useState<string>('blogs');
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [breakingNews, setBreakingNews] = useState<any[]>([]);
-  const [categories, setCategories] = useState<LandingCategory[]>([]);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  
-  const [contentCounts, setContentCounts] = useState<{
-    blogs: number;
-    podcasts: number;
-    videos: number;
-    total: number;
-  } | null>(null);
-  
-  const [categoryWiseCounts, setCategoryWiseCounts] = useState<{
-    category_id: number;
-    category_name: string;
-    blogs: number;
-    podcasts: number;
-    videos: number;
-    total: number;
-  }[]>([]);
-  
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  
-  const swipeContainerRef = useRef<HTMLDivElement>(null);
 
-  const isAuthenticated = !!localStorage.getItem('token');
+  // Menu items with Home as default
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([
+    { id: 'home', name: 'Home', icon: '🏠', description: 'All Categories Overview' }
+  ]);
 
+  // Helper function to get category icon
+  const getCategoryIcon = (categoryName: string): string => {
+    const iconMap: { [key: string]: string } = {
+      'generative ai': '🤖',
+      'machine learning': '🧠',
+      'computer vision': '👁️',
+      'natural language processing': '💬',
+      'robotics': '🤖',
+      'ai research': '🔬',
+      'ai tools': '🛠️',
+      'ai ethics': '⚖️',
+      'deep learning': '🧠',
+      'neural networks': '🕸️',
+      'ai startups': '🚀',
+      'ai news': '📰',
+      'ai events': '📅',
+      'ai education': '🎓',
+      'ai applications': '💼'
+    };
+    return iconMap[categoryName.toLowerCase()] || '🤖';
+  };
+
+  // Reusable Article Card Component
+  const ArticleCard = ({ article, contentType }: { article: Article; contentType: string }) => {
+    const getContentTypeInfo = (type: string) => {
+      switch (type.toLowerCase()) {
+        case 'podcast':
+          return { label: 'PODCAST', bgColor: '#dcfce7', textColor: '#15803d' };
+        case 'video':
+          return { label: 'VIDEO', bgColor: '#fee2e2', textColor: '#dc2626' };
+        default:
+          return { label: 'ARTICLE', bgColor: '#dbeafe', textColor: '#1e40af' };
+      }
+    };
+
+    const typeInfo = getContentTypeInfo(contentType);
+
+    return (
+      <article
+        onClick={() => window.open(article.url, '_blank', 'noopener,noreferrer')}
+        className="article-card"
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          padding: '24px',
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+          minHeight: '400px',
+          maxHeight: '400px',
+          height: '400px',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+          <span style={{ 
+            backgroundColor: typeInfo.bgColor, 
+            color: typeInfo.textColor, 
+            padding: '4px 8px', 
+            borderRadius: '6px', 
+            fontSize: '12px', 
+            fontWeight: '500' 
+          }}>
+            {typeInfo.label}
+          </span>
+          {article.significanceScore && (
+            <span style={{ 
+              backgroundColor: '#fef3c7', 
+              color: '#92400e', 
+              padding: '4px 8px', 
+              borderRadius: '6px', 
+              fontSize: '12px', 
+              fontWeight: '500' 
+            }}>
+              Score: {article.significanceScore}
+            </span>
+          )}
+        </div>
+        <h3 style={{ 
+          fontSize: '16px', 
+          fontWeight: '600', 
+          color: '#111827', 
+          marginBottom: '8px',
+          lineHeight: '1.4',
+          flex: '0 0 auto',
+          minHeight: '44px',
+          overflow: 'hidden',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical'
+        }}>
+          {article.title}
+        </h3>
+        <p style={{ 
+          color: '#6b7280', 
+          fontSize: '13px', 
+          marginBottom: '16px',
+          lineHeight: '1.5',
+          flex: '1',
+          overflow: 'auto'
+        }}>
+          {article.summary}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#9ca3af', marginTop: 'auto' }}>
+          <span style={{ fontWeight: '500' }}>{article.source}</span>
+          <span>{formatTimeAgo(article.published_date)}</span>
+        </div>
+      </article>
+    );
+  };
+
+  // Update the ContentTypeCTA component to be more informative
+  const ContentTypeCTA = ({ contentType, count }: { contentType: string; count: number }) => {
+    const getCtaText = (type: string) => {
+      const remainingCount = count > 10 ? count - 10 : 0;
+      switch (type.toLowerCase()) {
+        case 'podcast':
+          return {
+            title: remainingCount > 0 ? `${remainingCount} More AI Podcasts Available` : 'More AI Podcasts Available',
+            description: `Access expert discussions, insider interviews, and deep-dive analysis from AI industry leaders.`,
+            icon: '🎧',
+            action: 'Unlock Audio Content'
+          };
+        case 'video':
+          return {
+            title: remainingCount > 0 ? `${remainingCount} More AI Videos Available` : 'More AI Videos Available',
+            description: `Watch visual tutorials, conference talks, and live demonstrations from top AI researchers.`,
+            icon: '🎥',
+            action: 'Unlock Video Content'
+          };
+        default:
+          return {
+            title: remainingCount > 0 ? `${remainingCount} More AI Blogs Available` : 'More AI Blogs Available',
+            description: `Read comprehensive analysis, breaking research, and expert insights from leading AI publications.`,
+            icon: '📖',
+            action: 'Unlock All Blogs'
+          };
+      }
+    };
+
+    const ctaInfo = getCtaText(contentType);
+
+    if (count <= 10) return null;
+
+    return (
+      <div style={{
+        marginTop: '32px',
+        padding: '24px',
+        backgroundColor: '#f8fafc',
+        border: '2px dashed #e2e8f0',
+        borderRadius: '12px',
+        textAlign: 'center'
+      }}>
+        <div style={{ marginBottom: '16px' }}>
+          <span style={{ fontSize: '24px', marginBottom: '8px', display: 'block' }}>{ctaInfo.icon}</span>
+          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1a202c', marginBottom: '6px' }}>
+            {ctaInfo.title}
+          </h3>
+          <p style={{ color: '#718096', fontSize: '13px', marginBottom: '18px', lineHeight: '1.4' }}>
+            {ctaInfo.description}
+          </p>
+        </div>
+        <div className="cta-buttons" style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button 
+            onClick={() => navigateToAuth('signup')}
+            style={{
+              color: '#1a202c',
+              padding: '10px 20px',
+              fontSize: '13px',
+              fontWeight: '600',
+              border: '2px solid #1a202c',
+              borderRadius: '6px',
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#1a202c';
+              e.currentTarget.style.color = '#ffffff';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#1a202c';
+            }}
+          >
+            🚀 {ctaInfo.action}
+          </button>
+          <button 
+            onClick={() => navigateToAuth('signin')}
+            style={{
+              color: '#718096',
+              padding: '10px 20px',
+              fontSize: '12px',
+              fontWeight: '500',
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = '#718096';
+              e.currentTarget.style.color = '#1a202c';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#e2e8f0';
+              e.currentTarget.style.color = '#718096';
+            }}
+          >
+            Sign In Instead
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Monitor window resize for mobile responsiveness
   useEffect(() => {
-    console.log('📱 Device Info:', {
-      type,
-      isMobile,
-      isTablet,
-      isDesktop,
-      width,
-    });
-  }, [type, isMobile, isTablet, isDesktop, width]);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const navigateToAuth = (mode: 'signin' | 'signup') => {
     navigate(`/auth?mode=${mode}`);
   };
 
-  // ==================== HELPER FUNCTIONS ====================
-  const handleCategoryChange = (categoryId: number | null) => {
-    console.log('Category changed to:', categoryId);
-    setSelectedCategory(categoryId);
-    setCurrentIndex(0);
-    setPage(1);
-    setArticles([]);
-    setHasMore(true);
-    loadPaginatedArticles(1, true, categoryId);
-  };
-
-  const handleContentTypeChange = (contentType: string) => {
-    console.log('Content type changed to:', contentType);
-    setSelectedContentType(contentType);
-    setCurrentIndex(0);
-  };
-
-  const handleArticleClick = (article: any, event: React.MouseEvent) => {
-    event.preventDefault();
-    console.log('Article clicked:', article);
-
-    const url = article.url || article.link || article.article_url;
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
+  // Handle menu selection
+  const handleMenuSelection = async (menuId: string) => {
+    setActiveMenu(menuId);
+    setMenuOpen(false);
+    
+    if (menuId === 'home') {
+      setActiveCategory('');
+      // Get counts for all categories
+      try {
+        const countsResponse = await apiService.getContentCounts('all');
+        setContentCounts(countsResponse);
+      } catch (error) {
+        console.error('Failed to fetch content counts:', error);
+      }
     } else {
-      console.warn('No URL found for article:', article);
+      // Find the category name from menuItems
+      const menuItem = menuItems.find(item => item.id === menuId);
+      if (menuItem && menuItem.name !== 'Home') {
+        setActiveCategory(menuItem.name);
+        // Get counts for specific category
+        try {
+          const countsResponse = await apiService.getContentCounts(menuItem.name);
+          setContentCounts(countsResponse);
+        } catch (error) {
+          console.error('Failed to fetch content counts:', error);
+        }
+      }
     }
   };
 
-  const handleSwipeLeft = () => {
-    if (currentIndex < articles.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-    } else if (hasMore) {
-      loadPaginatedArticles(page + 1, false);
-    }
-  };
-
-  const handleSwipeRight = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
-    }
-  };
-
-  // ==================== DATA LOADING ====================
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  const fetchInitialData = async () => {
+  const fetchLandingContent = async () => {
     try {
-      console.log('📡 Fetching initial landing data...');
-      setInitialLoading(true);
-
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔍 DEBUG: Starting fetchLandingContent...');
+      
       const [breakingResponse, landingResponse, countsResponse] = await Promise.all([
         apiService.getBreakingNewsAlerts(10),
-        apiService.getLandingContent(),
+        apiService.getLandingContent(10),
         apiService.getContentCounts('all')
       ]);
-
-      if (breakingResponse && Array.isArray(breakingResponse)) {
-        setBreakingNews(breakingResponse.slice(0, 5));
-        console.log('✅ Breaking news loaded:', breakingResponse.length);
+      
+      console.log('🚨 DEBUG: Breaking News Response:', breakingResponse);
+      console.log('📊 DEBUG: Content Counts Response:', countsResponse);
+      console.log('📰 DEBUG: Landing Response:', landingResponse);
+      
+      if (breakingResponse?.articles) {
+        const breakingWithAuthor = breakingResponse.articles.map((article: any) => ({
+          ...article,
+          author: article.author || 'Unknown'
+        }));
+        console.log('✅ DEBUG: Setting breaking news:', breakingWithAuthor);
+        setBreakingNews(breakingWithAuthor);
+      } else {
+        console.log('❌ DEBUG: No breaking news articles found');
       }
-
+      
+      if (countsResponse) {
+        console.log('✅ DEBUG: Setting content counts:', countsResponse);
+        setContentCounts(countsResponse);
+      } else {
+        console.log('❌ DEBUG: No content counts found');
+      }
+      
       if (landingResponse?.categories) {
-        setCategories(landingResponse.categories);
+        setLandingContent(landingResponse);
         
-        const categoryMenus: MenuItem[] = landingResponse.categories.map((cat: any) => ({
-          id: cat.id,
+        // Create menu items from categories (WITHOUT ICONS)
+        const categoryMenus: MenuItem[] = landingResponse.categories.map((cat: Category) => ({
+          id: cat.name.toLowerCase().replace(/\s+/g, '-'),
           name: cat.name,
+          icon: '',
           description: cat.description || ''
         }));
         
         setMenuItems([
-          { id: null, name: 'All', description: 'All Categories' },
+          { id: 'home', name: 'Home', icon: '', description: 'All Categories Overview' },
           ...categoryMenus
         ]);
-
-        const catCounts = landingResponse.categories.map((cat: any) => ({
-          category_id: cat.id,
-          category_name: cat.name,
-          blogs: cat.content?.blogs?.length || 0,
-          podcasts: cat.content?.podcasts?.length || 0,
-          videos: cat.content?.videos?.length || 0,
-          total: (cat.content?.blogs?.length || 0) + 
-                 (cat.content?.podcasts?.length || 0) + 
-                 (cat.content?.videos?.length || 0)
-        }));
-        setCategoryWiseCounts(catCounts);
-        
-        console.log('✅ Categories loaded:', landingResponse.categories.length);
       }
-
-      if (countsResponse) {
-        setContentCounts(countsResponse);
-        console.log('✅ Content counts loaded:', countsResponse);
-      }
-
-      await loadPaginatedArticles(1, true);
-
-    } catch (error) {
-      console.error('❌ Initial data load failed:', error);
-    } finally {
-      setInitialLoading(false);
-    }
-  };
-
-  const loadPaginatedArticles = async (
-    pageNum: number, 
-    isInitial: boolean = false,
-    categoryId: number | null = selectedCategory
-  ) => {
-    if (loading) return;
-
-    try {
-      setLoading(true);
-      console.log(`📡 Loading articles page ${pageNum}...`);
-
-      // ✅ FIXED: Use getPaginatedContent with correct parameters
-      const response = await apiService.getPaginatedContent({
-        page: pageNum,
-        page_size: 10,  // ✅ Changed from 'limit' to 'page_size'
-        category_id: categoryId || undefined
-      });
-
-      // ✅ FIXED: Use 'items' instead of 'articles'
-      if (response?.items && Array.isArray(response.items)) {
-        const newArticles = response.items.map(item => normalizeArticle(item));
-        
-        if (isInitial) {
-          setArticles(newArticles);
-        } else {
-          setArticles(prev => [...prev, ...newArticles]);
+      
+    } catch (err: any) {
+      console.error('Failed to fetch landing content:', err);
+      setError('Unable to load content. Using sample data.');
+      
+      // Add fallback breaking news for testing
+      const fallbackBreakingNews = [
+        {
+          title: 'OpenAI Announces GPT-5 Release',
+          summary: 'Revolutionary AI model with unprecedented capabilities',
+          url: '#',
+          source: 'OpenAI',
+          significanceScore: 9.5,
+          published_date: new Date().toISOString(),
+          author: 'Sam Altman',
+          category: 'AI Research',
+          content_type: 'article'
+        },
+        {
+          title: 'Google DeepMind Breakthrough in Quantum AI',
+          summary: 'New quantum computing advances for AI training',
+          url: '#',
+          source: 'Google',
+          significanceScore: 9.0,
+          published_date: new Date().toISOString(),
+          author: 'Demis Hassabis',
+          category: 'AI Research',
+          content_type: 'article'
         }
-
-        setPage(pageNum);
-        // ✅ FIXED: Use meta.has_next instead of has_more
-        setHasMore(response.meta?.has_next || false);
-        
-        // ✅ FIXED: Use meta.total_pages instead of total_pages
-        console.log(`✅ Loaded ${newArticles.length} articles (page ${pageNum}/${response.meta?.total_pages || '?'})`);
-      } else {
-        setHasMore(false);
-        console.warn('⚠️ No articles in response');
-      }
-    } catch (error) {
-      console.error('❌ Failed to load articles:', error);
-      setHasMore(false);
+      ];
+      
+      // Add fallback content counts for testing
+      const fallbackContentCounts = {
+        total_blogs: 156,
+        total_podcasts: 89,
+        total_videos: 67,
+        by_category: {
+          'Generative AI': { blogs: 45, podcasts: 23, videos: 19 },
+          'Machine Learning': { blogs: 38, podcasts: 21, videos: 15 },
+          'AI Research': { blogs: 73, podcasts: 45, videos: 33 }
+        }
+      };
+      
+      console.log('🔧 DEBUG: Setting fallback data for testing');
+      setBreakingNews(fallbackBreakingNews);
+      setContentCounts(fallbackContentCounts);
+      
+      // Fallback content
+      const fallbackContent: LandingContent = {
+        categories: [
+          {
+            id: 1,
+            name: 'Generative AI',
+            priority: 1,
+            description: 'Latest developments in LLMs, GPT, Claude, and AI Generation technologies',
+            content: {
+              blogs: [
+                {
+                  title: 'OpenAI Releases GPT-5 with Revolutionary Capabilities',
+                  summary: 'The latest breakthrough in AI demonstrates unprecedented reasoning and multimodal understanding.',
+                  url: '#',
+                  source: 'OpenAI',
+                  significanceScore: 9.5,
+                  published_date: new Date().toISOString(),
+                  author: 'Sam Altman',
+                  category: 'Generative AI',
+                  content_type: 'article'
+                }
+              ],
+              podcasts: [
+                {
+                  title: 'AI Podcast: The Future of Language Models',
+                  summary: 'Expert discussion on the evolution of large language models.',
+                  url: '#',
+                  source: 'AI Podcast',
+                  significanceScore: 8.5,
+                  published_date: new Date().toISOString(),
+                  author: 'Lex Fridman',
+                  category: 'Generative AI',
+                  content_type: 'podcast'
+                }
+              ],
+              videos: [
+                {
+                  title: 'Demonstrating GPT-5 Capabilities',
+                  summary: 'Live demonstration of the latest AI model features.',
+                  url: '#',
+                  source: 'OpenAI YouTube',
+                  significanceScore: 9.0,
+                  published_date: new Date().toISOString(),
+                  author: 'OpenAI Team',
+                  category: 'Generative AI',
+                  content_type: 'video'
+                }
+              ]
+            }
+          }
+        ],
+        total_categories: 1
+      };
+      setLandingContent(fallbackContent);
     } finally {
       setLoading(false);
     }
   };
 
-  // ==================== RENDER: HEADER ====================
-  const renderHeader = () => (
-    <header className="landing-header bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-lg bg-opacity-90">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-14 sm:h-16">
-          
-          {!isDesktop && (
-            <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 -ml-2 hover:bg-gray-100 rounded-lg transition-colors"
-              aria-label="Menu"
-            >
-              {isMenuOpen ? (
-                <X className="w-5 h-5 text-gray-700" />
-              ) : (
-                <Menu className="w-5 h-5 text-gray-700" />
-              )}
-            </button>
-          )}
+  useEffect(() => {
+    fetchLandingContent();
+  }, []);
 
-          <div className="flex items-center flex-1 justify-center lg:justify-start lg:flex-initial">
-            <button 
-              onClick={() => {
-                setSelectedCategory(null);
-                setSelectedContentType('blogs');
-                setCurrentIndex(0);
-              }}
-              className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity"
-              aria-label="Go to home"
-            >
-              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-blue-600 rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              
-              <div className="flex flex-col">
-                <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight leading-none">
-                  Vidyagam
-                </h1>
-                {isDesktop && (
-                  <span className="text-xs text-gray-500 font-normal mt-0.5">
-                    AI Intelligence, Simplified
-                  </span>
-                )}
-              </div>
-            </button>
-          </div>
-
-          {isDesktop && (
-            <nav className="flex items-center gap-6 mr-6">
-              <button 
-                onClick={() => {
-                  setSelectedCategory(null);
-                  setIsMenuOpen(false);
-                }}
-                className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
-              >
-                All Content
-              </button>
-              <button 
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1"
-              >
-                Categories
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-            </nav>
-          )}
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            {!isMobile && (
-              <button 
-                onClick={() => navigateToAuth('signin')}
-                className="flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
-                aria-label="Sign In"
-              >
-                Sign In
-              </button>
-            )}
-            
-            <button 
-              onClick={() => navigateToAuth('signup')}
-              className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-medium rounded-full transition-all duration-200 shadow-sm hover:shadow-md active:scale-95"
-              aria-label="Get Started"
-            >
-              <span>{isMobile ? 'Start' : 'Get Started'}</span>
-              <svg className="w-4 h-4 -mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-
-        </div>
-      </div>
-    </header>
-  );
-
-  // ==================== RENDER: BREAKING NEWS ====================
-  const renderBreakingNews = () => {
-    if (breakingNews.length === 0) return null;
-
-    return (
-      <div className="bg-gradient-to-r from-red-600 to-pink-600 text-white py-2.5 sm:py-3 shadow-sm">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-3">
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            <span className="text-xs sm:text-sm font-semibold uppercase tracking-wide">
-              Breaking
-            </span>
-          </div>
-          
-          <div className="flex-1 overflow-hidden">
-            <div className="animate-marquee whitespace-nowrap inline-block">
-              {breakingNews.map((item, idx) => (
-                <button
-                  key={idx}
-                  onClick={(e) => handleArticleClick(item, e)}
-                  className="inline-block mx-6 sm:mx-8 hover:underline text-sm sm:text-base font-medium cursor-pointer bg-transparent border-none transition-opacity hover:opacity-80"
-                  type="button"
-                >
-                  {item.title}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // ==================== RENDER: HAMBURGER MENU ====================
-  const renderHamburgerMenu = () => {
-    if (!isMenuOpen || isDesktop) return null;
-
-    return (
-      <>
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => setIsMenuOpen(false)}
-        />
-
-        <div 
-          className={`fixed left-0 top-0 bottom-0 ${
-            isMobile ? 'w-full' : 'w-80'
-          } bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-out`}
-          style={{
-            transform: isMenuOpen ? 'translateX(0)' : 'translateX(-100%)'
-          }}
-        >
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Categories</h2>
-            <button
-              onClick={() => setIsMenuOpen(false)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              aria-label="Close menu"
-            >
-              <X className="w-5 h-5 text-gray-600" />
-            </button>
-          </div>
-
-          <div className="overflow-y-auto max-h-[calc(100vh-64px)]">
-            <nav className="p-2">
-              {menuItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    handleCategoryChange(item.id);
-                    setIsMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-                    selectedCategory === item.id
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{item.name}</span>
-                    {selectedCategory === item.id && (
-                      <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </nav>
-          </div>
-        </div>
-      </>
-    );
-  };
-
-  // ==================== RENDER: DESKTOP DROPDOWN ====================
-  const renderDesktopCategoriesDropdown = () => {
-    if (!isMenuOpen || !isDesktop) return null;
-
-    return (
-      <div className="absolute top-16 left-1/2 transform -translate-x-1/2 w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-200 z-40 p-6">
-        <button
-          onClick={() => setIsMenuOpen(false)}
-          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          aria-label="Close"
-        >
-          <X className="w-5 h-5 text-gray-600" />
-        </button>
-
-        <h3 className="text-xl font-semibold text-gray-900 mb-6">Browse by Category</h3>
-
-        <div className={`grid gap-4 ${
-          width >= 1280 ? 'grid-cols-4' : 'grid-cols-3'
-        }`}>
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                handleCategoryChange(item.id);
-                setIsMenuOpen(false);
-              }}
-              className={`group p-4 rounded-xl border-2 transition-all hover:shadow-md ${
-                selectedCategory === item.id
-                  ? 'border-blue-600 bg-blue-50'
-                  : 'border-gray-200 hover:border-blue-300 bg-white'
-              }`}
-            >
-              <div className="flex flex-col items-start">
-                <span className={`text-base font-semibold mb-1 ${
-                  selectedCategory === item.id ? 'text-blue-700' : 'text-gray-900 group-hover:text-blue-600'
-                }`}>
-                  {item.name}
-                </span>
-                {item.description && (
-                  <span className="text-sm text-gray-500 line-clamp-2">
-                    {item.description}
-                  </span>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // ==================== RENDER: HORIZONTAL MENU ====================
-  const renderHorizontalMenu = () => (
-    <div className="bg-white border-b border-gray-200 sticky top-14 sm:top-16 z-40 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto py-3 scrollbar-hide">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleCategoryChange(item.id)}
-              className={`
-                flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all flex-shrink-0
-                ${selectedCategory === item.id 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
-              `}
-            >
-              {item.id === null && <Home className="w-4 h-4" />}
-              <span>{item.name}</span>
-              {selectedCategory === item.id && (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  // ==================== RENDER: CONTENT COUNTS ====================
-  const renderContentCounts = () => {
-    if (!contentCounts) return null;
-
-    return (
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 py-4 sm:py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            {[
-              { label: 'Blogs', count: contentCounts.blogs, icon: BookOpen, color: 'from-blue-500 to-blue-600' },
-              { label: 'Podcasts', count: contentCounts.podcasts, icon: Mic, color: 'from-purple-500 to-purple-600' },
-              { label: 'Videos', count: contentCounts.videos, icon: Video, color: 'from-pink-500 to-pink-600' },
-              { label: 'Total', count: contentCounts.total, icon: TrendingUp, color: 'from-green-500 to-green-600' },
-            ].map(({ label, count, icon: Icon, color }) => (
-              <button
-                key={label}
-                onClick={() => handleContentTypeChange(label.toLowerCase())}
-                className={`
-                  p-4 sm:p-6 bg-white rounded-xl shadow-md hover:shadow-lg transition-all transform hover:scale-105 cursor-pointer
-                  ${selectedContentType === label.toLowerCase() ? 'ring-2 ring-blue-600 ring-offset-2' : ''}
-                `}
-              >
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center shadow-md`}>
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                  </div>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{(count ?? 0).toLocaleString()}</p>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">{label}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // ==================== RENDER: SWIPE VIEW ====================
-  const renderSwipeView = () => {
-    if (articles.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="text-6xl mb-4">📰</div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No articles yet</h3>
-          <p className="text-gray-600 text-center max-w-md">
-            We're working on bringing you the latest AI news. Check back soon!
-          </p>
-        </div>
-      );
+  const formatTimeAgo = (dateString: string | null) => {
+    if (!dateString) return 'Unknown';
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+      
+      if (diffInHours < 1) return 'Just now';
+      if (diffInHours < 24) return `${diffInHours}h ago`;
+      return `${Math.floor(diffInHours / 24)}d ago`;
+    } catch {
+      return 'Unknown';
     }
-
-    const currentArticle = articles[currentIndex];
-
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <div className="flex flex-col lg:flex-row gap-6">
-          <div className="flex-1">
-            <div 
-              ref={swipeContainerRef}
-              className="bg-white rounded-2xl shadow-xl overflow-hidden cursor-pointer transform transition-all hover:scale-[1.02] hover:shadow-2xl"
-              onClick={(e) => handleArticleClick(currentArticle, e)}
-            >
-              <div className="p-6 sm:p-8">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                    {selectedContentType.toUpperCase()}
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    {getArticlePublishedDate(currentArticle)}
-                  </span>
-                </div>
-
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 leading-tight">
-                  {currentArticle.title}
-                </h2>
-
-                <div className="prose prose-lg max-w-none text-gray-700 mb-6">
-                  {getArticleSummary(currentArticle)}
-                </div>
-
-                <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <span className="font-medium">{getArticleSource(currentArticle)}</span>
-                  </div>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors">
-                    Read More
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between mt-6">
-              <button
-                onClick={handleSwipeRight}
-                disabled={currentIndex === 0}
-                className="flex items-center gap-2 px-6 py-3 bg-white rounded-full shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                <span className="hidden sm:inline">Previous</span>
-              </button>
-
-              <div className="text-sm font-medium text-gray-600">
-                {currentIndex + 1} / {articles.length}
-              </div>
-
-              <button
-                onClick={handleSwipeLeft}
-                disabled={!hasMore && currentIndex === articles.length - 1}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span className="hidden sm:inline">Next</span>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <div className="lg:w-80 space-y-6">
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">View Mode</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setViewMode('swipe')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                    viewMode === 'swipe' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  <Grid className="w-4 h-4" />
-                  <span>Swipe</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                    viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  <List className="w-4 h-4" />
-                  <span>List</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   };
 
-  // ==================== RENDER: LIST VIEW ====================
-  const renderListView = () => {
-    if (articles.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="text-6xl mb-4">📰</div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No articles yet</h3>
-          <p className="text-gray-600 text-center max-w-md">
-            We're working on bringing you the latest AI news. Check back soon!
-          </p>
-        </div>
-      );
+  const getCurrentCategory = () => {
+    if (!landingContent) return null;
+    
+    if (activeMenu === 'home') {
+      // For home, create a virtual category combining all content
+      const allBlogs: Article[] = [];
+      const allPodcasts: Article[] = [];
+      const allVideos: Article[] = [];
+      
+      landingContent.categories.forEach(cat => {
+        allBlogs.push(...cat.content.blogs);
+        allPodcasts.push(...cat.content.podcasts);
+        allVideos.push(...cat.content.videos);
+      });
+      
+      return {
+        id: 0,
+        name: 'All Categories',
+        priority: 1,
+        description: 'Latest content from all AI categories - your comprehensive overview',
+        content: {
+          blogs: allBlogs.slice(0, 10),
+          podcasts: allPodcasts.slice(0, 10),
+          videos: allVideos.slice(0, 10)
+        },
+        realCounts: contentCounts ? {
+          blogs: contentCounts.total_blogs || allBlogs.length,
+          podcasts: contentCounts.total_podcasts || allPodcasts.length,
+          videos: contentCounts.total_videos || allVideos.length
+        } : {
+          blogs: allBlogs.length,
+          podcasts: allPodcasts.length,
+          videos: allVideos.length
+        }
+      };
+    } else {
+      const category = landingContent.categories.find(cat => cat.name === activeCategory);
+      if (category && contentCounts?.by_category) {
+        const categoryKey = Object.keys(contentCounts.by_category).find(key => 
+          key.toLowerCase() === activeCategory.toLowerCase()
+        );
+        if (categoryKey) {
+          const categoryCounts = contentCounts.by_category[categoryKey];
+          return {
+            ...category,
+            content: {
+              blogs: category.content.blogs.slice(0, 10),
+              podcasts: category.content.podcasts.slice(0, 10),
+              videos: category.content.videos.slice(0, 10)
+            },
+            realCounts: {
+              blogs: categoryCounts.blogs || category.content.blogs.length,
+              podcasts: categoryCounts.podcasts || category.content.podcasts.length,
+              videos: categoryCounts.videos || category.content.videos.length
+            }
+          };
+        }
+      }
+      return {
+        ...category,
+        content: {
+          blogs: category?.content.blogs.slice(0, 10) || [],
+          podcasts: category?.content.podcasts.slice(0, 10) || [],
+          videos: category?.content.videos.slice(0, 10) || []
+        },
+        realCounts: {
+          blogs: category?.content.blogs.length || 0,
+          podcasts: category?.content.podcasts.length || 0,
+          videos: category?.content.videos.length || 0
+        }
+      };
     }
-
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Latest Articles</h2>
-          <button
-            onClick={() => setViewMode('swipe')}
-            className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all"
-          >
-            <Grid className="w-4 h-4" />
-            <span>Swipe View</span>
-          </button>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {articles.map((article, idx) => (
-            <div
-              key={idx}
-              onClick={(e) => handleArticleClick(article, e)}
-              className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer transform hover:scale-[1.02] overflow-hidden"
-            >
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                    {selectedContentType.toUpperCase()}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {getArticlePublishedDate(article)}
-                  </span>
-                </div>
-
-                <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
-                  {article.title}
-                </h3>
-
-                <p className="text-sm text-gray-600 mb-4 line-clamp-3">
-                  {getArticleSummary(article)}
-                </p>
-
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                  <span className="text-xs text-gray-500">{getArticleSource(article)}</span>
-                  <button className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-1">
-                    Read
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {hasMore && (
-          <div className="flex justify-center mt-8">
-            <button
-              onClick={() => loadPaginatedArticles(page + 1, false)}
-              disabled={loading}
-              className="px-8 py-3 bg-blue-600 text-white rounded-full shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Loading...' : 'Load More'}
-            </button>
-          </div>
-        )}
-      </div>
-    );
   };
 
-  if (initialLoading) {
-    return <Loading message="Loading amazing AI content..." />;
+  // Debug logging
+  console.log('🔍 DEBUG: Component render state:', {
+    breakingNewsLength: breakingNews.length,
+    contentCounts,
+    activeMenu,
+    activeCategory,
+    loading,
+    error
+  });
+
+  if (loading) {
+    return <LandingSkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {renderHeader()}
-      {renderBreakingNews()}
-      {renderHamburgerMenu()}
-      {renderDesktopCategoriesDropdown()}
-      {renderHorizontalMenu()}
-      {renderContentCounts()}
-      {viewMode === 'swipe' ? renderSwipeView() : renderListView()}
+    <div style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif', minHeight: '100vh', backgroundColor: '#ffffff' }}>
+      <SEO
+        title="Vidyagam AI | Curated AI Insights, Filtered for You"
+        description="Get personalized AI updates, events, and learning resources curated by AI. Daily digest of artificial intelligence breakthroughs, conferences, courses, and industry insights."
+        keywords="AI updates, generative AI, machine learning, OpenAI, ChatGPT, AI breakthroughs, artificial intelligence, AI research, tech news"
+        url="/"
+      />
+      
+      {/* Modern Header */}
+  <header className="landing-header bg-white shadow-sm">
+    <div className="max-w-7xl mx-auto px-4">
+      <div className="flex justify-between items-center h-16">
+        
+        {/* Left: Hamburger menu button */}
+        <div className="flex items-center">
+          <button 
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={{
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              padding: '8px',
+              borderRadius: '6px',
+              border: '1px solid #e5e7eb',
+              transition: 'all 0.2s',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f9fafb';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff';
+              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+            }}
+            aria-label="Menu"
+          >
+            <svg style={{ height: '24px', width: '24px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                d={menuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+            </svg>
+          </button>
+        </div>
+
+        {/* Center: Logo with AI Intelligence Icon and subtitle */}
+        <div className="landing-logo-section flex flex-col items-center flex-1">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h1 className="landing-title text-2xl font-bold text-gray-900">
+              Vidyagam
+            </h1>
+          </div>
+          <span 
+            className="landing-subtitle text-xs mt-1" 
+            style={{ 
+              color: '#6b7280',
+              fontSize: '12px',
+              fontWeight: '400',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            AI Latest, Curated and Filtered for you
+          </span>
+        </div>
+
+        {/* Right: Auth Buttons - Desktop text, Mobile/Tablet icons */}
+        <div className="landing-auth-buttons flex items-center space-x-2">
+          <button 
+            onClick={() => navigateToAuth('signin')}
+            className="landing-signin-btn"
+            style={{
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              padding: '8px 16px',
+              fontSize: '14px',
+              fontWeight: '500',
+              border: '1px solid #e5e7eb',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s, border-color 0.2s',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#f9fafb';
+              e.currentTarget.style.borderColor = '#d1d5db';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff';
+              e.currentTarget.style.borderColor = '#e5e7eb';
+            }}
+            aria-label="Sign In"
+            title="Sign In"
+          >
+            <LogIn size={18} />
+            <span className="landing-btn-text">Sign In</span>
+          </button>
+          
+          {/* ✅ FIXED: Get Started button - No black hover, proper alignment */}
+          <button 
+            onClick={() => navigateToAuth('signup')}
+            className="landing-signup-btn"
+            style={{
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              padding: '8px 16px',
+              fontSize: '14px',
+              fontWeight: '600',
+              border: '2px solid #000000',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s, color 0.2s',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              minWidth: '120px', // ✅ Fixed width prevents jumping
+              justifyContent: 'center'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#f3f4f6'; // ✅ Light gray instead of black
+              e.currentTarget.style.color = '#000000';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff';
+              e.currentTarget.style.color = '#000000';
+            }}
+            aria-label="Get Started"
+            title="Get Started"
+          >
+            <UserPlus size={18} />
+            <span className="landing-btn-text">Get Started</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+        
+  {/* Vertical Sidebar Menu */}
+  {menuOpen && (
+    <div className="fixed inset-0 z-50">
+      {/* Overlay */}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+        onClick={() => setMenuOpen(false)}
+      />
+      
+      {/* Sidebar */}
+      <div 
+        className="fixed top-0 left-0 h-full bg-white shadow-xl z-50 transform transition-transform duration-300"
+        style={{ width: isMobile ? '100vw' : '480px', overflowY: 'auto' }}
+      >
+        <div className="flex flex-col h-full">
+          <div className="p-6">
+            {/* Header Layout - Same as dashboard */}
+            <div className="flex justify-between items-center mb-6">
+              
+              {/* Left: Close Button */}
+              <button 
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  backgroundColor: '#ffffff',
+                  color: '#000000',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  border: '1px solid #e5e7eb',
+                  transition: 'all 0.2s',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff';
+                  e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                }}
+                aria-label="Close menu"
+              >
+                <svg style={{ height: '24px', width: '24px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Center: Logo + Subtitle */}
+              <div className="flex flex-col items-center flex-1 mx-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h1 className="hamburger-menu-title text-2xl font-bold text-gray-900">
+                    Vidyagam
+                  </h1>
+                </div>
+                <span 
+                  className="hamburger-menu-subtitle text-xs mt-1" 
+                  style={{ 
+                    color: '#6b7280',
+                    fontSize: '12px',
+                    fontWeight: '400',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  AI Latest, Curated and Filtered for you
+                </span>
+              </div>
+
+              {/* Right: Auth Icons (Mobile: icons only, Desktop: text) */}
+              <div className="flex items-center space-x-2">
+                <button 
+                  onClick={() => {
+                    setMenuOpen(false);
+                    navigateToAuth('signin');
+                  }}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    color: '#000000',
+                    padding: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                  }}
+                  aria-label="Sign In"
+                  title="Sign In"
+                >
+                  <LogIn size={18} />
+                </button>
+                <button 
+                  onClick={() => {
+                    setMenuOpen(false);
+                    navigateToAuth('signup');
+                  }}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    color: '#000000',
+                    padding: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    border: '2px solid #000000',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    e.currentTarget.style.color = '#000000';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.color = '#000000';
+                  }}
+                  aria-label="Get Started"
+                  title="Get Started"
+                >
+                  <UserPlus size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Menu Items */}
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Categories</h3>
+              <nav className="space-y-1">
+                {menuItems.map((menu) => (
+                  <button
+                    key={menu.id}
+                    onClick={() => {
+                      handleMenuSelection(menu.id);
+                      setMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '12px 16px',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      marginBottom: '4px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      backgroundColor: activeMenu === menu.id ? '#dbeafe' : '#f9fafb',
+                      color: '#1f2937',
+                      boxShadow: activeMenu === menu.id ? '0 2px 4px rgba(59,130,246,0.15)' : '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeMenu !== menu.id) {
+                        e.currentTarget.style.backgroundColor = '#e5e7eb';
+                        e.currentTarget.style.color = '#1f2937';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeMenu !== menu.id) {
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                        e.currentTarget.style.color = '#1f2937';
+                        e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                      }
+                    }}
+                  >
+                    {menu.name}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+      {/* Horizontal Navigation Menu */}
+      {menuItems.length > 0 && (
+        <section 
+          className="horizontal-menu-section"
+          style={{ 
+            background: '#ffffff',
+            borderBottom: 'none',
+            paddingTop: '16px',
+            paddingBottom: '16px'
+          }}>
+          <div className="max-w-7xl mx-auto px-4">
+            {/* ✅ FIXED: Added consistent vertical padding */}
+            <div className="horizontal-nav flex items-center justify-center space-x-4 overflow-x-auto" style={{ minHeight: '48px', paddingTop: '4px', paddingBottom: '4px' }}>
+              {menuItems.map((menu) => (
+                <button
+                  key={menu.id}
+                  onClick={() => handleMenuSelection(menu.id)}
+                  style={{
+                    padding: '8px 16px',
+                    margin: '0 4px',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap',
+                    backgroundColor: activeMenu === menu.id ? '#dbeafe' : '#f3f4f6',
+                    color: '#1f2937',
+                    boxShadow: activeMenu === menu.id ? '0 2px 8px rgba(59,130,246,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+                    backdropFilter: 'blur(10px)',
+                    // ✅ FIXED: Consistent height to prevent jumping
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeMenu !== menu.id) {
+                      e.currentTarget.style.backgroundColor = '#e5e7eb';
+                      e.currentTarget.style.color = '#1f2937';
+                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeMenu !== menu.id) {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      e.currentTarget.style.color = '#1f2937';
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+                    }
+                  }}
+                >
+                  {menu.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Breaking News */}
+      {(breakingNews.length > 0 || contentCounts?.total_blogs > 0) && (
+        <section style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
+          <div style={{ maxWidth: '100%', margin: '0', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ 
+                backgroundColor: '#dbeafe', 
+                padding: '6px 12px', 
+                borderRadius: '6px',
+                flexShrink: 0
+              }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#1e40af' }}>
+                  🚨 Breaking News
+                </span>
+              </div>
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '16px',
+                  animation: 'scroll 15s linear infinite',
+                  whiteSpace: 'nowrap',
+                  justifyContent: 'flex-start'
+                }}>
+                  {(breakingNews.length > 0 ? breakingNews : [
+                    { title: `${contentCounts?.total_blogs || 0} Latest AI Blogs Available`, source: 'Vidyagam AI', url: '#' },
+                    { title: 'Generative AI, Machine Learning & More', source: 'All Categories', url: '#' },
+                    { title: 'Join 10,000+ AI Professionals', source: 'Get Started', url: '#' }
+                  ] as any).concat(breakingNews.length > 0 ? breakingNews : [
+                    { title: `${contentCounts?.total_blogs || 0} Latest AI Blogs Available`, source: 'Vidyagam AI', url: '#' },
+                    { title: 'Generative AI, Machine Learning & More', source: 'All Categories', url: '#' },
+                    { title: 'Join 10,000+ AI Professionals', source: 'Get Started', url: '#' }
+                  ] as any).map((alert: any, index: number) => (
+                    <div 
+                      key={index}
+                      onClick={() => window.open(alert.url, '_blank', 'noopener,noreferrer')}
+                      style={{
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '6px',
+                        padding: '6px 10px',
+                        border: '1px solid #e5e7eb',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                        transition: 'all 0.2s',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.boxShadow = '0 2px 4px -1px rgba(0, 0, 0, 0.1)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      <span style={{ fontWeight: '500', color: '#111827', fontSize: '13px' }}>
+                        {alert.title}
+                      </span>
+                      <span style={{ 
+                        fontSize: '11px', 
+                        color: '#3b82f6', 
+                        backgroundColor: '#dbeafe', 
+                        padding: '2px 6px', 
+                        borderRadius: '4px',
+                        fontWeight: '500'
+                      }}>
+                        {alert.source}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Main Content */}
+      <main style={{ backgroundColor: '#f9fafb', padding: '48px 0' }}>
+        {(() => {
+          const currentCategory = getCurrentCategory();
+          
+          if (!currentCategory) {
+            return (
+              <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px', textAlign: 'center' }}>
+                <div style={{ padding: '64px 0' }}>
+                  <h3 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', marginBottom: '8px' }}>
+                    No content available
+                  </h3>
+                  <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+                    We're working on getting fresh content for you.
+                  </p>
+                  <button 
+                    onClick={() => navigateToAuth('signup')}
+                    style={{
+                      backgroundColor: '#3b82f6',
+                      color: '#ffffff',
+                      padding: '12px 24px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Get Notified When Available
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div style={{ width: '100%', margin: '0 auto', padding: '0 16px' }}>
+              {/* Category Header */}
+              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                <h1 className="hero-title" style={{ fontSize: '14px', fontWeight: 'bold', color: '#111827', marginBottom: '6px' }}>
+                  {currentCategory.name}
+                </h1>
+                <p className="hero-subtitle" style={{ fontSize: '11px', color: '#6b7280', maxWidth: '768px', margin: '0 auto 12px auto', lineHeight: '1.4' }}>
+                  {currentCategory.description}
+                </p>
+                
+                {/* ✅ NEW: Content Stats with Auth Prompt */}
+                <div style={{ 
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '12px',
+                  margin: '0 auto',
+                  maxWidth: '600px'
+                }}>
+                  {/* Stats Row */}
+                  <div className="content-stats" style={{ 
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    flexWrap: 'wrap'
+                  }}>
+                    <div style={{ 
+                      backgroundColor: '#f9fafb', 
+                      borderRadius: '6px', 
+                      padding: '6px 12px', 
+                      border: '1px solid #e5e7eb',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                        {currentCategory.realCounts?.blogs || 0}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>Blogs</div>
+                    </div>
+                    <div style={{ 
+                      backgroundColor: '#f9fafb', 
+                      borderRadius: '6px', 
+                      padding: '6px 12px', 
+                      border: '1px solid #e5e7eb',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                        {currentCategory.realCounts?.podcasts || 0}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>Podcasts</div>
+                    </div>
+                    <div style={{ 
+                      backgroundColor: '#f9fafb', 
+                      borderRadius: '6px', 
+                      padding: '6px 12px', 
+                      border: '1px solid #e5e7eb',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                        {currentCategory.realCounts?.videos || 0}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>Videos</div>
+                    </div>
+                  </div>
+
+                  {/* ✅ NEW: Auth Prompt - Responsive */}
+
+                </div>
+              </div>
+
+              {/* Content Sections */}
+              <div className="section-gap" style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
+                {/* Blogs */}
+                {currentCategory.content.blogs.length > 0 && (
+                  <section>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px', 
+                      marginBottom: '24px'
+                    }}>
+                      <div style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        backgroundColor: '#dbeafe', 
+                        borderRadius: '8px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <span style={{ color: '#3b82f6', fontSize: '18px' }}>📖</span>
+                      </div>
+                      <h2 className="section-title" style={{ 
+                        fontSize: '20px', 
+                        fontWeight: 'bold', 
+                        color: '#111827',
+                        margin: 0,
+                        lineHeight: '32px'
+                      }}>
+                        Latest Blogs
+                      </h2>
+                      {/* ✅ UPDATED: Light background with dark text */}
+                      <span style={{ 
+                        backgroundColor: '#dbeafe',
+                        color: '#1e3a8a', 
+                        padding: '6px 16px', 
+                        borderRadius: '20px', 
+                        fontSize: '15px', 
+                        fontWeight: '700',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
+                        border: '2px solid #bfdbfe'
+                      }}>
+                        {currentCategory.realCounts?.blogs || 0}
+                      </span>
+                    </div>
+                    <div className="content-grid" style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', 
+                      gap: '24px' 
+                    }}>
+                      {currentCategory.content.blogs.slice(0, 10).map((article, index) => (
+                        <ArticleCard key={index} article={article} contentType="article" />
+                      ))}
+                    </div>
+                    
+                    <ContentTypeCTA 
+                      contentType="article" 
+                      count={currentCategory.realCounts?.blogs || 0} 
+                    />
+                  </section>
+                )}
+
+                {/* Podcasts */}
+                {currentCategory.content.podcasts.length > 0 && (
+                  <section>
+                    {/* ✅ FIXED: Aligned icon, heading, and count */}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px', 
+                      marginBottom: '24px'
+                    }}>
+                      <div style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        backgroundColor: '#dcfce7', 
+                        borderRadius: '8px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <span style={{ color: '#16a34a', fontSize: '18px' }}>🎧</span>
+                      </div>
+                      <h2 className="section-title" style={{ 
+                        fontSize: '20px', 
+                        fontWeight: 'bold', 
+                        color: '#111827',
+                        margin: 0,
+                        lineHeight: '32px'
+                      }}>
+                        Featured Podcasts
+                      </h2>
+                      {/* ✅ UPDATED: Light background with dark text */}
+                      <span style={{ 
+                        backgroundColor: '#dcfce7',
+                        color: '#14532d', 
+                        padding: '6px 16px', 
+                        borderRadius: '20px', 
+                        fontSize: '15px', 
+                        fontWeight: '700',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 8px rgba(22, 163, 74, 0.2)',
+                        border: '2px solid #bbf7d0'
+                      }}>
+                        {currentCategory.realCounts?.podcasts || 0}
+                      </span>
+                    </div>
+                    <div className="content-grid" style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', 
+                      gap: '24px' 
+                    }}>
+                      {currentCategory.content.podcasts.slice(0, 10).map((article, index) => (
+                        <ArticleCard key={index} article={article} contentType="podcast" />
+                      ))}
+                    </div>
+                    
+                    <ContentTypeCTA contentType="podcast" count={currentCategory.realCounts?.podcasts || 0} />
+                  </section>
+                )}
+
+                {/* Videos */}
+                {currentCategory.content.videos.length > 0 && (
+                  <section>
+                    {/* ✅ FIXED: Aligned icon, heading, and count */}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px', 
+                      marginBottom: '24px'
+                    }}>
+                      <div style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        backgroundColor: '#fee2e2', 
+                        borderRadius: '8px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <span style={{ color: '#dc2626', fontSize: '18px' }}>🎥</span>
+                      </div>
+                      <h2 className="section-title" style={{ 
+                        fontSize: '20px', 
+                        fontWeight: 'bold', 
+                        color: '#111827',
+                        margin: 0,
+                        lineHeight: '32px'
+                      }}>
+                        Latest Videos
+                      </h2>
+                      {/* ✅ UPDATED: Light background with dark text */}
+                      <span style={{ 
+                        backgroundColor: '#fee2e2',
+                        color: '#7f1d1d', 
+                        padding: '6px 16px', 
+                        borderRadius: '20px', 
+                        fontSize: '15px', 
+                        fontWeight: '700',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 8px rgba(220, 38, 38, 0.2)',
+                        border: '2px solid #fecaca'
+                      }}>
+                        {currentCategory.realCounts?.videos || 0}
+                      </span>
+                    </div>
+                    <div className="content-grid" style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', 
+                      gap: '24px' 
+                    }}>
+                      {currentCategory.content.videos.slice(0, 10).map((article, index) => (
+                        <ArticleCard key={index} article={article} contentType="video" />
+                      ))}
+                    </div>
+                    
+                    <ContentTypeCTA contentType="video" count={currentCategory.realCounts?.videos || 0} />
+                  </section>
+                )}
+                
+                {/* No Content Message */}
+                {currentCategory.content.blogs.length === 0 && 
+                 currentCategory.content.podcasts.length === 0 && 
+                 currentCategory.content.videos.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '64px 0' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827', marginBottom: '8px' }}>
+                      No content available yet
+                    </h3>
+                    <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+                      We're working on getting fresh {currentCategory.name} content for you.
+                    </p>
+                    <button 
+                      onClick={() => navigateToAuth('signup')}
+                      style={{
+                        backgroundColor: '#3b82f6',
+                        color: '#ffffff',
+                        padding: '12px 24px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Get Notified When Available
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+      </main>
+
+      {/* Footer */}
+      <footer style={{ backgroundColor: '#1f2937', color: '#ffffff', padding: '64px 0', marginTop: '64px' }}>
+        <div style={{ maxWidth: '1152px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '32px', marginBottom: '48px' }}>
+            {/* Company Info */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ 
+                  width: '32px', 
+                  height: '32px', 
+                  background: 'linear-gradient(135deg, #3b82f6, #6366f1)', 
+                  borderRadius: '8px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  marginRight: '12px'
+                }}>
+                  <span style={{ color: '#ffffff', fontSize: '16px', fontWeight: 'bold' }}>V</span>
+                </div>
+                <span style={{ fontSize: '24px', fontWeight: 'bold' }}>Vidyagam</span>
+              </div>
+              <p style={{ color: '#d1d5db', fontSize: '14px', marginBottom: '24px', lineHeight: '1.6' }}>
+                Join 10,000+ AI professionals getting curated insights from 50+ premium sources. 
+                Stay ahead with personalized AI intelligence delivered daily.
+              </p>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', backgroundColor: '#3730a3', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '16px' }}>🤖</span>
+                </div>
+                <div style={{ width: '40px', height: '40px', backgroundColor: '#dc2626', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '16px' }}>⚡</span>
+                </div>
+                <div style={{ width: '40px', height: '40px', backgroundColor: '#059669', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '16px' }}>🚀</span>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA Section */}
+            <div style={{ textAlign: 'center', padding: '32px', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderRadius: '16px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'rgba(59, 130, 246, 0.2)', padding: '8px 16px', borderRadius: '20px' }}>
+                  <span style={{ color: '#fbbf24' }}>⭐</span>
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>10,000+ Active Users</span>
+                  <span style={{ color: '#fbbf24' }}>⭐</span>
+                </div>
+              </div>
+              <h3 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '12px' }}>
+                Ready to Join the AI Elite?
+              </h3>
+              <p style={{ color: '#d1d5db', marginBottom: '32px', fontSize: '18px', lineHeight: '1.6' }}>
+                Get instant access to curated AI insights, breaking news alerts, and personalized content from industry leaders. 
+                <span style={{ color: '#60a5fa', fontWeight: '600' }}> 100% Free</span> • 
+                <span style={{ color: '#34d399', fontWeight: '600' }}> No Credit Card</span> • 
+                <span style={{ color: '#a78bfa', fontWeight: '600' }}> Cancel Anytime</span>
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                <button 
+                  onClick={() => navigateToAuth('signup')}
+                  style={{
+                    backgroundColor: '#3b82f6',
+                    color: '#ffffff',
+                    padding: '16px 32px',
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    border: 'none',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => (e.target as HTMLElement).style.backgroundColor = '#2563eb'}
+                  onMouseOut={(e) => (e.target as HTMLElement).style.backgroundColor = '#3b82f6'}
+                >
+                  🚀 Start Free Account
+                </button>
+                <div style={{ fontSize: '14px', color: '#9ca3af' }}>
+                  <span>Already have an account? </span>
+                  <button 
+                    onClick={() => navigateToAuth('signin')}
+                    style={{
+                      color: '#60a5fa',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Sign in here
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom */}
+          <div style={{ borderTop: '1px solid #374151', paddingTop: '32px', textAlign: 'center' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '24px', fontSize: '14px' }}>
+              <span>🌍 Global AI Coverage</span>
+              <span>⚡ Real-time Updates</span>
+              <span>🔒 Privacy First</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* Error Notice */}
+      {error && (
+        <div style={{
+          position: 'fixed',
+          top: '80px',
+          left: '16px',
+          right: '16px',
+          backgroundColor: '#fef3c7',
+          borderLeft: '4px solid #f59e0b',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+          zIndex: 1000,
+          maxWidth: '1024px',
+          margin: '0 auto'
+        }}>
+          <p style={{ fontSize: '14px', color: '#92400e', fontWeight: '500', margin: 0 }}>
+            💡 {error}
+          </p>
+        </div>
+      )}
+
+      <style>
+        {`
+          @keyframes scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+          
+          /* Mobile responsiveness - Header */
+          @media (max-width: 768px) {
+            .landing-title { font-size: 18px !important; }
+            .landing-subtitle { font-size: 10px !important; }
+            .hamburger-menu-title { font-size: 18px !important; }
+            .hamburger-menu-subtitle { fontSize: 10px !important; }
+            .landing-logo-section { margin: 0 !important; }
+            .landing-auth-buttons { gap: 4px !important; }
+            .landing-auth-buttons button { padding: 8px !important; min-width: unset !important; }
+            .landing-btn-text { display: none !important; }
+            .horizontal-menu-section { display: none !important; }
+            .hero-title { fontSize: 22px !important; }
+            .hero-subtitle { fontSize: 14px !important; }
+            .section-title { fontSize: 18px !important; }
+            .hero-buttons { flexDirection: column !important; gap: 12px !important; }
+            .category-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 16px !important; }
+            .content-grid { grid-template-columns: 1fr !important; }
+            .content-stats { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
+            .content-stats > div { padding: 12px !important; }
+            .section-gap { gap: 32px !important; }
+            .article-card { padding: 16px !important; }
+            .cta-buttons { flex-direction: column !important; }
+            /* ✅ NEW: Auth prompt mobile */
+            .auth-prompt { 
+              padding: 10px 12px !important;
+              gap: 6px !important;
+            }
+            .auth-prompt > div:first-child {
+              fontSize: 11px !important;
+            }
+            .auth-prompt button {
+              fontSize: 11px !important;
+              padding: 5px 12px !important;
+              min-width: 80px !important;
+              max-width: 120px !important;
+            }
+          }
+          
+          /* Tablet responsiveness */
+          @media (max-width: 1024px) and (min-width: 769px) {
+            .landing-title { font-size: 20px !important; }
+            .landing-subtitle { font-size: 11px !important; }
+            .hamburger-menu-title { font-size: 20px !important; }
+            .hamburger-menu-subtitle { fontSize: 11px !important; }
+            .landing-btn-text { display: none !important; }
+            .landing-auth-buttons { gap: 4px !important; }
+            .landing-auth-buttons button { padding: 8px !important; min-width: unset !important; }
+            .horizontal-menu-section { display: none !important; }
+            .content-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            /* ✅ NEW: Auth prompt tablet */
+            .auth-prompt {
+              max-width: 400px !important;
+            }
+          }
+          
+          /* Small mobile devices */
+          @media (max-width: 480px) {
+            .category-grid { grid-template-columns: 1fr !important; }
+            .content-stats { grid-template-columns: 1fr !important; gap: 8px !important; }
+            .breaking-news-scroll { flex-direction: column !important; align-items: stretch !important; }
+            .cta-buttons button { width: 100% !important; }
+            .hero-title { font-size: 20px !important; }
+            .section-title { font-size: 16px !important; }
+            .horizontal-nav button { font-size: 12px !important; padding: 8px 4px !important; }
+            /* ✅ NEW: Auth prompt small mobile - stacked buttons */
+            .auth-prompt button {
+              flex: 1 1 100% !important;
+              max-width: 100% !important;
+            }
+          }
+          
+          /* Navigation specific styles */
+          .horizontal-nav {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+          
+          .horizontal-nav::-webkit-scrollbar {
+            display: none;
+          }
+          
+          /* Focus styles for accessibility */
+          .horizontal-nav button:focus,
+          button:focus {
+            outline: 2px solid #000000;
+            outline-offset: 2px;
+          }
+        `}
+      </style>
     </div>
   );
 };
