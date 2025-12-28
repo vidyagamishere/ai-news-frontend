@@ -13,6 +13,7 @@ import type { Article, Category, LandingContent } from '../types/article';
 import { getContentTypeInfo, formatTimeAgo, getArticleSummary, getArticleSource } from '../types/article';
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
 import '../styles/landing.css';
+import { MobileHeader } from '../components/MobileHeader';
 
 interface MenuItem {
   id: string;
@@ -590,12 +591,116 @@ const Landing: React.FC = () => {
         description="Curated AI news, expert insights, and learning resources"
       />
       
+      {/* Add explicit CSS for mobile/desktop separation */}
+      <style>{`
+        .mobile-only {
+          display: block;
+        }
+        .desktop-only {
+          display: none;
+        }
+        @media (min-width: 768px) {
+          .mobile-only {
+            display: none !important;
+          }
+          .desktop-only {
+            display: block !important;
+          }
+        }
+      `}</style>
+      
       {loading ? (
         <LandingSkeleton />
       ) : (
         <div className="landing-container">
-          {/* Compact Header - Reddit Style */}
-          <header className="landing-header">
+          {/* Mobile Header - Force hide on desktop */}
+          <div className="mobile-only">
+            <MobileHeader
+              logoIcon="🔥"
+              logoText="Vidyagam"
+              searchBar={
+                <EnhancedSearchBar
+                  onSearch={(query) => handleSearch(query)}
+                  categoryId={
+                    activeCategory === 'All'
+                      ? undefined
+                      : landingContent?.categories.find(cat => cat.name === activeCategory)?.id
+                  }
+                  placeholder="Search..."
+                  showSuggestions={true}
+                />
+              }
+              dateFilter={
+                <select
+                  className="w-full px-3 py-2 bg-gray-50 rounded-lg text-sm border-0 focus:outline-none focus:ring-0"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(Number(e.target.value) as 1 | 7 | 30 | 365)}
+                >
+                  <option value={1}>Last 24 hours</option>
+                  <option value={7}>Last 7 days</option>
+                  <option value={30}>Last 30 days</option>
+                  <option value={365}>Last year</option>
+                </select>
+              }
+              contentTabs={contentTypeTabs}
+              categories={menuItems
+                .filter(item => item.id !== 'all')
+                .slice(0, 11)
+                .map((item) => {
+                  const actualCat = landingContent?.categories.find(cat => 
+                    cat.name.toLowerCase() === item.name.toLowerCase()
+                  );
+                  return {
+                    id: actualCat?.id || getCategoryIdFromName(item.name) || 0,
+                    name: item.name,
+                    icon: item.icon
+                  };
+                })}
+              activeTab={selectedTab}
+              activeCategory={activeCategory}
+              onTabChange={(tabId) => {
+                if (tabId === 'news') {
+                  setActiveCategory('All');
+                  if (landingContent?.categories) {
+                    setLandingContent({
+                      categories: landingContent.categories.map(cat => ({
+                        ...cat,
+                        content: { blogs: [], podcasts: [], videos: [] }
+                      })),
+                      total_categories: landingContent.total_categories
+                    });
+                  }
+                  fetchLandingContent(dateFilter, undefined, 1);
+                }
+                setSelectedTab(tabId as any);
+              }}
+              onCategoryChange={(categoryId) => {
+                const categoryName = Object.entries({
+                  1: 'Machine Learning',
+                  2: 'AI Applications',
+                  3: 'AI Infrastructure',
+                  4: 'AI Governance',
+                  5: 'Generative AI',
+                  6: 'Quantum AI',
+                  9: 'AI Start Ups',
+                  10: 'Cloud Computing',
+                  11: 'Robotics',
+                  12: 'Internet Of Things',
+                  13: 'Future Technology'
+                }).find(([id]) => Number(id) === categoryId)?.[1];
+                
+                if (categoryName) {
+                  setActiveCategory(categoryName);
+                }
+              }}
+              onSignIn={() => navigate('/auth')}
+              onSignUp={() => navigate('/auth?mode=signup')}
+              showAuth={true}
+            />
+          </div>
+
+          {/* Desktop Header - Force hide on mobile */}
+          <header className="landing-header desktop-only">
             <div className="landing-header-content">
               {/* Mobile Hamburger Menu */}
               <button 

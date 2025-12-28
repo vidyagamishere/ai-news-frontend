@@ -1082,3 +1082,56 @@
     order: -1;
   }
 }
+
+/* Force mobile/desktop separation */
+.mobile-only {
+  display: block;
+}
+
+.desktop-only {
+  display: none;
+}
+
+/* Desktop breakpoint (768px and above) */
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  .desktop-only {
+    display: block !important;
+    visibility: visible !important;
+  }
+}
+
+/* Mobile breakpoint (below 768px) */
+@media (max-width: 767px) {
+  .mobile-only {
+    display: block !important;
+    visibility: visible !important;
+  }
+  
+  .desktop-only {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+}
+
+/* Hide mobile header container on desktop */
+.mobile-header-container {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .mobile-header-container {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+}

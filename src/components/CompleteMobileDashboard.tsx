@@ -17,6 +17,7 @@ import '../styles/design-tokens.css';
 import '../styles/components.css';
 import '../styles/dashboard.css';
 import '../styles/landing.css';
+import { MobileHeader } from '../components/MobileHeader';
 
 const CompleteMobileDashboard: React.FC = () => {
   const { user, isAuthenticated, updatePreferences, logout } = useAuth();
@@ -644,29 +645,100 @@ const CompleteMobileDashboard: React.FC = () => {
         />
       )}
 
-      {/* Dashboard View */}
+      {/* Dashboard Mobile View */}
       {currentView === 'dashboard' && (
         <div className="landing-container">
-          {/* Compact Header - Same as Landing */}
-          <header className="landing-header">
-            <div className="landing-header-content">
-              {/* Mobile Hamburger Menu */}
-              <button
-                className="mobile-hamburger-btn"
-                onClick={() => {
-                  if ((window as any).toggleMobileSidebar) {
-                    (window as any).toggleMobileSidebar();
+          {/* Mobile Header - Add Preferences and Sign Out */}
+          <div className="mobile-only">
+            <MobileHeader
+              logoIcon="🔥"
+              logoText="Vidyagam"
+              searchBar={
+                <EnhancedSearchBar
+                  onSearch={(query) => handleSearch(query)}
+                  categoryId={
+                    selectedCategory === 'All'
+                      ? undefined
+                      : availableCategories.find(cat => cat.name === selectedCategory)?.id
                   }
-                }}
-                aria-label="Toggle menu"
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="3" y1="6" x2="21" y2="6"></line>
-                  <line x1="3" y1="12" x2="21" y2="12"></line>
-                  <line x1="3" y1="18" x2="21" y2="18"></line>
-                </svg>
-              </button>
+                  placeholder="Search..."
+                  showSuggestions={true}
+                />
+              }
+              dateFilter={
+                <select
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm transition-colors"
+                  style={{ 
+                    color: '#000000',
+                    outline: 'none'
+                  }}
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(Number(e.target.value) as 1 | 7 | 30 | 365)}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#000000';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(0, 0, 0, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#d1d5db';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                >
+                  <option value={1}>Last 24 hours</option>
+                  <option value={7}>Last 7 days</option>
+                  <option value={30}>Last 30 days</option>
+                  <option value={365}>Last year</option>
+                </select>
+              }
+              contentTabs={contentTypeTabs.map(tab => ({
+                ...tab,
+                count: (() => {
+                  const countKey = tab.id === 'news' ? 'blogs' :
+                                  tab.id === 'audio' ? 'podcasts' :
+                                  tab.id === 'video' ? 'videos' : null;
 
+                  if (isSearchActive && searchCounts && countKey) {
+                    return searchCounts[countKey as keyof typeof searchCounts] as number;
+                  } else if (!isSearchActive && contentCounts && countKey) {
+                    return contentCounts[countKey as keyof typeof contentCounts];
+                  }
+                  return undefined;
+                })()
+              }))}
+              categories={menuItems
+                .filter(item => item.id !== 'all')
+                .map((item) => {
+                  const actualCat = availableCategories.find(cat =>
+                    cat.name.toLowerCase() === item.name.toLowerCase()
+                  );
+                  return {
+                    id: actualCat?.id || 0,
+                    name: item.name,
+                    icon: item.icon
+                  };
+                })}
+              activeTab={selectedTab}
+              activeCategory={selectedCategory}
+              onTabChange={(tabId) => {
+                if (tabId === 'news') {
+                  setSelectedCategory('All');
+                }
+                setSelectedTab(tabId as any);
+              }}
+              onCategoryChange={(categoryId) => {
+                const category = availableCategories.find(cat => cat.id === categoryId);
+                if (category) {
+                  setSelectedCategory(category.name);
+                }
+              }}
+              onPreferences={() => setCurrentView('settings')}
+              onSignOut={handleLogout}
+              showAuth={false}
+            />
+          </div>
+
+          {/* Desktop Header */}
+          <header className="landing-header desktop-only">
+            <div className="landing-header-content">
               {/* 1. Logo - Far Left */}
               <div className="landing-logo" onClick={() => navigate('/dashboard')}>
                 <div className="landing-logo-icon">🔥</div>
@@ -725,7 +797,7 @@ const CompleteMobileDashboard: React.FC = () => {
             </div>
           </header>
 
-          {/* Three Column Layout - Same as Landing */}
+          {/* Three Column Layout */}
           <ThreeColumnLayout
             leftSidebar={
               <SidebarNavigation
@@ -959,8 +1031,6 @@ const CompleteMobileDashboard: React.FC = () => {
                   }
                 }}
                 trendingArticles={[]}
-                onSignIn={() => {}}
-                onSignUp={() => {}}
                 isAuthenticated={true}
               />
             }

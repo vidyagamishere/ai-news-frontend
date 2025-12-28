@@ -276,16 +276,17 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
 
   return (
     <div ref={searchRef} className={`relative w-full ${className}`}>
-      {/* Search Input - YouTube Style with Border */}
+      {/* Search Input - Minimalistic Black & White */}
       <form onSubmit={handleSubmit} className="relative w-full">
         <div
           className={`
-            flex items-center gap-1 px-4 py-2 bg-white rounded-full
-            border border-black
+            flex items-center gap-2 px-3 md:px-4 py-2 md:py-2 bg-white rounded-lg
+            border border-gray-300
             transition-all duration-200
+            focus-within:ring-2 focus-within:ring-gray-900 focus-within:border-transparent
           `}
         >
-          <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
+          <Search className="w-4 md:w-5 h-4 md:h-5 text-gray-600 flex-shrink-0" />
           
           <input
             ref={inputRef}
@@ -297,7 +298,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
               setShowDropdown(true);
             }}
             placeholder={placeholder}
-            className="flex-1 w-full text-gray-900 placeholder-gray-400 text-sm overflow-hidden text-ellipsis"
+            className="flex-1 w-full text-gray-900 placeholder-gray-500 text-sm overflow-hidden text-ellipsis"
             style={{ 
               minWidth: 0, 
               border: 'none', 
@@ -306,7 +307,6 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
               boxShadow: 'none',
               WebkitAppearance: 'none',
               MozAppearance: 'none',
-              maxWidth: '95%'
             }}
           />
 
@@ -314,20 +314,19 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
             <button
               type="button"
               onClick={handleClear}
-              className="rounded-full transition-opacity hover:opacity-70"
-              style={{ padding: '0px', background: 'transparent' }}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
             >
-              <X className="w-3.5 h-3.5 text-gray-500" />
+              <X className="w-4 h-4 text-gray-600" />
             </button>
           )}
 
           {loading && (
-            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-4 md:w-5 h-4 md:h-5 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
           )}
         </div>
       </form>
 
-      {/* Dropdown with Suggestions - YouTube Style Clean White Background */}
+      {/* Dropdown with Suggestions - UNCHANGED */}
       {showDropdown && isFocused && showSuggestions && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl z-50 max-h-[500px] overflow-y-auto w-full" style={{ border: '1px solid #e5e7eb' }}>
 
