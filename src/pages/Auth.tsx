@@ -4,6 +4,7 @@ import { Mail, User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
 import GoogleSignIn from '../components/auth/GoogleSignIn';
+import { validateSignupEmail } from '../utils/emailValidation';
 import '../components/auth/auth.css';
 import './auth.css';
 
@@ -57,23 +58,26 @@ const Auth: React.FC = () => {
       errors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Please enter a valid email address';
+    } else if (mode === 'signup') {
+      // Additional signup validations for spam prevention
+      const emailError = validateSignupEmail(formData.email);
+      if (emailError) {
+        errors.email = emailError;
+      }
     }
     
-    // Password validation for non-Gmail users
-    const isGmail = isGmailDomain(formData.email);
-    if (!isGmail) {
-      if (!formData.password) {
-        errors.password = 'Password is required';
-      } else if (formData.password.length < 6) {
-        errors.password = 'Password must be at least 6 characters';
-      }
-      
-      if (mode === 'signup') {
-        if (!formData.confirmPassword) {
-          errors.confirmPassword = 'Please confirm your password';
-        } else if (formData.password !== formData.confirmPassword) {
-          errors.confirmPassword = 'Passwords do not match';
-        }
+    // Password validation for all users
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    
+    if (mode === 'signup') {
+      if (!formData.confirmPassword) {
+        errors.confirmPassword = 'Please confirm your password';
+      } else if (formData.password !== formData.confirmPassword) {
+        errors.confirmPassword = 'Passwords do not match';
       }
     }
     
@@ -101,37 +105,28 @@ const Auth: React.FC = () => {
       
       if (mode === 'signin') {
         if (isGmail) {
-          // Gmail user - use email verification
-          console.log('📧 Sending verification for Gmail signin');
-          await authService.sendOTP(formData.email, '', 'signin');
-          navigate('/verify-otp?email=' + encodeURIComponent(formData.email) + '&userData=' + encodeURIComponent(JSON.stringify({name: '', email: formData.email})) + '&authMode=signin');
-        } else {
-          // Non-Gmail user - use password verification
-          console.log('🔐 Password signin for non-Gmail user');
-          const result = await login({
-            email: formData.email,
-            password: formData.password
-          });
-          // Login success - user will be redirected by useEffect
+          // Gmail users must use Google Sign-In
+          setFormErrors({ email: 'Gmail users must use "Continue with Google" button above' });
+          return;
         }
+        // Non-Gmail: Direct password signin
+        console.log('🔐 Password signin');
+        await login({
+          email: formData.email,
+          password: formData.password
+        });
       } else {
+        // Signup logic
         if (isGmail) {
-          // Gmail user - use email verification
-          console.log('📧 Sending verification for Gmail signup');
-          await authService.sendOTP(formData.email, formData.name, 'signup');
-          navigate('/verify-otp?email=' + encodeURIComponent(formData.email) + '&userData=' + encodeURIComponent(JSON.stringify(formData)) + '&authMode=signup');
-        } else {
-          // Non-Gmail user - use password signup
-          console.log('🔐 Password signup for non-Gmail user');
-          const result = await signup({
-            email: formData.email,
-            name: formData.name,
-            password: formData.password,
-            confirmPassword: formData.password,
-            acceptTerms: true
-          });
-          // Signup success - user will be redirected by useEffect
+          // Gmail users must use Google Sign-In
+          setFormErrors({ email: 'Gmail users must use "Continue with Google" button above' });
+          return;
         }
+        // Non-Gmail users: Send OTP for verification
+        console.log('📧 Sending OTP for non-Gmail signup');
+        await authService.sendOTP(formData.email, formData.name, 'signup');
+        const userData = JSON.stringify({ name: formData.name, email: formData.email, password: formData.password });
+        navigate('/verify-otp?email=' + encodeURIComponent(formData.email) + '&userData=' + encodeURIComponent(userData) + '&authMode=signup');
       }
     } catch (err: any) {
       // Handle specific authentication errors
@@ -180,7 +175,7 @@ const Auth: React.FC = () => {
       } else {
         // Handle fallback cases - check error message content for known patterns
         const errorMsg = err.message || '';
-        if (errorMsg.includes('Email ID already registered') && mode === 'signup') {
+        if (errorMsg.includes('Email ID already registered') || errorMsg.includes('User already exists') || errorMsg.includes('already exists') && mode === 'signup') {
           setFormErrors({ 
             email: 'An account with this email already exists. Please sign in instead.'
           });

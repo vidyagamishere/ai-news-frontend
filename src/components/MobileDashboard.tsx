@@ -1637,42 +1637,14 @@ const MobileDashboard: React.FC = () => {
           </select>
         </div>
         
-        <div className="relative">
-          <input 
-            type="search"
-            placeholder="Search for specific updates..."
-            value={userProfile.currentSearchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
-          />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-        </div>
-      </header>
-
-      <main className="flex-1 bg-gray-50 p-6 overflow-y-auto">
-        {loading && (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-            <span className="ml-3 text-gray-600">Loading...</span>
-          </div>
-        )}
-        {error && (
-          <div className="p-4 mb-6 bg-yellow-100 border-l-4 border-yellow-500 rounded-lg">
-            <p className="text-yellow-800 font-semibold">{error}</p>
-          </div>
-        )}
-        {!loading && renderWebDashboardContent()}
-      </main>
-    </div>
-  );
-
-  const TabletSettingsScreen = () => <WebSettingsScreen />;
-
   return (
     <div className="min-h-screen">
       <WebLayout />
       <TabletLayout />
       <MobileLayout />
+      <footer className="mobile-dashboard-footer" style={{textAlign: 'center', padding: '1rem', background: '#f9f9f9'}}>
+        <p style={{ color: '#111' }}>Vidyagam @ 2025 - All Rights Reserved</p>
+      </footer>
     </div>
   );
 };

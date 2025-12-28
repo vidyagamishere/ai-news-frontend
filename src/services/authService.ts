@@ -230,6 +230,24 @@ class AuthService {
     });
   }
 
+  async sendVerificationEmail(email: string, name: string, password: string): Promise<{ message: string }> {
+    return this.request('/api/v2/auth/send-verification', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        name,
+        password
+      }),
+    });
+  }
+
+  async verifyEmail(token: string): Promise<AuthResponse> {
+    return this.request('/api/v2/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  }
+
   async verifyOTP(email: string, otp: string, userData: any): Promise<AuthResponse> {
     this.debug.enter('verifyOTP', { 
       email, 

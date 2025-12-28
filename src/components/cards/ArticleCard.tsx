@@ -1,6 +1,14 @@
 import React from 'react';
 import { ExternalLink, Clock, Star, Play, Headphones } from 'lucide-react';
-import type { Article } from '../../services/api';
+import type { 
+  Article
+} from '../../types/article';
+import { 
+  getContentTypeInfo,
+  formatTimeAgo,
+  formatDuration,
+  getArticleSummary
+} from '../../types/article';
 import SmartImage from '../SmartImage';
 import TopicLabels from '../TopicLabels';
 
@@ -18,6 +26,8 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
     }
   };
 
+  const typeInfo = getContentTypeInfo(article.type || 'article');
+
   const getTypeIcon = () => {
     switch (article.type) {
       case 'video':
@@ -27,13 +37,6 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
       default:
         return null;
     }
-  };
-
-  const formatDuration = (duration?: number) => {
-    if (!duration) return '';
-    const minutes = Math.floor(duration / 60);
-    const seconds = duration % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -65,7 +68,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
             <span className="separator">•</span>
             <span className="time">
               <Clock className="time-icon" />
-              {article.time}
+              {formatTimeAgo(article.published_date || article.time)}
             </span>
             {article.duration && article.type === 'audio' && (
               <>
@@ -77,7 +80,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
           
           <div className="article-indicators">
             {getTypeIcon()}
-            <div className={`impact-badge ${getImpactColor(article.impact)}`}>
+            <div className={`impact-badge ${getImpactColor(article.impact || 'medium')}`}>
               <Star className="star-icon" />
               <span>{article.significanceScore.toFixed(1)}</span>
             </div>
@@ -97,7 +100,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
         </h3>
         
         <p className="article-description">
-          {article.content_summary || article.description}
+          {getArticleSummary(article)}
           {article.content_summary && (
             <span className="llm-summary-badge" title="AI-generated summary">🤖</span>
           )}

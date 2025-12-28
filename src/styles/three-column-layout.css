@@ -1,0 +1,122 @@
+/* Three Column Layout - Medium-inspired */
+.three-column-container {
+  display: grid;
+  grid-template-columns: 240px 1fr 400px;
+  gap: 1.5rem;
+  max-width: 100%;
+  margin: 0;
+  padding: 1rem 2rem;
+  min-height: calc(100vh - 56px); /* Account for header */
+}
+
+/* Left Sidebar - Fixed width, sticky */
+.three-column-left-sidebar {
+  position: sticky;
+  top: 72px; /* Below header */
+  height: fit-content;
+  max-height: calc(100vh - 88px);
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  padding-left: 0;
+}
+
+/* Main Content - Fluid, max width for readability */
+.three-column-main-content {
+  max-width: 900px;
+  min-width: 0; /* Allow flexbox to shrink */
+  margin: 0 auto; /* Center the content */
+}
+
+/* Right Sidebar - Fixed width, sticky */
+.three-column-right-sidebar {
+  position: sticky;
+  top: 72px; /* Below header */
+  height: fit-content;
+  max-height: calc(100vh - 88px);
+  overflow-y: auto;
+  padding-left: 1rem;
+}
+
+/* Responsive Breakpoints */
+
+/* Tablet: Hide right sidebar, expand main content */
+@media (max-width: 1279px) {
+  .three-column-container {
+    grid-template-columns: 240px 1fr;
+  }
+  
+  .three-column-right-sidebar {
+    display: none;
+  }
+}
+
+/* Mobile: Hamburger menu for left sidebar */
+@media (max-width: 767px) {
+  .three-column-container {
+    grid-template-columns: 1fr;
+    padding: 0.5rem;
+    gap: 1rem;
+  }
+  
+  .three-column-left-sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    background: white;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+    overflow-y: auto;
+    padding: 1rem;
+    display: block;
+  }
+  
+  .three-column-left-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  
+  .three-column-main-content {
+    max-width: 100%;
+  }
+  
+  /* Mobile overlay backdrop */
+  .mobile-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+  
+  .mobile-sidebar-backdrop.active {
+    display: block;
+  }
+}
+
+/* Smooth scrolling for sidebars */
+.three-column-left-sidebar::-webkit-scrollbar,
+.three-column-right-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.three-column-left-sidebar::-webkit-scrollbar-track,
+.three-column-right-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.three-column-left-sidebar::-webkit-scrollbar-thumb,
+.three-column-right-sidebar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.three-column-left-sidebar::-webkit-scrollbar-thumb:hover,
+.three-column-right-sidebar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}

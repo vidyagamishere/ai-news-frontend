@@ -56,6 +56,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
+  
   // Step 1: Welcome & Experience Level
   const [selectedExperience, setSelectedExperience] = useState<string>('intermediate');
   const [selectedRole, setSelectedRole] = useState<string>('enthusiast');

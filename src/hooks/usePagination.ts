@@ -7,7 +7,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
-import type { PaginationMeta, Article } from '../types/pagination';
+import type { Article } from '../types/article';
+import type { PaginationMeta } from '../types/pagination';
 
 export interface UsePaginationOptions {
   content_type?: string;
@@ -35,24 +36,26 @@ export const usePagination = (options: UsePaginationOptions = {}) => {
         page,
         page_size: options.page_size || 10,
         content_type: options.content_type,
-        category_id: options.category_id,
+        category: options.category_id?.toString(),  // ✅ FIXED: Use 'category' instead of 'category_id'
         sort_by: options.sort_by,
         sort_order: options.sort_order
       });  
 
-      if (response.success) {
+      const responseItems = response.items || response.articles || [];
+      
+      if (response.success || responseItems.length > 0) {
         if (append) {
-          // Infinite scroll: append new items
-          setItems(prev => [...prev, ...response.items]);
+          setItems(prev => [...prev, ...responseItems]);
         } else {
-          // New page: replace items
-          setItems(response.items);
+          setItems(responseItems);
         }
         
-        setMeta(response.meta);
+        if (response.meta) {
+          setMeta(response.meta);
+        }
         setCurrentPage(page);
         
-        console.log(`📄 Loaded page ${page}: ${response.items.length} items`);
+        console.log(`📄 Loaded page ${page}: ${responseItems.length} items`);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch content');

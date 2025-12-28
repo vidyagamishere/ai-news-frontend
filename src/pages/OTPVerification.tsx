@@ -48,32 +48,32 @@ const OTPVerification: React.FC = () => {
 
     setVerificationStatus('verifying');
     try {
-      await authService.verifyOTP(email, otp, userData);
+      const response = await authService.verifyOTP(email, otp, userData);
       setVerificationStatus('success');
       
-      // Handle success based on auth flow type
-      if (isSigninFlow) {
-        // Signin flow - always go to dashboard (existing user)
-        setMessage('Welcome back! Redirecting to your dashboard...');
-        setTimeout(() => navigate('/dashboard'), 2000);
-      } else if (isSignupFlow) {
-        // Signup flow - check if onboarding needed
-        const onboardingComplete = localStorage.getItem('onboardingComplete');
-        if (onboardingComplete === 'true') {
-          setMessage('Account created! Redirecting to your dashboard...');
-          setTimeout(() => navigate('/dashboard'), 2000);
-        } else {
-          setMessage('Email verified successfully! Let\'s set up your preferences...');
-          setTimeout(() => navigate('/onboarding'), 2000);
-        }
+      // Store authentication data
+      localStorage.setItem('authToken', response.access_token);
+      localStorage.setItem('cachedUser', JSON.stringify(response.user));
+      
+      // isUserExist = false means this is a NEW user (just created)
+      // isUserExist = true means this is an EXISTING user (signing in)
+      const isNewUser = !response.isUserExist;
+      
+      // Handle success based on whether user is new or existing
+      if (isNewUser) {
+        // New user - always go through onboarding
+        localStorage.removeItem('onboardingComplete');  // Ensure onboarding flag is cleared
+        setMessage('Email verified successfully! Let\'s set up your preferences...');
+        setTimeout(() => navigate('/onboarding'), 2000);
       } else {
-        // Fallback - check onboarding status
-        const onboardingComplete = localStorage.getItem('onboardingComplete');
-        if (onboardingComplete === 'true') {
+        // Existing user - check if they've completed onboarding before
+        const onboardingComplete = response.user?.preferences?.onboarding_completed;
+        if (onboardingComplete) {
           setMessage('Welcome back! Redirecting to your dashboard...');
           setTimeout(() => navigate('/dashboard'), 2000);
         } else {
-          setMessage('Email verified successfully! Redirecting to onboarding...');
+          // Existing user who hasn't completed onboarding
+          setMessage('Welcome back! Let\'s complete your profile setup...');
           setTimeout(() => navigate('/onboarding'), 2000);
         }
       }

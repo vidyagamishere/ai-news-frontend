@@ -273,6 +273,14 @@ const Admin: React.FC = () => {
   const [scrapingLoading, setScrapingLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // ✅ NEW: States for podcast/video scraping
+  const [podcastScrapingLoading, setPodcastScrapingLoading] = useState(false);
+  const [videoScrapingLoading, setVideoScrapingLoading] = useState(false);
+  const [podcastResult, setPodcastResult] = useState<any>(null);
+  const [videoResult, setVideoResult] = useState<any>(null);
+  const [podcastError, setPodcastError] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   const models = [
     {
@@ -401,6 +409,142 @@ const Admin: React.FC = () => {
       console.error('❌ Scraping error:', error);
       setScrapingLoading(false); // ✅ FIX: Changed from setIsScrapingLoading
       setError(error instanceof Error ? error.message : 'Failed to start scraping');
+    }
+  };
+
+  // ✅ NEW: Handler for podcast scraping
+  const handleTriggerPodcastScraping = async () => {
+    try {
+      setPodcastScrapingLoading(true);
+      setPodcastError(null);
+      setPodcastResult(null);
+      
+      const endpoint = `admin/scrape-pending-podcasts?llm_model=${selectedModel}`;
+      console.log('🎧 Triggering podcast scraping with endpoint:', endpoint);
+
+      // Start scraping job
+      const response = await apiService.callEndpoint(
+        endpoint,
+        'POST',
+        {},
+        false,
+        {
+          'X-Admin-API-Key': adminApiKey,
+          'Content-Type': 'application/json'
+        }
+      );
+      
+      const jobId = response.job_id;
+      console.log('✅ Podcast scraping job started:', jobId);
+      console.log('ℹ️ Polling for job status...');
+      
+      // Poll for status every 5 seconds
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await apiService.callEndpoint(
+            `admin/scrape-status/${jobId}`,
+            'GET',
+            {},
+            false,
+            {
+              'X-Admin-API-Key': adminApiKey
+            }
+          );
+          
+          console.log('📊 Podcast job status:', statusResponse.status);
+          
+          if (statusResponse.status === 'completed') {
+            clearInterval(pollInterval);
+            setPodcastScrapingLoading(false);
+            setPodcastResult({
+              success: true,
+              message: 'Podcast scraping completed successfully!',
+              ...statusResponse.result
+            });
+            console.log('✅ Podcast scraping completed:', statusResponse.result);
+          } else if (statusResponse.status === 'failed') {
+            clearInterval(pollInterval);
+            setPodcastScrapingLoading(false);
+            setPodcastError(statusResponse.error || 'Podcast scraping failed');
+            console.error('❌ Podcast scraping failed:', statusResponse.error);
+          }
+        } catch (pollError) {
+          console.error('❌ Error polling podcast job status:', pollError);
+        }
+      }, 5000);
+      
+    } catch (error) {
+      console.error('❌ Podcast scraping error:', error);
+      setPodcastScrapingLoading(false);
+      setPodcastError(error instanceof Error ? error.message : 'Failed to start podcast scraping');
+    }
+  };
+
+  // ✅ NEW: Handler for video scraping
+  const handleTriggerVideoScraping = async () => {
+    try {
+      setVideoScrapingLoading(true);
+      setVideoError(null);
+      setVideoResult(null);
+      
+      const endpoint = `admin/scrape-pending-videos?llm_model=${selectedModel}`;
+      console.log('🎥 Triggering video scraping with endpoint:', endpoint);
+
+      // Start scraping job
+      const response = await apiService.callEndpoint(
+        endpoint,
+        'POST',
+        {},
+        false,
+        {
+          'X-Admin-API-Key': adminApiKey,
+          'Content-Type': 'application/json'
+        }
+      );
+      
+      const jobId = response.job_id;
+      console.log('✅ Video scraping job started:', jobId);
+      console.log('ℹ️ Polling for job status...');
+      
+      // Poll for status every 5 seconds
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await apiService.callEndpoint(
+            `admin/scrape-status/${jobId}`,
+            'GET',
+            {},
+            false,
+            {
+              'X-Admin-API-Key': adminApiKey
+            }
+          );
+          
+          console.log('📊 Video job status:', statusResponse.status);
+          
+          if (statusResponse.status === 'completed') {
+            clearInterval(pollInterval);
+            setVideoScrapingLoading(false);
+            setVideoResult({
+              success: true,
+              message: 'Video scraping completed successfully!',
+              ...statusResponse.result
+            });
+            console.log('✅ Video scraping completed:', statusResponse.result);
+          } else if (statusResponse.status === 'failed') {
+            clearInterval(pollInterval);
+            setVideoScrapingLoading(false);
+            setVideoError(statusResponse.error || 'Video scraping failed');
+            console.error('❌ Video scraping failed:', statusResponse.error);
+          }
+        } catch (pollError) {
+          console.error('❌ Error polling video job status:', pollError);
+        }
+      }, 5000);
+      
+    } catch (error) {
+      console.error('❌ Video scraping error:', error);
+      setVideoScrapingLoading(false);
+      setVideoError(error instanceof Error ? error.message : 'Failed to start video scraping');
     }
   };
 
@@ -586,7 +730,14 @@ const Admin: React.FC = () => {
       )}
      {/* ✅ UPDATED: Model Selection Section */}
       <div className="model-selection" style={{ marginTop: '0', marginBottom: '32px' }}>
-        <h2>🤖 Select LLM Model for Content Processing</h2>
+        <h2>🚀 RSS Feed Scraping Configuration</h2>
+        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.5rem' }}>
+          Configure scraping for RSS feeds from <code>ai_sources</code> table based on frequency settings.
+        </p>
+        
+        <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '12px', color: '#111827' }}>
+          🤖 Select LLM Model for Content Processing
+        </h3>
         <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
           Choose the AI model to process and analyze scraped content.
         </p>
@@ -789,6 +940,142 @@ const Admin: React.FC = () => {
           <p>{error}</p>
         </div>
       )}
+
+      {/* ✅ NEW: Podcast Scraping Section */}
+      <div className="scraping-section" style={{ marginTop: '3rem', borderTop: '2px solid #e5e7eb', paddingTop: '2rem' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#111827' }}>
+          🎧 Podcast Scraping
+        </h2>
+        <p style={{ fontSize: '0.95rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+          Scrape all pending podcasts from <code>ai_podcasts</code> table (status = 'pending')
+        </p>
+        <p style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '1.5rem', fontStyle: 'italic' }}>
+          💡 Uses the <strong>{models.find(m => m.id === selectedModel)?.name}</strong> model selected above
+        </p>
+        
+        <button
+          onClick={handleTriggerPodcastScraping}
+          disabled={podcastScrapingLoading}
+          className="btn-scraping"
+          style={{ 
+            backgroundColor: podcastScrapingLoading ? '#9ca3af' : '#10b981',
+            cursor: podcastScrapingLoading ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {podcastScrapingLoading ? (
+            <>
+              <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              ⏳ Scraping podcasts...
+            </>
+          ) : (
+            <>
+              🎧 Scrape Pending Podcasts with {models.find(m => m.id === selectedModel)?.name}
+            </>
+          )}
+        </button>
+
+        {/* Podcast Result Display */}
+        {podcastResult && (
+          <div className={`result-display ${podcastResult.success ? 'success' : 'error'}`} style={{ marginTop: '1rem' }}>
+            <h3>{podcastResult.success ? '✅ Podcast Scraping Completed' : '❌ Podcast Scraping Failed'}</h3>
+            <p>{podcastResult.message}</p>
+            <div className="result-details">
+              <div className="detail-item">
+                <span className="detail-label">🤖 Model Used:</span>
+                <strong>{podcastResult.llm_model}</strong>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">🎧 Total Pending:</span>
+                <strong>{podcastResult.podcasts_total || 0}</strong>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">✅ Processed:</span>
+                <strong>{podcastResult.podcasts_processed || 0}</strong>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">💾 Articles Inserted:</span>
+                <strong style={{ color: '#10b981' }}>{podcastResult.articles_inserted || 0}</strong>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Podcast Error Display */}
+        {podcastError && (
+          <div className="error-display" style={{ marginTop: '1rem' }}>
+            <h3>Error</h3>
+            <p>{podcastError}</p>
+          </div>
+        )}
+      </div>
+
+      {/* ✅ NEW: Video Scraping Section */}
+      <div className="scraping-section" style={{ marginTop: '3rem', borderTop: '2px solid #e5e7eb', paddingTop: '2rem' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#111827' }}>
+          🎥 Video Scraping
+        </h2>
+        <p style={{ fontSize: '0.95rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+          Scrape all pending videos from <code>ai_videos</code> table (status = 'pending')
+        </p>
+        <p style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '1.5rem', fontStyle: 'italic' }}>
+          💡 Uses the <strong>{models.find(m => m.id === selectedModel)?.name}</strong> model selected above
+        </p>
+        
+        <button
+          onClick={handleTriggerVideoScraping}
+          disabled={videoScrapingLoading}
+          className="btn-scraping"
+          style={{ 
+            backgroundColor: videoScrapingLoading ? '#9ca3af' : '#ef4444',
+            cursor: videoScrapingLoading ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {videoScrapingLoading ? (
+            <>
+              <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              ⏳ Scraping videos...
+            </>
+          ) : (
+            <>
+              🎥 Scrape Pending Videos with {models.find(m => m.id === selectedModel)?.name}
+            </>
+          )}
+        </button>
+
+        {/* Video Result Display */}
+        {videoResult && (
+          <div className={`result-display ${videoResult.success ? 'success' : 'error'}`} style={{ marginTop: '1rem' }}>
+            <h3>{videoResult.success ? '✅ Video Scraping Completed' : '❌ Video Scraping Failed'}</h3>
+            <p>{videoResult.message}</p>
+            <div className="result-details">
+              <div className="detail-item">
+                <span className="detail-label">🤖 Model Used:</span>
+                <strong>{videoResult.llm_model}</strong>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">🎥 Total Pending:</span>
+                <strong>{videoResult.videos_total || 0}</strong>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">✅ Processed:</span>
+                <strong>{videoResult.videos_processed || 0}</strong>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">💾 Articles Inserted:</span>
+                <strong style={{ color: '#10b981' }}>{videoResult.articles_inserted || 0}</strong>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Video Error Display */}
+        {videoError && (
+          <div className="error-display" style={{ marginTop: '1rem' }}>
+            <h3>Error</h3>
+            <p>{videoError}</p>
+          </div>
+        )}
+      </div>
 
       <div className="sources-table">
         <h3>AI Sources ({sources.length})</h3>

@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import SwipeableNewsCard from '../cards/SwipeableNewsCard';
 import { Loader2, TrendingUp, Filter, RefreshCw, Sparkles } from 'lucide-react';
 import { apiService } from '../../services/api';
-import { type Article } from '../../services/api';
+import type { Article } from '../../types/article';
+import { getArticleSummary, getArticleSource, getArticlePublishedDate } from '../../types/article';
 
 // Import the CSS file
 import '../../styles/infinite-feed.css';
@@ -109,8 +110,8 @@ const InfiniteFeed: React.FC<InfiniteFeedProps> = ({
       const hasMore = response.has_more ?? (newArticles.length >= 20);
 
       // Filter out duplicates
-      const existingIds = new Set(feedState.articles.map(a => a.id));
-      const uniqueArticles = newArticles.filter(a => !existingIds.has(a.id));
+      const existingIds = new Set(feedState.articles.map((a: Article) => a.id));
+      const uniqueArticles = newArticles.filter((a: Article) => !existingIds.has(a.id));
 
       setFeedState(prev => ({
         ...prev,
@@ -121,7 +122,7 @@ const InfiniteFeed: React.FC<InfiniteFeedProps> = ({
       }));
 
       // Preload images
-      uniqueArticles.forEach(article => {
+      uniqueArticles.forEach((article: Article) => {
         if (article.thumbnail_url) {
           const img = new Image();
           img.src = article.thumbnail_url;
@@ -342,15 +343,15 @@ const InfiniteFeed: React.FC<InfiniteFeedProps> = ({
               article={{
                 id: articleId,
                 title: currentArticle.title,
-                summary: currentArticle.summary,
+                summary: getArticleSummary(currentArticle),
                 url: currentArticle.url,
-                source_name: currentArticle.source_name || currentArticle.source,
-                published_date: currentArticle.published_date || currentArticle.time,
+                source_name: getArticleSource(currentArticle),
+                published_date: getArticlePublishedDate(currentArticle),
                 content_type_name: (currentArticle.content_type_name || currentArticle.type || 'BLOGS') as any,
                 thumbnail_url: currentArticle.thumbnail_url,
                 significance: currentArticle.significance || currentArticle.significance_score || 5,
                 category_name: currentArticle.category_name || currentArticle.category || 'AI News',
-                readTime: currentArticle.read_time || '5 min'
+                readTime: currentArticle.read_time || currentArticle.readTime || '5 min'
               }}
               onSwipeLeft={() => handleSwipeLeft(currentArticle)}
               onSwipeRight={() => handleSwipeRight(currentArticle)}
@@ -412,15 +413,15 @@ const InfiniteFeed: React.FC<InfiniteFeedProps> = ({
                   article={{
                     id: articleId,
                     title: article.title,
-                    summary: article.summary || article.description || article.content_summary,  // ✅ Use "article"
-                    url: article.url,                            // ✅ Use "article"
-                    source_name: article.source_name || article.source,  // ✅ Use "article"
-                    published_date: article.published_date || article.time,  // ✅ Use "article"
-                    content_type_name: (article.content_type_name || article.type || 'BLOGS') as any,  // ✅ Use "article"
-                    thumbnail_url: article.thumbnail_url || article.imageUrl,  // ✅ Use "article"
-                    significance: article.significance || article.significance_score || 5,  // ✅ Use "article"
-                    category_name: article.category_name || article.category || 'AI News',  // ✅ Use "article"
-                    readTime: article.read_time || '5 min'        // ✅ Use "article"
+                    summary: getArticleSummary(article),
+                    url: article.url,
+                    source_name: getArticleSource(article),
+                    published_date: getArticlePublishedDate(article),
+                    content_type_name: (article.content_type_name || article.type || 'BLOGS') as any,
+                    thumbnail_url: article.thumbnail_url || article.imageUrl,
+                    significance: article.significance || article.significance_score || 5,
+                    category_name: article.category_name || article.category || 'AI News',
+                    readTime: article.read_time || article.readTime || '5 min'
                   }}
                   onBookmark={() => handleBookmark(article)}
                   isBookmarked={bookmarkedArticles.has(articleId)}

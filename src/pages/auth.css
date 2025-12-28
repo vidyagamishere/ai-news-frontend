@@ -13,6 +13,77 @@
   margin-top: 0.5rem;
 }
 
+/* Email Verification Styles */
+.verification-icon-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.icon-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.icon-circle.bg-blue {
+  background-color: #3b82f6;
+}
+
+.icon-circle.bg-green {
+  background-color: #10b981;
+}
+
+.icon-circle.bg-red {
+  background-color: #ef4444;
+}
+
+.verification-message {
+  text-align: center;
+  color: #6b7280;
+  margin: 1.5rem 0;
+  line-height: 1.6;
+}
+
+.verification-message p {
+  margin: 0.5rem 0;
+}
+
+.verification-message .font-semibold {
+  font-weight: 600;
+  color: #111827;
+}
+
+.verification-message .text-green {
+  color: #10b981;
+}
+
+.verification-message .text-red {
+  color: #ef4444;
+}
+
+.verification-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.verification-help {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.verification-help p {
+  margin: 0.25rem 0;
+}
+
 .verification-icon {
   display: flex;
   justify-content: center;
@@ -22,16 +93,6 @@
 .success-icon {
   display: flex;
   justify-content: center;
-  margin-bottom: 1rem;
-}
-
-.verification-actions {
-  text-align: center;
-  margin-top: 1.5rem;
-}
-
-.verification-actions p {
-  color: var(--text-gray);
   margin-bottom: 1rem;
 }
 

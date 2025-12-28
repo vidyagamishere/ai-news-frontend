@@ -2,6 +2,8 @@
 // All API calls now go to direct FastAPI endpoints with modular routing
 import axios from 'axios';
 import DebugLogger from '../utils/debug';
+import type { Article } from '../types/article';
+import { supabaseImageService } from './supabaseImageService';
 
 // Modular FastAPI backend URL - Direct endpoints with APIRouter
 const API_BASE_URL = import.meta.env.VITE_API_BASE || 'https://mindful-adventure-production-50fa.up.railway.app';
@@ -134,6 +136,61 @@ async function makeModularRequest(
   }
 }
 
+// Helper function to assign random Supabase images to articles by category
+const mapArticleImages = async (article: any): Promise<any> => {
+  if (!article) return article;
+  
+  // Use category_label from backend (ai_categories_master.category_label) if available
+  // This directly matches Supabase folder names (e.g., "generative_ai", "ai_startups")
+  // Otherwise fallback to category name conversion
+  const categoryLabel = article.category_label || article.category || article.category_name || article.topic_category || 'General';
+  
+  console.log(`🎨 Mapping image for article: "${article.title?.substring(0, 50)}..." in category: ${categoryLabel}`);
+  
+  // Fetch random image from Supabase for this category
+  let supabaseImage: string | null = null;
+  if (supabaseImageService.isEnabled()) {
+    supabaseImage = await supabaseImageService.getRandomImageForCategory(categoryLabel);
+    console.log(`📷 Got Supabase image:`, supabaseImage || 'NONE');
+  } else {
+    console.warn('⚠️ Supabase service is disabled');
+  }
+  
+  // Use Supabase image if available, otherwise use placeholder
+  const finalImage = supabaseImage || article.image || '/placeholder-article.jpg';
+  
+  console.log(`✅ Final image for article:`, finalImage);
+  
+  return {
+    ...article,
+    image: finalImage,  // Primary field with Supabase image
+    imageUrl: finalImage,  // Legacy camelCase
+    thumbnail_url: finalImage,  // Thumbnail variant
+    category_label: categoryLabel  // Ensure category_label is preserved
+  };
+};
+
+// Batch image mapping for better performance
+const mapArticleImagesSync = (articles: any[]): any[] => {
+  // For synchronous operations, we'll use a simplified version
+  return articles.map(article => ({
+    ...article,
+    image: article.image || '/placeholder-article.jpg',
+    imageUrl: article.image || '/placeholder-article.jpg',
+    thumbnail_url: article.image || '/placeholder-article.jpg'
+  }));
+};
+
+// Async batch mapping for articles with Supabase images
+const mapArticleImagesAsync = async (articles: any[]): Promise<any[]> => {
+  if (!supabaseImageService.isEnabled()) {
+    return mapArticleImagesSync(articles);
+  }
+  
+  // Map all articles with images in parallel
+  return Promise.all(articles.map(article => mapArticleImages(article)));
+};
+
 // Simple in-memory cache with TTL
 const cache = new Map<string, { data: any; expiry: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -179,29 +236,6 @@ export interface AITopic {
   id: string;
   name: string;
   category: string;
-}
-
-export interface Article {
-  title: string;
-  description: string;
-  content_summary?: string;
-  source: string;
-  time: string;
-  impact: 'high' | 'medium' | 'low';
-  type: 'blog' | 'audio' | 'video' | 'events' | 'learning' | 'demos';
-  url: string;
-  readTime: string;
-  significanceScore: number;
-  rankingScore?: number;
-  priority?: number;
-  thumbnail_url?: string;
-  imageUrl?: string;
-  audio_url?: string;
-  duration?: number;
-  // Enhanced topic information from database views
-  topics?: AITopic[];
-  topic_names?: string[];
-  topic_categories?: string[];
 }
 
 export interface Metrics {
@@ -329,14 +363,17 @@ export interface AuthVerifyResponse {
   error?: string;
 }
 
+// Re-export types from central location (remove AITopic since it's defined above)
+export type { Article, Category, LandingContent } from '../types/article';
+
 // Complete API service using router pattern
-export const apiService = {
+export class ApiService {
   // ===============================
   // CORE CONTENT ENDPOINTS
   // ===============================
 
   // Get current digest
-  getDigest: async (refresh?: boolean): Promise<DigestResponse> => {
+  async getDigest(refresh?: boolean): Promise<DigestResponse> {
     if (shouldClearDailyCache()) {
       clearDailyCache();
     }
@@ -354,29 +391,38 @@ export const apiService = {
     
     console.log('📡 Fetching digest via modular endpoint...');
     const data = await makeModularRequest('digest', 'GET', params, null, {}, true);
+    
+    // Map Supabase images for all articles in the digest
+    if (data.topStories) {
+      data.topStories = await mapArticleImagesAsync(data.topStories);
+    }
+    if (data.content) {
+      for (const key of Object.keys(data.content)) {
+        if (Array.isArray(data.content[key])) {
+          data.content[key] = await mapArticleImagesAsync(data.content[key]);
+        }
+      }
+    }
+    
     setCachedData(cacheKey, data);
     return data;
-  },
+  }
 
   // Get health status
-  getHealth: async (): Promise<HealthResponse> => {
+  async getHealth(): Promise<HealthResponse> {
     return await makeModularRequest('health', 'GET');
-  },
+  }
 
   // Get sources configuration
-  getSources: async (): Promise<SourcesResponse> => {
+  async getSources(): Promise<SourcesResponse> {
     return await makeModularRequest('sources', 'GET');
-  },
+  }
 
   // ===============================
   // PRE-LOGIN LANDING PAGE ENDPOINTS
-  // These endpoints call backend APIs that access database views
-  // Frontend does not access database directly - all data via API
   // ===============================
 
-  // Get breaking news alerts for pre-login users
-  // Backend endpoint: GET /breaking-news (uses breaking_news_alerts DB view)
-  getBreakingNewsAlerts: async (limit: number = 5): Promise<{
+  async getBreakingNewsAlerts(limit: number = 5): Promise<{
     articles: Array<{
       title: string;
       summary: string;
@@ -389,14 +435,19 @@ export const apiService = {
     }>;
     count: number;
     type: string;
-  }> => {
+  }> {
     console.log('🚨 Fetching breaking news alerts for landing page...');
-    return await makeModularRequest('breaking-news', 'GET', { limit });
-  },
+    const data = await makeModularRequest('breaking-news', 'GET', { limit });
+    
+    // Map Supabase images for articles
+    if (data.articles && Array.isArray(data.articles)) {
+      data.articles = await mapArticleImagesAsync(data.articles);
+    }
+    
+    return data;
+  }
 
-  // Get Generative AI category stories for pre-login users  
-  // Backend endpoint: GET /generative-ai-content (uses articles table with AI filters)
-  getGenerativeAIStories: async (limit: number = 3): Promise<{
+  async getGenerativeAIStories(limit: number = 3): Promise<{
     articles: Array<{
       title: string;
       summary: string;
@@ -409,14 +460,19 @@ export const apiService = {
     }>;
     count: number;
     type: string;
-  }> => {
+  }> {
     console.log('🤖 Fetching Generative AI stories for landing page...');
-    return await makeModularRequest('generative-ai-content', 'GET', { limit });
-  },
+    const data = await makeModularRequest('generative-ai-content', 'GET', { limit });
+    
+    // Map Supabase images for articles
+    if (data.articles && Array.isArray(data.articles)) {
+      data.articles = await mapArticleImagesAsync(data.articles);
+    }
+    
+    return data;
+  }
 
-  // Get AI Applications category stories for pre-login users  
-  // Backend endpoint: GET /ai-applications-content (uses articles table with AI filters)
-  getAIApplicationsStories: async (limit: number = 3): Promise<{
+  async getAIApplicationsStories(limit: number = 3): Promise<{
     articles: Array<{
       title: string;
       summary: string;
@@ -429,14 +485,19 @@ export const apiService = {
     }>;
     count: number;
     type: string;
-  }> => {
+  }> {
     console.log('🏢 Fetching AI Applications stories for landing page...');
-    return await makeModularRequest('ai-applications-content', 'GET', { limit });
-  },
+    const data = await makeModularRequest('ai-applications-content', 'GET', { limit });
+    
+    // Map Supabase images for articles
+    if (data.articles && Array.isArray(data.articles)) {
+      data.articles = await mapArticleImagesAsync(data.articles);
+    }
+    
+    return data;
+  }
 
-  // Get AI Startups category stories for pre-login users  
-  // Backend endpoint: GET /ai-startups-content (uses articles table with AI filters)
-  getAIStartupsStories: async (limit: number = 3): Promise<{
+  async getAIStartupsStories(limit: number = 3): Promise<{
     articles: Array<{
       title: string;
       summary: string;
@@ -449,14 +510,19 @@ export const apiService = {
     }>;
     count: number;
     type: string;
-  }> => {
+  }> {
     console.log('🚀 Fetching AI Startups stories for landing page...');
-    return await makeModularRequest('ai-startups-content', 'GET', { limit });
-  },
+    const data = await makeModularRequest('ai-startups-content', 'GET', { limit });
+    
+    // Map Supabase images for articles
+    if (data.articles && Array.isArray(data.articles)) {
+      data.articles = await mapArticleImagesAsync(data.articles);
+    }
+    
+    return data;
+  }
 
-  // Get all landing page content organized by categories and content types
-  // Backend endpoint: GET /landing-content (mobile dashboard style organization)
-  getLandingContent: async (limitPerType: number = 10): Promise<{
+  async getLandingContent(limitPerType: number = 10, daysFilter: number = 7, categoryId?: number, contentTypeId?: number): Promise<{
     categories: Array<{
       id: number;
       name: string;
@@ -499,13 +565,88 @@ export const apiService = {
       };
     }>;
     total_categories: number;
-  }> => {
-    console.log('🏠 Fetching landing content for all categories and content types...');
-    return await makeModularRequest('landing-content', 'GET', { limit_per_type: limitPerType });
-  },
+  }> {
+    console.log('🏠 Fetching landing content - Days:', daysFilter, 'Category ID:', categoryId, 'Content Type ID:', contentTypeId);
+    const params: any = { limit_per_type: limitPerType, days_filter: daysFilter };
+    if (categoryId !== undefined) params.category_id = categoryId;
+    if (contentTypeId !== undefined) params.content_type_id = contentTypeId;
+    console.log('📤 API Request params:', params);
+    const data = await makeModularRequest('landing-content', 'GET', params);
+    
+    // Map Supabase images for all content in all categories
+    if (data.categories && Array.isArray(data.categories)) {
+      for (const category of data.categories) {
+        if (category.content?.blogs) {
+          category.content.blogs = await mapArticleImagesAsync(category.content.blogs);
+        }
+        if (category.content?.podcasts) {
+          category.content.podcasts = await mapArticleImagesAsync(category.content.podcasts);
+        }
+        if (category.content?.videos) {
+          category.content.videos = await mapArticleImagesAsync(category.content.videos);
+        }
+      }
+    }
+    
+    return data;
+  }
 
-  // Get personalized digest - requires authentication
-  getPersonalizedDigest: async (refresh?: boolean): Promise<DigestResponse> => {
+  async searchContent(
+    query: string,
+    categoryId?: number,
+    daysFilter: number = 7,
+    limitPerType: number = 20
+  ): Promise<{
+    query: string;
+    category: string;
+    category_id: number | null;
+    days_filter: number;
+    results: {
+      blogs: Array<any>;
+      podcasts: Array<any>;
+      videos: Array<any>;
+    };
+    counts: {
+      blogs: number;
+      podcasts: number;
+      videos: number;
+      total: number;
+    };
+    metadata: {
+      search_type: string;
+      filters_applied: {
+        category: string;
+        time_range_days: number;
+      };
+    };
+  }> {
+    console.log('🔍 Searching content - Query:', query, 'Category ID:', categoryId, 'Days:', daysFilter);
+    const params: any = { 
+      query, 
+      days_filter: daysFilter,
+      limit_per_type: limitPerType 
+    };
+    if (categoryId !== undefined) params.category_id = categoryId;
+    
+    console.log('📤 Search API Request params:', params);
+    const data = await makeModularRequest('search-content', 'GET', params);
+    
+    // Map Supabase images for all search results
+    if (data.results?.blogs) {
+      data.results.blogs = await mapArticleImagesAsync(data.results.blogs);
+    }
+    if (data.results?.podcasts) {
+      data.results.podcasts = await mapArticleImagesAsync(data.results.podcasts);
+    }
+    if (data.results?.videos) {
+      data.results.videos = await mapArticleImagesAsync(data.results.videos);
+    }
+    
+    console.log('✅ Search complete - Total results:', data.counts.total);
+    return data;
+  }
+
+  async getPersonalizedDigest(refresh?: boolean): Promise<DigestResponse> {
     const token = localStorage.getItem('authToken');
     if (!token) {
       throw new Error('Authentication required for personalized content');
@@ -531,47 +672,61 @@ export const apiService = {
     
     console.log('📡 Fetching personalized digest via modular endpoint...');
     const data = await makeModularRequest('digest', 'GET', params, null, headers, true);
+    
+    // Map Supabase images for all articles in the personalized digest
+    if (data.topStories) {
+      data.topStories = await mapArticleImagesAsync(data.topStories);
+    }
+    if (data.content) {
+      for (const key of Object.keys(data.content)) {
+        if (Array.isArray(data.content[key])) {
+          data.content[key] = await mapArticleImagesAsync(data.content[key]);
+        }
+      }
+    }
+    
     setCachedData(cacheKey, data);
     return data;
-  },
+  }
 
   // ===============================
   // SCRAPING & AUTO-UPDATE
   // ===============================
 
-  // Trigger manual scraping
-  triggerScrape: async (priorityOnly = false): Promise<ScrapeResponse> => {
+  async triggerScrape(priorityOnly = false): Promise<ScrapeResponse> {
     const params = priorityOnly ? { priority_only: 'true' } : {};
     return await makeModularRequest('scrape', 'GET', params);
-  },
+  }
 
-  // Trigger auto-update
-  triggerAutoUpdate: async (): Promise<{ message: string; status: any }> => {
+  async triggerAutoUpdate(): Promise<{ message: string; status: any }> {
     return await makeModularRequest('auto-update', 'POST', {}, { action: 'trigger' });
-  },
+  }
 
-  // Get auto-update status
-  getAutoUpdateStatus: async (): Promise<any> => {
+  async getAutoUpdateStatus(): Promise<any> {
     return await makeModularRequest('auto-update', 'GET');
-  },
+  }
 
   // ===============================
   // CONTENT FILTERING & TYPES
   // ===============================
 
-  // Get available content types
-  getContentTypes: async (): Promise<any> => {
+  async getContentTypes(): Promise<any> {
     return await makeModularRequest('content-types', 'GET');
-  },
+  }
 
-  // Get content by type (generic endpoint)
-  getContentByType: async (contentType: string, refresh?: boolean): Promise<any> => {
+  async getContentByType(contentType: string, refresh?: boolean): Promise<any> {
     const params = refresh ? { refresh: 'true', content_type: contentType } : { content_type: contentType };
-    return await makeModularRequest(`content/${contentType}`, 'GET', params, null, {}, true);
-  },
+    const data = await makeModularRequest(`content/${contentType}`, 'GET', params, null, {}, true);
+    
+    // Map Supabase images if response contains articles array
+    if (data.articles && Array.isArray(data.articles)) {
+      data.articles = await mapArticleImagesAsync(data.articles);
+    }
+    
+    return data;
+  }
 
-  // Get user preferences - requires authentication
-  getUserPreferences: async (): Promise<any> => {
+  async getUserPreferences(): Promise<any> {
     const token = localStorage.getItem('authToken');
     if (!token) {
       throw new Error('Authentication required for user preferences');
@@ -581,25 +736,23 @@ export const apiService = {
       'Authorization': `Bearer ${token}`
     };
     return await makeModularRequest('api/v2/auth/profile', 'GET', {}, null, headers);
-  },
+  }
 
   // ===============================
   // AUTHENTICATION ENDPOINTS
   // ===============================
 
-  // Google OAuth authentication
-  authenticateWithGoogle: async (idToken: string): Promise<AuthResponse> => {
+  async authenticateWithGoogle(idToken: string): Promise<AuthResponse> {
     console.log('🔐 Authenticating with Google via modular endpoint...');
     
     const data = {
-      credential: idToken  // Backend expects 'credential' field, not 'id_token'
+      credential: idToken
     };
     
     return await makeModularRequest('api/v2/auth/google', 'POST', {}, data);
-  },
+  }
 
-  // Verify authentication token
-  verifyAuth: async (): Promise<AuthVerifyResponse> => {
+  async verifyAuth(): Promise<AuthVerifyResponse> {
     const token = localStorage.getItem('authToken');
     if (!token) {
       return { valid: false, error: 'no_token' };
@@ -616,10 +769,9 @@ export const apiService = {
       console.log('🔐 Auth verification failed:', error);
       return { valid: false, error: 'invalid_token' };
     }
-  },
+  }
 
-  // Logout
-  logout: async (): Promise<{ success: boolean; message: string }> => {
+  async logout(): Promise<{ success: boolean; message: string }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
@@ -629,74 +781,66 @@ export const apiService = {
       localStorage.removeItem('user');
       return result;
     } catch (error) {
-      // Even if logout fails on server, clear local storage
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
       return { success: true, message: 'Logged out locally' };
     }
-  },
+  }
 
-  // Get available AI topics for authentication
-  getAuthTopics: async (): Promise<any> => {
+  async getAuthTopics(): Promise<any> {
     return await makeModularRequest('topics', 'GET');
-  },
+  }
 
   // ===============================
   // ADMIN ENDPOINTS
   // ===============================
 
-  // Validate sources (admin only)
-  validateSources: async (adminKey: string, options?: {
+  async validateSources(adminKey: string, options?: {
     contentType?: string;
     priority?: number;
     timeout?: number;
     maxConcurrent?: number;
-  }): Promise<any> => {
+  }): Promise<any> {
     const headers = { 'X-Admin-Key': adminKey };
     const data = options || {};
     return await makeModularRequest('admin/validate-sources', 'POST', {}, data, headers);
-  },
+  }
 
-  // Validate single source (admin only)
-  validateSingleSource: async (adminKey: string, sourceData: {
+  async validateSingleSource(adminKey: string, sourceData: {
     name: string;
     rss_url: string;
     website?: string;
     content_type?: string;
-  }): Promise<any> => {
+  }): Promise<any> {
     const headers = { 'X-Admin-Key': adminKey };
     return await makeModularRequest('admin/validate-single-source', 'POST', {}, sourceData, headers);
-  },
+  }
 
-  // Admin quick test
-  quickTest: async (adminKey: string): Promise<any> => {
+  async quickTest(adminKey: string): Promise<any> {
     const headers = { 'X-Admin-Key': adminKey };
     return await makeModularRequest('admin/quick-test', 'GET', {}, null, headers);
-  },
+  }
 
-  // Get validation status (admin only)
-  getValidationStatus: async (adminKey: string): Promise<any> => {
+  async getValidationStatus(adminKey: string): Promise<any> {
     const headers = { 'X-Admin-Key': adminKey };
     return await makeModularRequest('admin/validation-status', 'GET', {}, null, headers);
-  },
+  }
 
   // ===============================
   // TESTING & DEBUG
   // ===============================
 
-  // Test database connection
-  testDatabase: async (): Promise<any> => {
+  async testDatabase(): Promise<any> {
     return await makeModularRequest('health', 'GET');
-  },
+  }
 
-  // Generic modular method for future endpoints
-  callEndpoint: async (
+  async callEndpoint(
     endpoint: string, 
     method: string = 'GET', 
     params: any = {}, 
     requireAuth: boolean = false,
     customHeaders: any = {}
-  ) => {
+  ) {
     let headers: any = {};
     
     if (requireAuth) {
@@ -707,36 +851,32 @@ export const apiService = {
       headers['Authorization'] = `Bearer ${token}`;
     }
     
-    // Merge custom headers (including admin API key)
     headers = { ...headers, ...customHeaders };
     
     return await makeModularRequest(endpoint, method, params, null, headers);
-  },
+  }
 
-  // Generic GET method (backward compatibility)
-  get: async (endpoint: string, params?: any): Promise<any> => {
-    // Remove any leading slashes and api prefixes
+  async get(endpoint: string, params?: any): Promise<any> {
     const cleanEndpoint = endpoint.replace(/^\/?(api\/)?/, '');
     return await makeModularRequest(cleanEndpoint, 'GET', params);
-  },
+  }
 
   // ===============================
   // PERSONALIZED FEED ENDPOINTS
   // ===============================
 
-  // Get personalized feed with advanced filtering
-  getPersonalizedFeed: async (filterRequest: {
+  async getPersonalizedFeed(filterRequest: {
     interests?: string[];
     content_types?: string[];
     publishers?: string[];
     time_filter?: string;
     search_query?: string;
     limit?: number;
-  }): Promise<any> => {
+  }): Promise<any> {
     console.log('📱 Fetching personalized feed with filters:', filterRequest);
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    return await makeModularRequest('api/v1/personalized-feed', 'POST', {}, {
+    const data = await makeModularRequest('api/v1/personalized-feed', 'POST', {}, {
       interests: filterRequest.interests || [],
       content_types: filterRequest.content_types || [],
       publishers: filterRequest.publishers || [],
@@ -744,30 +884,37 @@ export const apiService = {
       search_query: filterRequest.search_query || '',
       limit: filterRequest.limit || 50
     }, headers, true);
-  },
+    
+    // Map Supabase images for articles in grouped content
+    if (data.grouped_content && Array.isArray(data.grouped_content)) {
+      for (const group of data.grouped_content) {
+        if (group.items && Array.isArray(group.items)) {
+          group.items = await mapArticleImagesAsync(group.items);
+        }
+      }
+    }
+    
+    return data;
+  }
 
-  // Get available interests/topics
-  getAvailableInterests: async (): Promise<{ categories: any[]; count: number }> => {
+  async getAvailableInterests(): Promise<{ categories: any[]; count: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     return await makeModularRequest('ai-topics', 'GET', {}, null, headers);
-  },
+  }
 
-  // Get available publishers  
-  getAvailablePublishers: async (): Promise<{ publishers: Array<{id: number; name: string; category_id?: number; priority?: number}>; count: number }> => {
+  async getAvailablePublishers(): Promise<{ publishers: Array<{id: number; name: string; category_id?: number; priority?: number}>; count: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    // Call the actual API endpoint instead of returning empty
     try {
       return await makeModularRequest('api/v1/available-publishers', 'GET', {}, null, headers);
     } catch (error) {
       console.warn('Failed to fetch publishers, using fallback:', error);
       return { publishers: [], count: 0 };
     }
-  },
+  }
 
-  // Get available content types
-  getAvailableContentTypes: async (): Promise<{ content_types: Array<{id: number; name: string; display_name: string; description?: string}>; count: number }> => {
+  async getAvailableContentTypes(): Promise<{ content_types: Array<{id: number; name: string; display_name: string; description?: string}>; count: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
@@ -776,10 +923,9 @@ export const apiService = {
       console.warn('Failed to fetch content types, using fallback:', error);
       return { content_types: [], count: 0 };
     }
-  },
+  }
 
-  // Get available categories for onboarding
-  getAvailableCategories: async (): Promise<{ categories: Array<{id: number; name: string; description?: string; priority?: number}>; count: number }> => {
+  async getAvailableCategories(): Promise<{ categories: Array<{id: number; name: string; description?: string; priority?: number}>; count: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
@@ -788,10 +934,9 @@ export const apiService = {
       console.warn('Failed to fetch categories, using fallback:', error);
       return { categories: [], count: 0 };
     }
-  },
+  }
 
-  // Get publishers for specific category
-  getPublishersByCategory: async (categoryId?: number): Promise<{ publishers: Array<{id: number; name: string; category_id?: number; priority?: number}>; count: number }> => {
+  async getPublishersByCategory(categoryId?: number): Promise<{ publishers: Array<{id: number; name: string; category_id?: number; priority?: number}>; count: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
@@ -801,10 +946,9 @@ export const apiService = {
       console.warn('Failed to fetch publishers by category, using fallback:', error);
       return { publishers: [], count: 0 };
     }
-  },
+  }
 
-  // Update user preferences (enhanced)
-  updateUserPreferences: async (preferences: any): Promise<any> => {
+  async updateUserPreferences(preferences: any): Promise<any> {
     const token = localStorage.getItem('authToken');
     if (!token) {
       throw new Error('Authentication required for updating preferences');
@@ -815,10 +959,9 @@ export const apiService = {
     };
     
     return await makeModularRequest('api/v2/auth/preferences', 'PUT', {}, preferences, headers);
-  },
+  }
 
-  // Content counts endpoint
-  getContentCounts: async (categoryId?: string, timeFilter: string = 'All Time'): Promise<any> => {
+  async getContentCounts(categoryId: string = 'all', timeFilter: string = 'all'): Promise<any> {
     debug.enter('getContentCounts', { categoryId, timeFilter });
     
     const params: any = {};
@@ -839,7 +982,6 @@ export const apiService = {
       return response;
     } catch (error) {
       debug.error('getContentCounts', error);
-      // Return fallback data on error
       return {
         total_blogs: 0,
         total_podcasts: 0,
@@ -847,8 +989,163 @@ export const apiService = {
         by_category: {}
       };
     }
-  },
-};
+  }
+
+  // ===============================
+  // BOOKMARKS & INTERACTIONS
+  // ===============================
+
+  async getBookmarks(): Promise<{ articles: Article[] }> {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    try {
+      const response = await makeModularRequest('bookmarks', 'GET', {}, null, headers);
+      
+      // Map Supabase images for bookmarked articles
+      if (response.articles && Array.isArray(response.articles)) {
+        response.articles = await mapArticleImagesAsync(response.articles);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch bookmarks:', error);
+      return { articles: [] };
+    }
+  }
+
+  async bookmarkArticle(articleId: string): Promise<void> {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    try {
+      await makeModularRequest(`bookmarks/${articleId}`, 'POST', {}, null, headers);
+    } catch (error) {
+      console.error('Failed to bookmark article:', error);
+      throw error;
+    }
+  }
+
+  async removeBookmark(articleId: string): Promise<void> {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    try {
+      await makeModularRequest(`bookmarks/${articleId}`, 'DELETE', {}, null, headers);
+    } catch (error) {
+      console.error('Failed to remove bookmark:', error);
+      throw error;
+    }
+  }
+
+  async trackInteraction(articleId: string, interactionType: string): Promise<void> {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    try {
+      await makeModularRequest('interactions', 'POST', {}, {
+        article_id: articleId,
+        interaction_type: interactionType
+      }, headers);
+    } catch (error) {
+      console.error('Failed to track interaction:', error);
+      throw error;
+    }
+  }
+
+  async createInteraction(data: { article_id: number | string; interaction_type: string }): Promise<void> {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    try {
+      await makeModularRequest('interactions', 'POST', {}, data, headers);
+    } catch (error) {
+      console.error('Failed to create interaction:', error);
+      throw error;
+    }
+  }
+
+  async removeInteraction(articleId: number | string, interactionType: string): Promise<void> {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    try {
+      await makeModularRequest(`interactions/${articleId}/${interactionType}`, 'DELETE', {}, null, headers);
+    } catch (error) {
+      console.error('Failed to remove interaction:', error);
+      throw error;
+    }
+  }
+
+  async getSwipeableFeed(params: {
+    category?: string;
+    content_type?: string;
+    time_filter?: string;
+    limit?: number;
+    offset?: number;
+    page?: number;
+    feed_type?: string;  // ✅ ADD THIS
+    exclude_viewed?: boolean;  // ✅ ADD THIS
+  }): Promise<{ articles: Article[]; has_more: boolean; total: number }> {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    try {
+      const response = await makeModularRequest('feed/swipeable', 'GET', params, null, headers, true);
+      
+      // Map Supabase images for articles
+      if (response.articles && Array.isArray(response.articles)) {
+        response.articles = await mapArticleImagesAsync(response.articles);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch swipeable feed:', error);
+      return { articles: [], has_more: false, total: 0 };
+    }
+  }
+
+  async getPaginatedContent(params: {
+    category?: string;
+    content_type?: string;
+    time_filter?: string;
+    limit?: number;
+    offset?: number;
+    page?: number;
+    page_size?: number;  // ✅ ADD THIS
+    sort_by?: string;  // ✅ ADD THIS
+    sort_order?: string;  // ✅ ADD THIS
+  }): Promise<{ 
+    success?: boolean;  // ✅ ADD THIS
+    articles: Article[]; 
+    items?: Article[];  // ✅ ADD THIS
+    meta?: any;  // ✅ ADD THIS
+    has_more: boolean; 
+    total: number;
+  }> {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    try {
+      const response = await makeModularRequest('content/paginated', 'GET', params, null, headers, true);
+      
+      // Map Supabase images for articles
+      if (response.articles && Array.isArray(response.articles)) {
+        response.articles = await mapArticleImagesAsync(response.articles);
+      }
+      if (response.items && Array.isArray(response.items)) {
+        response.items = await mapArticleImagesAsync(response.items);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch paginated content:', error);
+      return { articles: [], has_more: false, total: 0 };
+    }
+  }
+}
+
+export const apiService = new ApiService();
 
 console.log('✅ API Service initialized with complete modular FastAPI architecture');
 console.log('🔗 All endpoints now use direct modular FastAPI routing with APIRouter');

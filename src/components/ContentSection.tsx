@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Headphones, Play } from 'lucide-react';
-import type { Article } from '../services/api';
+import type { Article } from '../types/article';
 import ArticleCard from './cards/ArticleCard';
 
 interface ContentSectionProps {
