@@ -1616,27 +1616,10 @@ const MobileDashboard: React.FC = () => {
     </div>
   );
 
-  const TabletDashboardScreen = () => (
-    <div className="flex flex-col h-full">
-      <header className="bg-white border-b border-gray-200 p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-900">Your Feed</h1>
-            <p className="text-gray-500 mt-1">Personalized content for {userProfile.aiExposure} level</p>
-          </div>
-          <select 
-            value={userProfile.timeFilter}
-            onChange={(e) => updateProfile('timeFilter', e.target.value)}
-            className="border border-gray-300 rounded-lg p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500"
-          >
-            <option value="Last 24 hours">24 Hours</option>
-            <option value="Last Week">Last Week</option>
-            <option value="Last Month">Last Month</option>
-            <option value="Last Year">Last Year</option>
-            <option value="All Time">All Time</option>
-          </select>
-        </div>
-        
+  // Tablet Dashboard and Settings screens (reuse web versions)
+  const TabletDashboardScreen = () => <WebDashboardScreen />;
+  const TabletSettingsScreen = () => <WebSettingsScreen />;
+
   return (
     <div className="min-h-screen">
       <WebLayout />
