@@ -1,8 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Search, X, Settings, LogOut, BookmarkIcon, User, Home, Bell } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import '../styles/header.css';
+import {
+  AppBar,
+  Toolbar,
+  IconButton,
+  Typography,
+  Box,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Avatar,
+  Divider,
+  Paper,
+  TextField,
+  InputAdornment,
+  Collapse,
+  Badge,
+  Stack,
+  Chip
+} from '@mui/material';
+import {
+  Menu as MenuIcon,
+  Close as CloseIcon,
+  Search as SearchIcon,
+  Home as HomeIcon,
+  Bookmark as BookmarkIcon,
+  Settings as SettingsIcon,
+  Person as PersonIcon,
+  Notifications as NotificationsIcon,
+  Logout as LogoutIcon
+} from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
@@ -23,15 +54,6 @@ const Header: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
-    if (isMenuOpen) {
-      document.body.classList.add('menu-open');
-    } else {
-      document.body.classList.remove('menu-open');
-    }
-    return () => document.body.classList.remove('menu-open');
-  }, [isMenuOpen]);
-
   const handleLogout = async () => {
     setIsMenuOpen(false);
     await logout();
@@ -48,233 +70,306 @@ const Header: React.FC = () => {
 
   const menuItems = [
     {
-      icon: Home,
+      icon: HomeIcon,
       label: 'Dashboard',
       path: '/dashboard',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
+      color: 'primary.main'
     },
     {
       icon: BookmarkIcon,
       label: 'My Categories',
       path: '/categories',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
+      color: 'secondary.main'
     },
     {
-      icon: Settings,
+      icon: SettingsIcon,
       label: 'Preferences',
       path: '/preferences',
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-50'
+      color: 'info.main'
     },
     {
-      icon: User,
+      icon: PersonIcon,
       label: 'Profile',
       path: '/profile',
-      color: 'text-green-600',
-      bgColor: 'bg-green-50'
+      color: 'success.main'
     },
     {
-      icon: Bell,
+      icon: NotificationsIcon,
       label: 'Notifications',
       path: '/notifications',
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50'
+      color: 'warning.main'
     }
   ];
 
   return (
     <>
-      {/* Header */}
-      <header 
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled 
-            ? 'bg-white/95 backdrop-blur-md shadow-lg' 
-            : 'bg-white shadow-sm'
-        }`}
+      {/* App Bar */}
+      <AppBar
+        position="fixed"
+        elevation={scrolled ? 4 : 1}
+        sx={{
+          backgroundColor: scrolled ? 'background.paper' : 'background.paper',
+          backdropFilter: scrolled ? 'blur(10px)' : 'none',
+          transition: 'all 0.3s'
+        }}
       >
-        <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
-          {/* Left: Hamburger Menu */}
-          <button
+        <Toolbar>
+          {/* Menu Button */}
+          <IconButton
+            edge="start"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="p-2 rounded-xl hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 transition-all duration-300 group"
-            aria-label="Menu"
+            sx={{ mr: 2 }}
           >
-            {isMenuOpen ? (
-              <X size={24} className="text-gray-700" />
-            ) : (
-              <Menu size={24} className="text-gray-700 group-hover:text-blue-600 transition-colors" />
-            )}
-          </button>
+            {isMenuOpen ? <CloseIcon /> : <MenuIcon />}
+          </IconButton>
 
-          {/* Center: Logo/Brand */}
-          <div 
-            className="flex-1 text-center cursor-pointer"
+          {/* Logo */}
+          <Box 
+            sx={{ 
+              flexGrow: 1, 
+              textAlign: 'center',
+              cursor: 'pointer'
+            }}
             onClick={() => navigate('/dashboard')}
           >
-            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
+            <Typography
+              variant="h6"
+              sx={{
+                background: 'linear-gradient(90deg, #2563eb, #7c3aed, #ec4899)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontWeight: 'bold'
+              }}
+            >
               ✨ AI News Hub
-            </h1>
-          </div>
+            </Typography>
+          </Box>
 
-          {/* Right: Search Icon */}
-          <button
+          {/* Search Button */}
+          <IconButton
+            edge="end"
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="p-2 rounded-xl hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 transition-all duration-300 group relative"
-            aria-label="Search"
           >
-            <Search size={24} className="text-gray-700 group-hover:text-purple-600 transition-colors" />
-            {!isSearchOpen && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            )}
-          </button>
-        </div>
+            <Badge variant="dot" color="error" invisible={isSearchOpen}>
+              <SearchIcon />
+            </Badge>
+          </IconButton>
+        </Toolbar>
 
-        {/* Search Bar (Expandable) */}
-        {isSearchOpen && (
-          <div className="px-4 pb-4 pt-2 border-t border-gray-100 animate-slideDown">
-            <form onSubmit={handleSearch} className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search AI news, research papers, tutorials..."
-                className="w-full px-4 py-3 pl-12 pr-4 rounded-2xl border-2 border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300 bg-gradient-to-r from-blue-50/30 to-purple-50/30"
-                autoFocus
-              />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500" size={20} />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </form>
-          </div>
-        )}
-      </header>
+        {/* Search Bar Collapse */}
+        <Collapse in={isSearchOpen}>
+          <Box sx={{ px: 2, pb: 2, borderTop: 1, borderColor: 'divider' }}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Search AI news, research papers, tutorials..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch(e);
+                }
+              }}
+              autoFocus
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="primary" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'background.paper'
+                }
+              }}
+            />
+          </Box>
+        </Collapse>
+      </AppBar>
 
-      {/* Menu Overlay */}
-      {isMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fadeIn"
-          onClick={() => setIsMenuOpen(false)}
-        />
-      )}
+      {/* Spacer for fixed AppBar */}
+      <Toolbar />
+      {isSearchOpen && <Box sx={{ height: 60 }} />}
 
-      {/* Slide-out Menu */}
-      <div
-        className={`fixed top-0 left-0 bottom-0 w-80 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 backdrop-blur-xl shadow-2xl z-50 transform transition-transform duration-300 ease-out ${
-          isMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+      {/* Drawer Menu */}
+      <Drawer
+        anchor="left"
+        open={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        PaperProps={{
+          sx: {
+            width: 320,
+            background: 'linear-gradient(180deg, rgba(37, 99, 235, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%)',
+          }
+        }}
       >
-        <div className="flex flex-col h-full">
-          {/* Menu Header */}
-          <div className="relative p-6 pb-8 border-b border-gray-200/50 bg-gradient-to-br from-blue-600 to-purple-600">
-            <button
-              onClick={() => setIsMenuOpen(false)}
-              className="absolute top-4 right-4 p-2 rounded-lg bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-colors"
+        {/* User Profile Section */}
+        <Box
+          sx={{
+            p: 3,
+            background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+            color: 'white'
+          }}
+        >
+          <IconButton
+            onClick={() => setIsMenuOpen(false)}
+            sx={{ 
+              position: 'absolute', 
+              top: 8, 
+              right: 8,
+              color: 'white',
+              backgroundColor: 'rgba(255,255,255,0.2)'
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 2 }}>
+            <Avatar
+              src={user?.profileImage}
+              alt={user?.name}
+              sx={{ 
+                width: 64, 
+                height: 64,
+                border: '4px solid rgba(255,255,255,0.3)',
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                background: 'linear-gradient(135deg, #fbbf24 0%, #ec4899 100%)'
+              }}
             >
-              <X size={20} className="text-white" />
-            </button>
+              {user?.name?.charAt(0).toUpperCase() || 'U'}
+            </Avatar>
+            <Box sx={{ flex: 1, overflow: 'hidden' }}>
+              <Typography variant="subtitle1" fontWeight="bold" noWrap>
+                {user?.name || 'User'}
+              </Typography>
+              <Typography variant="caption" sx={{ opacity: 0.9 }} noWrap>
+                {user?.email}
+              </Typography>
+              <Chip
+                label={user?.subscriptionTier === 'premium' ? '⭐ Premium' : '🆓 Free'}
+                size="small"
+                sx={{
+                  mt: 0.5,
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  fontSize: '0.7rem'
+                }}
+              />
+            </Box>
+          </Stack>
+        </Box>
+
+        {/* Menu Items */}
+        <List sx={{ flex: 1, p: 2 }}>
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
             
-            <div className="flex items-center gap-4 mt-2">
-              {user?.profileImage ? (
-                <img
-                  src={user.profileImage}
-                  alt={user.name}
-                  className="w-16 h-16 rounded-full border-4 border-white/30 shadow-lg"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-pink-600 flex items-center justify-center text-white font-bold text-2xl border-4 border-white/30 shadow-lg">
-                  {user?.name?.charAt(0).toUpperCase() || 'U'}
-                </div>
-              )}
-              <div className="flex-1">
-                <p className="font-bold text-white text-lg">{user?.name || 'User'}</p>
-                <p className="text-sm text-white/80 truncate">{user?.email}</p>
-                <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm">
-                  <span className="text-xs font-medium text-white">
-                    {user?.subscriptionTier === 'premium' ? '⭐ Premium' : '🆓 Free'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Menu Items */}
-          <nav className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-2">
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                
-                return (
-                  <button
-                    key={item.path}
-                    onClick={() => {
-                      navigate(item.path);
-                      setIsMenuOpen(false);
+            return (
+              <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+                <ListItemButton
+                  onClick={() => {
+                    navigate(item.path);
+                    setIsMenuOpen(false);
+                  }}
+                  selected={isActive}
+                  sx={{
+                    borderRadius: 2,
+                    '&.Mui-selected': {
+                      background: 'linear-gradient(90deg, #2563eb, #7c3aed)',
+                      color: 'white',
+                      '&:hover': {
+                        background: 'linear-gradient(90deg, #1e40af, #6d28d9)',
+                      }
+                    },
+                    '&:hover': {
+                      backgroundColor: 'rgba(37, 99, 235, 0.08)'
+                    }
+                  }}
+                >
+                  <ListItemIcon>
+                    <Icon sx={{ color: isActive ? 'white' : item.color }} />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.label}
+                    primaryTypographyProps={{
+                      fontWeight: isActive ? 600 : 400
                     }}
-                    className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 text-left group ${
-                      isActive
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg transform scale-105'
-                        : 'hover:bg-white/60 hover:shadow-md hover:transform hover:scale-105'
-                    }`}
-                  >
-                    <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : item.bgColor} transition-colors`}>
-                      <Icon 
-                        size={20} 
-                        className={isActive ? 'text-white' : item.color}
-                      />
-                    </div>
-                    <span className={`font-medium ${isActive ? 'text-white' : 'text-gray-900'}`}>
-                      {item.label}
-                    </span>
-                    {isActive && (
-                      <div className="ml-auto w-2 h-2 rounded-full bg-white animate-pulse" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
+        </List>
 
-            {/* Stats Section */}
-            <div className="mt-6 p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-purple-50 border border-purple-100">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Your Activity</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Articles Read</span>
-                  <span className="text-sm font-bold text-blue-600">127</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Bookmarks</span>
-                  <span className="text-sm font-bold text-purple-600">34</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Streak</span>
-                  <span className="text-sm font-bold text-green-600">🔥 7 days</span>
-                </div>
-              </div>
-            </div>
-          </nav>
+        {/* Stats Section */}
+        <Paper sx={{ m: 2, p: 2, backgroundColor: 'background.paper' }}>
+          <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+            Your Activity
+          </Typography>
+          <Stack spacing={1}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="caption" color="text.secondary">
+                Articles Read
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" color="primary">
+                127
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="caption" color="text.secondary">
+                Bookmarks
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" color="secondary">
+                34
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="caption" color="text.secondary">
+                Streak
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" color="success.main">
+                🔥 7 days
+              </Typography>
+            </Box>
+          </Stack>
+        </Paper>
 
-          {/* Menu Footer */}
-          <div className="p-4 border-t border-gray-200/50 bg-white/50 backdrop-blur-sm">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 transition-all duration-300 text-white font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              <LogOut size={20} />
-              <span>Sign Out</span>
-            </button>
-          </div>
-        </div>
-      </div>
+        <Divider />
+
+        {/* Logout Button */}
+        <Box sx={{ p: 2 }}>
+          <ListItemButton
+            onClick={handleLogout}
+            sx={{
+              borderRadius: 2,
+              background: 'linear-gradient(90deg, #ef4444, #ec4899)',
+              color: 'white',
+              '&:hover': {
+                background: 'linear-gradient(90deg, #dc2626, #db2777)',
+              }
+            }}
+          >
+            <ListItemIcon>
+              <LogoutIcon sx={{ color: 'white' }} />
+            </ListItemIcon>
+            <ListItemText primary="Sign Out" />
+          </ListItemButton>
+        </Box>
+      </Drawer>
     </>
   );
 };

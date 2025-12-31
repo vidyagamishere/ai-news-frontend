@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Loading from '../components/Loading';
 import CompleteMobileDashboard from '../components/CompleteMobileDashboard';
+import NewDashboard from '../newcomponents/Dashboard';
 
 const Dashboard: React.FC = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -57,7 +58,7 @@ const Dashboard: React.FC = () => {
   }
 
   // Main dashboard - use the complete mobile dashboard component
-  return <CompleteMobileDashboard />;
+  return <NewDashboard />;
 };
 
 export default Dashboard;

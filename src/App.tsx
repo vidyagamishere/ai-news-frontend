@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AdminAuthProvider } from './contexts/AdminAuthContext';
 import Home from './pages/Home';
@@ -19,9 +21,13 @@ import Admin from './pages/Admin';
 import AdminLogin from './pages/AdminLogin';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import Loading from './components/Loading';
+import AuthenticatedLayout from './layouts/AuthenticatedLayout';
+import PublicLayout from './layouts/PublicLayout';
+import theme from './theme/theme';
 import './App.css';
 import './pages/legal.css';
 import './pages/about.css';
+import NewDashboard from './newcomponents/Dashboard';
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -66,7 +72,7 @@ const AuthRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Loading message="Loading..." />;
   }
   
-  if (isAuthenticated) {
+  if (!isAuthenticated) {
     // Debug: Log admin check in ProtectedRoute
     console.log('🔍 ProtectedRoute Admin Check:', {
       isAuthenticated,
@@ -126,100 +132,53 @@ const LandingRoute: React.FC = () => {
 function AppContent() {
   return (
     <Routes>
-      <Route 
-        path="/" 
-        element={<LandingRoute />} 
-      />
-      <Route 
-        path="/home" 
-        element={<Home />} 
-      />
-      {/* Removed direct mobile route to prevent duplicate instances */}
-      <Route 
-        path="/auth" 
-        element={
-          <AuthRoute>
-            <Auth />
-          </AuthRoute>
-        } 
-      />
-      <Route 
-        path="/old-landing" 
-        element={<Landing />} 
-      />
-      <Route 
-        path="/signin" 
-        element={<Navigate to="/auth" replace />}
-      />
-      <Route 
-        path="/signup" 
-        element={<Navigate to="/auth" replace />}
-      />
-      <Route 
-        path="/verify-email" 
-        element={<EmailVerification />}
-      />
-      <Route 
-        path="/verify-otp" 
-        element={<OTPVerification />}
-      />
-      <Route 
-        path="/onboarding" 
-        element={<Onboarding />}
-      />
-      <Route 
-        path="/preferences" 
-        element={
-          <ProtectedRoute>
-            <Preferences />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/dashboard" 
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/archive" 
-        element={
-          <ProtectedRoute>
-            <Archive />
-          </ProtectedRoute>
-        } 
-      />
-      <Route path="/terms" element={<Terms />} />
-      <Route path="/privacy" element={<Privacy />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/admin/login" element={<AdminLogin />} />
-      <Route 
-        path="/admin" 
-        element={
-          <ProtectedAdminRoute>
-            <Admin />
-          </ProtectedAdminRoute>
-        } 
-      />
+      {/* Public Routes - No Header/SideNav/Footer */}
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<LandingRoute />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/old-landing" element={<Landing />} />
+        <Route path="/signin" element={<Navigate to="/auth" replace />} />
+        <Route path="/signup" element={<Navigate to="/auth" replace />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
+        <Route path="/verify-otp" element={<OTPVerification />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+      </Route>
+
+      {/* Authenticated Routes - With Header/SideNav/Footer */}
+      <Route element={<AuthenticatedLayout />}>
+        <Route path="/preferences" element={<ProtectedRoute><Preferences /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<NewDashboard />} />
+        <Route path="/archive" element={<ProtectedRoute><Archive /></ProtectedRoute>} />
+        <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
+      </Route>
+
+      {/* Admin Route - Separate from layouts */}
+      <Route path="/admin" element={<ProtectedAdminRoute><Admin /></ProtectedAdminRoute>} />
+
+      {/* Catch-all redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
-          <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
-          <Route path="/preferences" element={<ProtectedRoute><Preferences /></ProtectedRoute>} />
     </Routes>
   );
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <AdminAuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </AdminAuthProvider>
-    </AuthProvider>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AuthProvider>
+        <AdminAuthProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </AdminAuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
-export default App;
+export default App;AppContent

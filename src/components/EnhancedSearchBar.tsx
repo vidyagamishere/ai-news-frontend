@@ -1,5 +1,27 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, TrendingUp, Clock, Sparkles, X } from 'lucide-react';
+import {
+  Box,
+  TextField,
+  InputAdornment,
+  IconButton,
+  Paper,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  CircularProgress,
+  Typography,
+  Divider,
+  useTheme,
+  alpha
+} from '@mui/material';
+import {
+  Search as SearchIcon,
+  TrendingUp,
+  Clear as ClearIcon,
+  AutoAwesome as SparklesIcon
+} from '@mui/icons-material';
 import { apiService } from '../services/api';
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
 
@@ -45,6 +67,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   className = "",
   showSuggestions = true
 }) => {
+  const theme = useTheme();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [searchQuestions, setSearchQuestions] = useState<SearchQuestion[]>([]);
@@ -263,9 +286,9 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   // Get icon for question type
   const getQuestionTypeIcon = (type: string) => {
     switch (type) {
-      case 'trending': return <TrendingUp className="w-3.5 h-3.5" />;
-      case 'featured': return <Sparkles className="w-3.5 h-3.5" />;
-      default: return <Search className="w-3.5 h-3.5" />;
+      case 'trending': return <TrendingUp sx={{ fontSize: 18 }} />;
+      case 'featured': return <SparklesIcon sx={{ fontSize: 18 }} />;
+      default: return <SearchIcon sx={{ fontSize: 18 }} />;
     }
   };
 
@@ -275,86 +298,121 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   };
 
   return (
-    <div ref={searchRef} className={`relative w-full ${className}`}>
-      {/* Search Input - Minimalistic Black & White */}
-      <form onSubmit={handleSubmit} className="relative w-full">
-        <div
-          className={`
-            flex items-center gap-2 px-3 md:px-4 py-2 md:py-2 bg-white rounded-lg
-            border border-gray-300
-            transition-all duration-200
-            focus-within:ring-2 focus-within:ring-gray-900 focus-within:border-transparent
-          `}
-        >
-          <Search className="w-4 md:w-5 h-4 md:h-5 text-gray-600 flex-shrink-0" />
-          
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => handleInputChange(e.target.value)}
-            onFocus={() => {
-              setIsFocused(true);
-              setShowDropdown(true);
-            }}
-            placeholder={placeholder}
-            className="flex-1 w-full text-gray-900 placeholder-gray-500 text-sm overflow-hidden text-ellipsis"
-            style={{ 
-              minWidth: 0, 
-              border: 'none', 
-              outline: 'none', 
-              background: 'transparent',
-              boxShadow: 'none',
-              WebkitAppearance: 'none',
-              MozAppearance: 'none',
-            }}
-          />
-
-          {query && (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
-            >
-              <X className="w-4 h-4 text-gray-600" />
-            </button>
-          )}
-
-          {loading && (
-            <div className="w-4 md:w-5 h-4 md:h-5 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
-          )}
-        </div>
+    <Box ref={searchRef} sx={{ position: 'relative', width: '100%' }} className={className}>
+      {/* Search Input */}
+      <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+        <TextField
+          inputRef={inputRef}
+          fullWidth
+          value={query}
+          onChange={(e) => handleInputChange(e.target.value)}
+          onFocus={() => {
+            setIsFocused(true);
+            setShowDropdown(true);
+          }}
+          placeholder=""
+          variant="outlined"
+          size="small"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                {loading && <CircularProgress size={20} />}
+                {query && !loading && (
+                  <IconButton
+                    size="small"
+                    onClick={handleClear}
+                    edge="end"
+                  >
+                    <ClearIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                )}
+              </InputAdornment>
+            ),
+            sx: {
+              bgcolor: 'background.paper',
+              borderRadius: 8,
+              '& fieldset': {
+                borderColor: 'divider',
+                borderRadius: 8
+              },
+              '&:hover fieldset': {
+                borderColor: 'text.secondary'
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: 'primary.main'
+              }
+            }
+          }}
+          sx={{
+            '& .MuiInputBase-input': {
+              fontSize: '0.875rem',
+              py: 0.75
+            }
+          }}
+        />
       </form>
 
-      {/* Dropdown with Suggestions - UNCHANGED */}
+      {/* Dropdown with Suggestions */}
       {showDropdown && isFocused && showSuggestions && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl z-50 max-h-[500px] overflow-y-auto w-full" style={{ border: '1px solid #e5e7eb' }}>
+        <Paper
+          elevation={8}
+          sx={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            mt: 1,
+            borderRadius: 2,
+            zIndex: 1300,
+            maxHeight: '500px',
+            overflowY: 'auto',
+            width: '100%'
+          }}
+        >
 
           {/* Autocomplete Suggestions (when typing) */}
           {autocompleteSuggestions.length > 0 && (
-            <div className="py-2">
+            <List sx={{ py: 1 }}>
               {autocompleteSuggestions.map((suggestion, index) => (
-                <div
+                <ListItemButton
                   key={index}
                   onClick={() => handleSuggestionClick(suggestion)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 transition-colors cursor-pointer select-none"
+                  sx={{
+                    py: 1.5,
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.action.hover, 0.08)
+                    }
+                  }}
                 >
-                  <Search className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-gray-800 truncate">{suggestion.text}</div>
-                    {suggestion.category && (
-                      <div className="text-xs text-gray-500 truncate">{suggestion.category}</div>
-                    )}
-                  </div>
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={suggestion.text}
+                    secondary={suggestion.category}
+                    primaryTypographyProps={{
+                      variant: 'body2',
+                      sx: { color: 'text.primary' }
+                    }}
+                    secondaryTypographyProps={{
+                      variant: 'caption',
+                      sx: { color: 'text.secondary' }
+                    }}
+                  />
                   {suggestion.type === 'trending' && (
-                    <TrendingUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                    <TrendingUp sx={{ fontSize: 16, color: 'text.disabled', ml: 1 }} />
                   )}
-                </div>
+                </ListItemButton>
               ))}
-            </div>
+            </List>
           )}
 
-          {/* Curated Search Questions (when empty or focused) - YouTube Style Clean */}
+          {/* Curated Search Questions (when empty or focused) */}
           {autocompleteSuggestions.length === 0 && searchQuestions.length > 0 && (() => {
             // Filter questions based on current query
             const filteredQuestions = query.length >= 2
@@ -367,53 +425,79 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
             if (filteredQuestions.length === 0) return null;
 
             return (
-            <div className="py-2">
+            <List sx={{ py: 1 }}>
               {filteredQuestions.map((question) => (
-                <div
+                <ListItemButton
                   key={question.id}
                   onClick={() => handleQuestionClick(question)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 transition-colors cursor-pointer select-none"
+                  sx={{
+                    py: 1.5,
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.action.hover, 0.08)
+                    }
+                  }}
                 >
-                  <Search className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                  <div className="flex-1 text-sm text-gray-800 min-w-0 truncate">
-                    {question.question_text}
-                  </div>
-                </div>
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={question.question_text}
+                    primaryTypographyProps={{
+                      variant: 'body2',
+                      sx: { color: 'text.primary' },
+                      noWrap: true
+                    }}
+                  />
+                </ListItemButton>
               ))}
-            </div>
+            </List>
             );
           })()}
 
-          {/* Trending Searches - YouTube Style Clean */}
+          {/* Trending Searches */}
           {autocompleteSuggestions.length === 0 && trendingSearches.length > 0 && (
-            <div className="py-1">
+            <List sx={{ py: 1 }}>
               {trendingSearches.slice(0, 5).map((trending, index) => (
-                <div
+                <ListItemButton
                   key={index}
                   onClick={() => handleTrendingClick(trending)}
-                  className="w-full flex items-center gap-3 px-4 py-1.5 hover:bg-gray-100 transition-colors cursor-pointer select-none"
+                  sx={{
+                    py: 1,
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.action.hover, 0.08)
+                    }
+                  }}
                 >
-                  <TrendingUp className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                  <div className="flex-1 text-sm text-gray-800 min-w-0 truncate">
-                    {trending.term}
-                  </div>
-                </div>
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    <TrendingUp sx={{ fontSize: 18, color: 'text.secondary' }} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={trending.term}
+                    primaryTypographyProps={{
+                      variant: 'body2',
+                      sx: { color: 'text.primary' },
+                      noWrap: true
+                    }}
+                  />
+                </ListItemButton>
               ))}
-            </div>
+            </List>
           )}
 
           {/* Empty State */}
           {autocompleteSuggestions.length === 0 &&
            searchQuestions.length === 0 &&
            trendingSearches.length === 0 && (
-            <div className="p-8 text-center text-gray-400 bg-white">
-              <Search className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p className="text-sm">Start typing to search...</p>
-            </div>
+            <Box sx={{ p: 6, textAlign: 'center' }}>
+              <SearchIcon sx={{ fontSize: 48, color: 'action.disabled', mb: 2, opacity: 0.2 }} />
+              <Typography variant="body2" color="text.secondary">
+                Start typing to search...
+              </Typography>
+            </Box>
           )}
-        </div>
+        </Paper>
       )}
-    </div>
+    </Box>
   );
 };
 

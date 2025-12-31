@@ -1,235 +1,136 @@
 import React from 'react';
-import '../styles/design-tokens.css';
-import '../styles/components.css';
+import {
+  Box,
+  Skeleton,
+  Stack,
+  Typography
+} from '@mui/material';
 
-interface LoadingSkeletonProps {
-  variant?: 'article-card' | 'text' | 'title' | 'paragraph' | 'avatar' | 'button';
-  count?: number;
-  height?: string;
-  width?: string;
-  className?: string;
-}
+// Horizontal Article Card Skeleton matching HorizontalArticleCard layout
+export const HorizontalArticleCardSkeleton: React.FC = () => (
+  <Box
+    sx={{
+      display: 'flex',
+      py: 2,
+      gap: 2
+    }}
+  >
+    {/* Content on left */}
+    <Box sx={{ flex: 1 }}>
+      {/* Publisher/Source */}
+      <Skeleton variant="text" width="30%" height={16} sx={{ mb: 1 }} />
+      
+      {/* Title */}
+      <Skeleton variant="text" width="90%" height={28} sx={{ mb: 0.5 }} />
+      <Skeleton variant="text" width="70%" height={28} sx={{ mb: 1 }} />
+      
+      {/* Summary */}
+      <Skeleton variant="text" width="100%" height={20} sx={{ mb: 0.5 }} />
+      <Skeleton variant="text" width="85%" height={20} sx={{ mb: 2 }} />
+      
+      {/* Metadata */}
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <Skeleton variant="text" width={80} height={20} />
+        <Skeleton variant="circular" width={4} height={4} />
+        <Skeleton variant="rounded" width={80} height={24} />
+      </Box>
+    </Box>
 
-const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
-  variant = 'text',
-  count = 1,
-  height,
-  width,
-  className = ''
-}) => {
-  const renderSkeleton = () => {
-    switch (variant) {
-      case 'article-card':
-        return (
-          <div className={`skeleton skeleton-card ${className}`}>
-            <div className="p-6 space-y-4">
-              {/* Article tag */}
-              <div className="skeleton" style={{ width: '80px', height: '24px', borderRadius: '12px' }}></div>
-              
-              {/* Article title */}
-              <div className="space-y-2">
-                <div className="skeleton skeleton-title"></div>
-                <div className="skeleton" style={{ width: '60%', height: '1.5em' }}></div>
-              </div>
-              
-              {/* Article summary */}
-              <div className="space-y-2">
-                <div className="skeleton skeleton-paragraph"></div>
-                <div className="skeleton skeleton-paragraph"></div>
-                <div className="skeleton skeleton-paragraph"></div>
-              </div>
-              
-              {/* Meta information */}
-              <div className="flex justify-between items-center mt-4">
-                <div className="skeleton" style={{ width: '120px', height: '1em' }}></div>
-                <div className="skeleton" style={{ width: '60px', height: '1em' }}></div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'title':
-        return (
-          <div 
-            className={`skeleton skeleton-title ${className}`}
-            style={{ 
-              height: height || '1.5em',
-              width: width || '80%'
-            }}
-          ></div>
-        );
-
-      case 'paragraph':
-        return (
-          <div className="space-y-2">
-            {Array.from({ length: count }).map((_, index) => (
-              <div 
-                key={index}
-                className={`skeleton skeleton-paragraph ${className}`}
-                style={{ 
-                  height: height || '1em',
-                  width: index === count - 1 ? '75%' : '100%'
-                }}
-              ></div>
-            ))}
-          </div>
-        );
-
-      case 'avatar':
-        return (
-          <div 
-            className={`skeleton ${className}`}
-            style={{ 
-              height: height || '40px',
-              width: width || '40px',
-              borderRadius: '50%'
-            }}
-          ></div>
-        );
-
-      case 'button':
-        return (
-          <div 
-            className={`skeleton ${className}`}
-            style={{ 
-              height: height || '40px',
-              width: width || '120px',
-              borderRadius: '8px'
-            }}
-          ></div>
-        );
-
-      case 'text':
-      default:
-        return (
-          <div 
-            className={`skeleton skeleton-text ${className}`}
-            style={{ 
-              height: height || '1em',
-              width: width || '100%'
-            }}
-          ></div>
-        );
-    }
-  };
-
-  if (variant === 'article-card' || variant === 'paragraph') {
-    return <>{renderSkeleton()}</>;
-  }
-
-  return (
-    <>
-      {Array.from({ length: count }).map((_, index) => (
-        <React.Fragment key={index}>
-          {renderSkeleton()}
-        </React.Fragment>
-      ))}
-    </>
-  );
-};
-
-// Pre-built skeleton layouts for common use cases
-export const ArticleCardSkeleton: React.FC<{ count?: number; className?: string }> = ({ 
-  count = 1, 
-  className = '' 
-}) => (
-  <>
-    {Array.from({ length: count }).map((_, index) => (
-      <LoadingSkeleton 
-        key={index}
-        variant="article-card" 
-        className={className}
-      />
-    ))}
-  </>
+    {/* Thumbnail on right */}
+    <Skeleton
+      variant="rounded"
+      width={100}
+      height={100}
+      sx={{
+        flexShrink: 0,
+        borderRadius: 1
+      }}
+    />
+  </Box>
 );
 
-export const DashboardSkeleton: React.FC = () => (
-  <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-    {/* Header skeleton */}
-    <div className="space-y-4">
-      <LoadingSkeleton variant="title" width="40%" />
-      <LoadingSkeleton variant="paragraph" count={2} />
-    </div>
+// Container with header and multiple horizontal cards
+export const ArticleListSkeleton: React.FC<{ count?: number; showHeader?: boolean }> = ({ 
+  count = 5,
+  showHeader = true 
+}) => (
+  <Box>
+    {/* Header */}
+    {showHeader && (
+      <Box sx={{ mb: 4 }}>
+        <Skeleton variant="text" width="40%" height={48} sx={{ mb: 1 }} />
+        <Skeleton variant="text" width="25%" height={24} />
+      </Box>
+    )}
 
-    {/* Filter chips skeleton */}
-    <div className="flex gap-3 flex-wrap">
-      {Array.from({ length: 6 }).map((_, index) => (
-        <LoadingSkeleton 
-          key={index}
-          variant="button" 
-          width="80px" 
-          height="32px"
-        />
-      ))}
-    </div>
+    {/* Content with dividers */}
+    <Box sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
+      <Stack spacing={0} divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}>
+        {Array.from({ length: count }).map((_, i) => (
+          <HorizontalArticleCardSkeleton key={i} />
+        ))}
+      </Stack>
+    </Box>
+  </Box>
+);
 
-    {/* Article grid skeleton */}
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <ArticleCardSkeleton count={6} />
-    </div>
-  </div>
+// Legacy vertical card skeleton (kept for backward compatibility)
+export const ArticleCardSkeleton: React.FC = () => (
+  <Box
+    sx={{
+      border: 1,
+      borderColor: 'divider',
+      borderRadius: 2,
+      overflow: 'hidden'
+    }}
+  >
+    <Skeleton variant="rectangular" height={200} />
+    <Box sx={{ p: 2 }}>
+      <Stack spacing={1}>
+        <Skeleton variant="text" width="60%" height={32} />
+        <Skeleton variant="text" width="100%" />
+        <Skeleton variant="text" width="100%" />
+        <Skeleton variant="text" width="80%" />
+        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+          <Skeleton variant="circular" width={24} height={24} />
+          <Skeleton variant="text" width={100} />
+        </Box>
+      </Stack>
+    </Box>
+  </Box>
 );
 
 export const LandingSkeleton: React.FC = () => (
-  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-    {/* Header skeleton */}
-    <div className="bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 p-8">
-      <div className="max-w-7xl mx-auto text-center space-y-4">
-        <LoadingSkeleton variant="title" width="300px" className="mx-auto" />
-        <LoadingSkeleton variant="text" width="200px" className="mx-auto" />
-        <div className="flex justify-center gap-4 mt-6">
-          <LoadingSkeleton variant="button" width="100px" />
-          <LoadingSkeleton variant="button" width="120px" />
-        </div>
-      </div>
-    </div>
-
-    {/* Category navigation skeleton */}
-    <div className="bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 p-4">
-      <div className="max-w-7xl mx-auto flex gap-3 overflow-x-auto">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <LoadingSkeleton 
-            key={index}
-            variant="button" 
-            width="120px" 
-            height="36px"
-          />
-        ))}
-      </div>
-    </div>
-
-    {/* Main content skeleton */}
-    <div className="max-w-7xl mx-auto px-4 py-12 space-y-8">
-      {/* Category header skeleton */}
-      <div className="bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 rounded-3xl p-8 space-y-4">
-        <LoadingSkeleton variant="title" width="60%" />
-        <LoadingSkeleton variant="paragraph" count={2} />
-        <div className="grid grid-cols-3 gap-4 mt-6">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="text-center space-y-2">
-              <LoadingSkeleton variant="title" width="60px" className="mx-auto" />
-              <LoadingSkeleton variant="text" width="80px" className="mx-auto" />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Content sections skeleton */}
-      {Array.from({ length: 3 }).map((_, sectionIndex) => (
-        <div key={sectionIndex} className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4">
-            <LoadingSkeleton variant="title" width="200px" />
-          </div>
-          <div className="p-6">
-            <div className="grid gap-6 md:grid-cols-3">
-              <ArticleCardSkeleton count={3} />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
+  <ArticleListSkeleton count={6} showHeader={true} />
 );
+
+export const DashboardSkeleton: React.FC = () => (
+  <Box sx={{ p: 3 }}>
+    <Stack spacing={3}>
+      {/* Tabs Skeleton */}
+      <Box sx={{ display: 'flex', gap: 2, borderBottom: 1, borderColor: 'divider', pb: 2 }}>
+        <Skeleton variant="text" width={100} height={40} />
+        <Skeleton variant="text" width={100} height={40} />
+        <Skeleton variant="text" width={100} height={40} />
+      </Box>
+
+      {/* Content Skeleton */}
+      <ArticleListSkeleton count={5} showHeader={true} />
+    </Stack>
+  </Box>
+);
+
+export const ContentSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => (
+  <ArticleListSkeleton count={count} showHeader={false} />
+);
+
+const LoadingSkeleton = {
+  ArticleCardSkeleton,
+  HorizontalArticleCardSkeleton,
+  ArticleListSkeleton,
+  LandingSkeleton,
+  DashboardSkeleton,
+  ContentSkeleton
+};
 
 export default LoadingSkeleton;

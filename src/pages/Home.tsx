@@ -1,12 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-// LogIn icon now handled by Header component
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Container,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+  Paper,
+  Stack,
+  Chip,
+  Divider,
+  Alert,
+  Link
+} from '@mui/material';
+import {
+  Rocket as RocketIcon,
+  TrendingUp as TrendingUpIcon,
+  NotificationsActive as NotificationsIcon,
+  BarChart as BarChartIcon,
+  Email as EmailIcon
+} from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, type DigestResponse } from '../services/api';
 import Loading from '../components/Loading';
 import Header from '../components/Header';
 import SEO from '../components/SEO';
-import './Home.css';
 
 const Home: React.FC = () => {
   const [digest, setDigest] = useState<DigestResponse | null>(null);
@@ -16,7 +37,6 @@ const Home: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect authenticated users to dashboard
   useEffect(() => {
     if (isAuthenticated && user) {
       navigate('/dashboard');
@@ -130,315 +150,406 @@ const Home: React.FC = () => {
 
   if (error && !digest) {
     return (
-      <div className="home-page">
-        <div className="error-container">
-          <div className="error-message">
-            <h2>⚠️ Connection Issue</h2>
-            <p>{error}</p>
-            <div className="error-actions">
-              <button 
-                onClick={() => fetchDigest(0)} 
-                className="btn btn-primary"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <span className="loading-spinner"></span>
-                    Retrying...
-                  </>
-                ) : (
-                  'Try Again'
-                )}
-              </button>
-              <button 
-                onClick={() => window.location.reload()} 
-                className="btn btn-ghost"
-              >
-                Refresh Page
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Container maxWidth="md" sx={{ mt: 8 }}>
+        <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h4" gutterBottom>⚠️ Connection Issue</Typography>
+          <Typography variant="body1" color="text.secondary" paragraph>{error}</Typography>
+          <Stack direction="row" spacing={2} justifyContent="center">
+            <Button variant="contained" onClick={() => fetchDigest(0)} disabled={loading}>
+              {loading ? 'Retrying...' : 'Try Again'}
+            </Button>
+            <Button variant="outlined" onClick={() => window.location.reload()}>
+              Refresh Page
+            </Button>
+          </Stack>
+        </Paper>
+      </Container>
     );
   }
 
   return (
-    <div className="home-page">
-      <a href="#main-content" className="skip-link">Skip to main content</a>
+    <Box>
+      {/* Skip to main content link for accessibility */}
+      <Link
+        href="#main-content"
+        sx={{
+          position: 'absolute',
+          left: '-9999px',
+          zIndex: 999,
+          '&:focus': {
+            left: '10px',
+            top: '10px',
+            backgroundColor: 'primary.main',
+            color: 'primary.contrastText',
+            padding: '8px 16px',
+            borderRadius: 1
+          }
+        }}
+      >
+        Skip to main content
+      </Link>
+
       <SEO 
         title="Vidyagam AI News | Gaining Knowledge, Filtered for You"
         description="Stay ahead with the latest AI breakthroughs, research, and industry insights. Personalized AI news curated by advanced neural networks."
         url="/"
       />
       
-      {/* Header - Using consistent Header component */}
       <Header />
 
       {/* Hero Section */}
-      <section className="hero-section" aria-labelledby="hero-heading">
-        <div className="hero-content">
-          <h1 id="hero-heading">Stay Ahead of the AI Revolution</h1>
-          <p>
+      <Box
+        sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          py: { xs: 8, md: 12 },
+          textAlign: 'center'
+        }}
+      >
+        <Container maxWidth="lg" id="main-content">
+          <Typography variant="h2" component="h1" fontWeight="bold" gutterBottom>
+            Stay Ahead of the AI Revolution
+          </Typography>
+          <Typography variant="h6" sx={{ mb: 4, opacity: 0.95 }}>
             Stay ahead of the AI revolution with curated news, insights, and breakthroughs 
             from 50+ top sources. <strong>No signup required to explore.</strong>
-          </p>
+          </Typography>
           
-          <div className="hero-cta">
-            <button 
-              onClick={() => navigateToAuth('signup')}
-              className="cta-primary"
-              aria-describedby="hero-heading"
-            >
-              🚀 Start Your AI Journey
-            </button>
-            <p className="cta-subtitle">Free access • No credit card • Instant setup</p>
-          </div>
-          
-          <div className="hero-stats" role="list" aria-label="Key statistics">
-            <div className="stat" role="listitem">
-              <span className="stat-number" aria-label="Over 50 AI sources">50+</span>
-              <span className="stat-label">AI Sources</span>
-            </div>
-            <div className="stat" role="listitem">
-              <span className="stat-number" aria-label="Daily news updates">Daily</span>
-              <span className="stat-label">Updates</span>
-            </div>
-            <div className="stat" role="listitem">
-              <span className="stat-number" aria-label="Free access to content">Free</span>
-              <span className="stat-label">Access</span>
-            </div>
-          </div>
-        </div>
-      </section>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={() => navigateToAuth('signup')}
+            startIcon={<RocketIcon />}
+            sx={{
+              backgroundColor: 'white',
+              color: 'primary.main',
+              fontSize: '1.1rem',
+              px: 4,
+              py: 1.5,
+              '&:hover': {
+                backgroundColor: 'rgba(255,255,255,0.9)',
+              }
+            }}
+          >
+            Start Your AI Journey
+          </Button>
+          <Typography variant="caption" display="block" sx={{ mt: 2, opacity: 0.9 }}>
+            Free access • No credit card • Instant setup
+          </Typography>
 
-      {/* Content Section */}
-      <main id="main-content" className="home-content">
+          <Grid container spacing={4} sx={{ mt: 4, justifyContent: 'center' }}>
+            <Grid sx={{xs:4, sm: 'auto'}}>
+              <Typography variant="h4" fontWeight="bold">50+</Typography>
+              <Typography variant="body2">AI Sources</Typography>
+            </Grid>
+            <Grid sx={{xs:4, sm: 'auto'}}>
+              <Typography variant="h4" fontWeight="bold">Daily</Typography>
+              <Typography variant="body2">Updates</Typography>
+            </Grid>
+            <Grid sx={{xs:4, sm: 'auto'}}>
+              <Typography variant="h4" fontWeight="bold">Free</Typography>
+              <Typography variant="body2">Access</Typography>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      <Container maxWidth="lg" sx={{ py: 6 }}>
         {digest && (
           <>
-            {/* Breaking Stories - Horizontal scroll bar (3-5 feeds) */}
-            <section className="breaking-stories-section" aria-labelledby="breaking-stories-heading">
-              <div className="section-header">
-                <h2 id="breaking-stories-heading">🚨 Breaking Stories</h2>
-                <p>Latest breaking news from today</p>
-              </div>
-              <div className="breaking-stories-scroll">
-                {digest.topStories?.slice(0, Math.min(5, Math.max(3, digest.topStories?.length || 3))).map((story, index) => (
-                  <div key={index} className="breaking-story-card" onClick={() => window.open(story.url, '_blank')}>
-                    <h3>{story.title}</h3>
-                    <p className="story-summary">{story.summary?.substring(0, 150) || story.content_summary?.substring(0, 150) || 'No summary available'}...</p>
-                    <div className="story-meta">
-                      <span className="source">{story.source}</span>
-                      <span className="significance">Score: {story.significanceScore}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {/* Content Types - Each content type as heading with articles (1-5 per type) */}
-            <section className="content-types-section" aria-labelledby="content-types-heading">
-              <div className="section-header">
-                <h2 id="content-types-heading">📰 Latest AI News by Category</h2>
-                <p>Browse news by content type - each category shows 1-5 latest articles</p>
-              </div>
+            {/* Breaking Stories */}
+            <Box sx={{ mb: 6 }}>
+              <Typography variant="h4" fontWeight="bold" gutterBottom>
+                🚨 Breaking Stories
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Latest breaking news from today
+              </Typography>
               
-              {/* AI News & Updates */}
-              <div className="content-type-section">
-                <h3 className="content-type-heading">🤖 AI News & Updates</h3>
-                <div className="content-type-articles">
-                  {digest.topStories?.slice(0, Math.min(5, Math.max(1, digest.topStories?.length || 1))).map((story, index) => (
-                    <div key={index} className="article-card" onClick={() => window.open(story.url, '_blank')}>
-                      <h4>{story.title}</h4>
-                      <p>{story.summary?.substring(0, 200) || story.content_summary?.substring(0, 200) || 'Latest AI news and developments'}...</p>
-                      <div className="article-meta">
-                        <span className="source">{story.source}</span>
-                        <span className="score">Score: {story.significanceScore}</span>
-                      </div>
-                    </div>
+              <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2 }}>
+                {digest.topStories?.slice(0, 5).map((story, index) => (
+                  <Card
+                    key={index}
+                    sx={{
+                      minWidth: 300,
+                      maxWidth: 400,
+                      cursor: 'pointer',
+                      '&:hover': { transform: 'translateY(-4px)', transition: 'transform 0.3s' }
+                    }}
+                    onClick={() => window.open(story.url, '_blank')}
+                  >
+                    <CardContent>
+                      <Typography variant="h6" fontWeight="bold" gutterBottom>
+                        {story.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {(story.summary || story.content_summary || '').substring(0, 150)}...
+                      </Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="caption" color="text.secondary">
+                          {story.source}
+                        </Typography>
+                        <Chip label={`Score: ${story.significanceScore}`} size="small" color="primary" />
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            </Box>
+
+            {/* Content Types */}
+            <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ mb: 3 }}>
+              📰 Latest AI News by Category
+            </Typography>
+
+            {/* AI News & Updates */}
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h5" fontWeight="bold" gutterBottom>
+                🤖 AI News & Updates
+              </Typography>
+              <Grid container spacing={2}>
+                {digest.topStories?.slice(0, 5).map((story, index) => (
+                  <Grid sx={{xs:12, sm:6, md:4}} key={index}>
+                    <Card
+                      sx={{ height: '100%', cursor: 'pointer' }}
+                      onClick={() => window.open(story.url, '_blank')}
+                    >
+                      <CardContent>
+                        <Typography variant="h6" gutterBottom>
+                          {story.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {(story.summary || story.content_summary || '').substring(0, 150)}...
+                        </Typography>
+                      </CardContent>
+                      <CardActions>
+                        <Chip label={story.source} size="small" />
+                        <Chip label={`Score: ${story.significanceScore}`} size="small" color="primary" />
+                      </CardActions>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+
+            {/* Machine Learning */}
+            {digest.content?.blog && digest.content.blog.length > 0 && (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h5" fontWeight="bold" gutterBottom>
+                  🧠 Machine Learning
+                </Typography>
+                <Grid container spacing={2}>
+                  {digest.content.blog.slice(0, 5).map((story, index) => (
+                    <Grid sx={{xs:12, sm:6, md:4}} key={index}>
+                      <Card
+                        sx={{ height: '100%', cursor: 'pointer' }}
+                        onClick={() => window.open(story.url, '_blank')}
+                      >
+                        <CardContent>
+                          <Typography variant="h6" gutterBottom>
+                            {story.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {(story.summary || story.content_summary || '').substring(0, 150)}...
+                          </Typography>
+                        </CardContent>
+                        <CardActions>
+                          <Chip label={story.source} size="small" />
+                          <Chip label={`Score: ${story.significanceScore}`} size="small" color="primary" />
+                        </CardActions>
+                      </Card>
+                    </Grid>
                   ))}
-                </div>
-              </div>
+                </Grid>
+              </Box>
+            )}
 
-              {/* Machine Learning */}
-              <div className="content-type-section">
-                <h3 className="content-type-heading">🧠 Machine Learning</h3>
-                <div className="content-type-articles">
-                  {digest.content.blog?.slice(0, Math.min(5, Math.max(1, digest.content.blog?.length || 1))).map((item, index) => (
-                    <div key={index} className="article-card" onClick={() => window.open(item.url || '#', '_blank')}>
-                      <h4>{item.title}</h4>
-                      <p>{item.content_summary?.substring(0, 200) || 'Latest machine learning developments and research'}...</p>
-                      <div className="article-meta">
-                        <span className="source">{item.source || 'ML Research'}</span>
-                      </div>
-                    </div>
-                  )) || (
-                    <div className="article-card placeholder">
-                      <h4>Latest Machine Learning Breakthroughs</h4>
-                      <p>Discover cutting-edge ML research, algorithms, and applications...</p>
-                      <div className="article-meta">
-                        <span className="source">ML Research</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+            {/* AI Learning & Education */}
+            {digest.content?.learning && digest.content.learning.length > 0 && (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h5" fontWeight="bold" gutterBottom>
+                  📚 AI Learning & Education
+                </Typography>
+                <Grid container spacing={2}>
+                  {digest.content.learning.slice(0, 5).map((story, index) => (
+                    <Grid sx={{xs:12, sm:6, md:4}} key={index}>
+                      <Card
+                        sx={{ height: '100%', cursor: 'pointer' }}
+                        onClick={() => window.open(story.url, '_blank')}
+                      >
+                        <CardContent>
+                          <Typography variant="h6" gutterBottom>
+                            {story.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {(story.summary || story.content_summary || '').substring(0, 150)}...
+                          </Typography>
+                        </CardContent>
+                        <CardActions>
+                          <Chip label={story.source} size="small" />
+                          <Chip label={`Score: ${story.significanceScore}`} size="small" color="primary" />
+                        </CardActions>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
 
-              {/* AI Learning & Education */}
-              <div className="content-type-section">
-                <h3 className="content-type-heading">📚 AI Learning & Education</h3>
-                <div className="content-type-articles">
-                  {digest.content.learning?.slice(0, Math.min(5, Math.max(1, digest.content.learning?.length || 1))).map((item, index) => (
-                    <div key={index} className="article-card" onClick={() => window.open(item.url || '#', '_blank')}>
-                      <h4>{item.title}</h4>
-                      <p>{item.content_summary?.substring(0, 200) || 'Educational content about AI and machine learning'}...</p>
-                      <div className="article-meta">
-                        <span className="source">{item.source || 'AI Education'}</span>
-                      </div>
-                    </div>
-                  )) || (
-                    <div className="article-card placeholder">
-                      <h4>AI Learning Resources</h4>
-                      <p>Educational content, tutorials, and courses for AI enthusiasts...</p>
-                      <div className="article-meta">
-                        <span className="source">AI Education</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+            {/* Video Content */}
+            {digest.content?.video && digest.content.video.length > 0 && (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h5" fontWeight="bold" gutterBottom>
+                  🎥 Video Content
+                </Typography>
+                <Grid container spacing={2}>
+                  {digest.content.video.slice(0, 5).map((story, index) => (
+                    <Grid sx={{xs:12, sm:6, md:4}} key={index}>
+                      <Card
+                        sx={{ height: '100%', cursor: 'pointer' }}
+                        onClick={() => window.open(story.url, '_blank')}
+                      >
+                        <CardContent>
+                          <Typography variant="h6" gutterBottom>
+                            {story.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {(story.summary || story.content_summary || '').substring(0, 150)}...
+                          </Typography>
+                        </CardContent>
+                        <CardActions>
+                          <Chip label={story.source} size="small" />
+                          <Chip label={`Score: ${story.significanceScore}`} size="small" color="primary" />
+                        </CardActions>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
 
-              {/* Video Content */}
-              <div className="content-type-section">
-                <h3 className="content-type-heading">🎥 Video Content</h3>
-                <div className="content-type-articles">
-                  {digest.content.video?.slice(0, Math.min(5, Math.max(1, digest.content.video?.length || 1))).map((item, index) => (
-                    <div key={index} className="article-card" onClick={() => window.open(item.url || '#', '_blank')}>
-                      <h4>{item.title}</h4>
-                      <p>{item.content_summary?.substring(0, 200) || 'Video content about AI developments'}...</p>
-                      <div className="article-meta">
-                        <span className="source">{item.source || 'AI Video'}</span>
-                      </div>
-                    </div>
-                  )) || (
-                    <div className="article-card placeholder">
-                      <h4>AI Video Content</h4>
-                      <p>Watch the latest AI presentations, demos, and educational videos...</p>
-                      <div className="article-meta">
-                        <span className="source">AI Video</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+            {/* Audio & Podcasts */}
+            {digest.content?.audio && digest.content.audio.length > 0 && (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h5" fontWeight="bold" gutterBottom>
+                  🎙️ Audio & Podcasts
+                </Typography>
+                <Grid container spacing={2}>
+                  {digest.content.audio.slice(0, 5).map((story, index) => (
+                    <Grid sx={{xs:12, sm:6, md:4}} key={index}>
+                      <Card
+                        sx={{ height: '100%', cursor: 'pointer' }}
+                        onClick={() => window.open(story.url, '_blank')}
+                      >
+                        <CardContent>
+                          <Typography variant="h6" gutterBottom>
+                            {story.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {(story.summary || story.content_summary || '').substring(0, 150)}...
+                          </Typography>
+                        </CardContent>
+                        <CardActions>
+                          <Chip label={story.source} size="small" />
+                          <Chip label={`Score: ${story.significanceScore}`} size="small" color="primary" />
+                        </CardActions>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
 
-              {/* Audio/Podcast Content */}
-              <div className="content-type-section">
-                <h3 className="content-type-heading">🎧 Audio & Podcasts</h3>
-                <div className="content-type-articles">
-                  {digest.content.audio?.slice(0, Math.min(5, Math.max(1, digest.content.audio?.length || 1))).map((item, index) => (
-                    <div key={index} className="article-card" onClick={() => window.open(item.url || '#', '_blank')}>
-                      <h4>{item.title}</h4>
-                      <p>{item.content_summary?.substring(0, 200) || 'Audio content and podcasts about AI'}...</p>
-                      <div className="article-meta">
-                        <span className="source">{item.source || 'AI Podcast'}</span>
-                      </div>
-                    </div>
-                  )) || (
-                    <div className="article-card placeholder">
-                      <h4>AI Podcasts & Audio</h4>
-                      <p>Listen to expert discussions, interviews, and AI thought leadership...</p>
-                      <div className="article-meta">
-                        <span className="source">AI Podcast</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
+            {/* Why Sign Up */}
+            <Paper elevation={3} sx={{ p: 4, my: 6, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+              <Typography variant="h4" fontWeight="bold" textAlign="center" gutterBottom>
+                🎯 Why Sign Up?
+              </Typography>
+              <Grid container spacing={3} sx={{ mt: 2 }}>
+                {[
+                  { icon: <TrendingUpIcon />, title: 'Personalized Content', desc: 'Get AI news tailored to your interests' },
+                  { icon: <NotificationsIcon />, title: 'Breaking News Alerts', desc: 'Instant notifications for critical developments' },
+                  { icon: <BarChartIcon />, title: 'Advanced Analytics', desc: 'Track trends and discover what matters' },
+                  { icon: <EmailIcon />, title: 'Newsletter Digest', desc: 'Daily summaries delivered to your inbox' }
+                ].map((item, idx) => (
+                  <Grid sx={{xs:12, sm:6, md:3}} key={idx}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Box sx={{ fontSize: 48, mb: 1 }}>{item.icon}</Box>
+                      <Typography variant="h6" fontWeight="bold" gutterBottom>{item.title}</Typography>
+                      <Typography variant="body2">{item.desc}</Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+              <Box sx={{ textAlign: 'center', mt: 4 }}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  onClick={() => navigateToAuth('signup')}
+                  sx={{
+                    backgroundColor: 'white',
+                    color: 'primary.main',
+                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' }
+                  }}
+                >
+                  Start Your Personalized AI Journey
+                </Button>
+              </Box>
+            </Paper>
 
-            {/* Sign Up/Sign In Significance Section */}
-            <section className="signup-significance-section" aria-labelledby="signup-significance-heading">
-              <div className="significance-content">
-                <h2 id="signup-significance-heading">🎯 Why Sign Up?</h2>
-                <div className="significance-grid">
-                  <div className="significance-item">
-                    <div className="significance-icon">🎯</div>
-                    <h3>Personalized Content</h3>
-                    <p>Get AI news tailored to your experience level, role, and interests</p>
-                  </div>
-                  <div className="significance-item">
-                    <div className="significance-icon">⚡</div>
-                    <h3>Breaking News Alerts</h3>
-                    <p>Receive instant notifications for critical AI developments</p>
-                  </div>
-                  <div className="significance-item">
-                    <div className="significance-icon">📊</div>
-                    <h3>Advanced Analytics</h3>
-                    <p>Track trends and discover what matters most in AI</p>
-                  </div>
-                  <div className="significance-item">
-                    <div className="significance-icon">📧</div>
-                    <h3>Newsletter Digest</h3>
-                    <p>Daily, weekly, or monthly summaries delivered to your inbox</p>
-                  </div>
-                </div>
-                <div className="significance-cta">
-                  <button 
-                    onClick={() => navigateToAuth('signup')}
-                    className="btn-significance-primary"
-                  >
-                    Start Your Personalized AI Journey
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            {/* Call to Action */}
-            <section className="cta-section" aria-labelledby="cta-heading">
-              <div className="cta-content">
-                <h2 id="cta-heading">Want Full Access?</h2>
-                <p className="cta-text">
-                  Sign up for free to get personalized AI news, daily digests, 
-                  and exclusive insights delivered to your inbox.
-                </p>
-                <div className="cta-buttons" role="group" aria-labelledby="cta-heading">
-                  <button 
-                    onClick={() => navigateToAuth('signup')}
-                    className="btn-cta-primary btn-large"
-                    aria-describedby="cta-heading"
-                  >
-                    Get Started Free
-                  </button>
-                  <button 
-                    onClick={() => navigateToAuth('signin')}
-                    className="btn-cta-secondary btn-large"
-                    aria-describedby="cta-heading"
-                  >
-                    Sign In
-                  </button>
-                </div>
-              </div>
-            </section>
+            {/* CTA Section */}
+            <Paper elevation={2} sx={{ p: 4, textAlign: 'center', backgroundColor: 'background.paper' }}>
+              <Typography variant="h4" fontWeight="bold" gutterBottom>
+                Want Full Access?
+              </Typography>
+              <Typography variant="body1" color="text.secondary" paragraph>
+                Sign up for free to get personalized AI news, daily digests, 
+                and exclusive insights delivered to your inbox.
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+                <Button
+                  variant="contained"
+                  size="large"
+                  onClick={() => navigateToAuth('signup')}
+                >
+                  Get Started Free
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  onClick={() => navigateToAuth('signin')}
+                >
+                  Sign In
+                </Button>
+              </Stack>
+            </Paper>
           </>
         )}
-      </main>
+      </Container>
 
       {/* Footer */}
-      <footer className="home-footer">
-        <div className="footer-content">
-          <div className="footer-center">
-            <p>Copyright @2025 by Vidyagam Learning LLC</p>
-            <div className="footer-links">
-              <Link to="/about">Purpose: Mission, Vision and Values</Link>
-              <Link to="/terms">Terms and Privacy</Link>
-              <a href="mailto:admin@vidyagam.com">Feedback</a>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-    </div>
+      <Box
+        component="footer"
+        sx={{
+          backgroundColor: 'background.paper',
+          py: 4,
+          mt: 8,
+          borderTop: 1,
+          borderColor: 'divider'
+        }}
+      >
+        <Container maxWidth="lg">
+          <Typography variant="body2" textAlign="center" color="text.secondary">
+            Copyright ©2025 by Vidyagam Learning LLC
+          </Typography>
+          <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
+            <Button onClick={() => navigate('/about')} size="small">About</Button>
+            <Button onClick={() => navigate('/terms')} size="small">Terms</Button>
+            <Button href="mailto:admin@vidyagam.com" size="small">Feedback</Button>
+          </Stack>
+        </Container>
+      </Box>
+    </Box>
   );
 };
 

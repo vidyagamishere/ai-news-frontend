@@ -1,687 +1,933 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Mail, User, Lock, Eye, EyeOff } from 'lucide-react';
+import {
+  Box,
+  Container,
+  Grid,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Divider,
+  Checkbox,
+  FormControlLabel,
+  InputAdornment,
+  IconButton,
+  Alert,
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  alpha,
+  useTheme,
+  Chip,
+  Fade,
+  Slide
+} from '@mui/material';
+import {
+  Visibility,
+  VisibilityOff,
+  Email as MailIcon,
+  Person as UserIcon,
+  Lock as LockIcon,
+  Psychology as BrainIcon,
+  AutoAwesome,
+  TrendingUp,
+  Security,
+  Speed
+} from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
 import GoogleSignIn from '../components/auth/GoogleSignIn';
 import { validateSignupEmail } from '../utils/emailValidation';
-import '../components/auth/auth.css';
-import './auth.css';
 
-type AuthMode = 'signin' | 'signup';
+interface FormData {
+  fullName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  agreeToTerms: boolean;
+}
 
-// ✅ ADD: Logger utility
-const logger = {
-  info: (message: string, ...args: any[]) => console.log(`ℹ️ ${message}`, ...args),
-  error: (message: string, ...args: any[]) => console.error(`❌ ${message}`, ...args),
-  warn: (message: string, ...args: any[]) => console.warn(`⚠️ ${message}`, ...args),
-  debug: (message: string, ...args: any[]) => console.debug(`🔍 ${message}`, ...args)
-};
+interface FormErrors {
+  fullName?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  agreeToTerms?: string;
+}
 
 const Auth: React.FC = () => {
+  const navigate = useNavigate();
+  const { login, signup } = useAuth();
   const [searchParams] = useSearchParams();
-  const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
-  const [mode, setMode] = useState<AuthMode>(initialMode);
-  const [formData, setFormData] = useState({
-    name: '',
+  const mode = searchParams.get('mode') || 'signin';
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
+    fullName: '',
     email: '',
     password: '',
     confirmPassword: '',
-    acceptTerms: false
+    agreeToTerms: false,
   });
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [showPassword, setShowPassword] = useState(false);
-  
-  const { loading, error, isAuthenticated, login, signup, isGmailDomain } = useAuth();
-  const navigate = useNavigate();
+  const [errors, setErrors] = useState<FormErrors>({});
 
-  // ✅ ADD: Missing state for modals
-  const [showTermsModal, setShowTermsModal] = useState(false);
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const isSignIn = mode === 'signin';
+  const isSignUp = mode === 'signup';
+  const theme = useTheme();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      // Redirect authenticated users to dashboard
-      console.log('User authenticated, redirecting to dashboard...');
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
+    setError('');
+    setSuccess('');
+    setErrors({});
+  }, [mode]);
 
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-    
-    if (mode === 'signup' && !formData.name.trim()) {
-      errors.name = 'Full name is required';
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, checked, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+    if (errors[name as keyof FormErrors]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
     }
-    
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (isSignUp) {
+      if (!formData.fullName.trim()) {
+        newErrors.fullName = 'Full name is required';
+      }
+
+      if (!formData.agreeToTerms) {
+        newErrors.agreeToTerms = 'You must agree to the terms and conditions';
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
+    }
+
     if (!formData.email.trim()) {
-      errors.email = 'Email is required';
+      newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'Please enter a valid email address';
-    } else if (mode === 'signup') {
-      // Additional signup validations for spam prevention
-      const emailError = validateSignupEmail(formData.email);
-      if (emailError) {
-        errors.email = emailError;
-      }
+      newErrors.email = 'Email is invalid';
     }
-    
-    // Password validation for all users
+
     if (!formData.password) {
-      errors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
+      newErrors.password = 'Password is required';
+    } else if (isSignUp && formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
     }
-    
-    if (mode === 'signup') {
-      if (!formData.confirmPassword) {
-        errors.confirmPassword = 'Please confirm your password';
-      } else if (formData.password !== formData.confirmPassword) {
-        errors.confirmPassword = 'Passwords do not match';
-      }
-    }
-    
-    if (mode === 'signup' && !formData.acceptTerms) {
-      errors.acceptTerms = 'You must accept the Terms of Service';
-    }
-    
-    return errors;
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const errors = validateForm();
-    setFormErrors(errors);
-    
-    if (Object.keys(errors).length > 0) {
+    if (!validateForm()) {
       return;
     }
-    
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
     try {
-      console.log('🔍 Auth Debug:', { mode, email: formData.email, name: formData.name });
-      
-      const isGmail = isGmailDomain(formData.email);
-      
-      if (mode === 'signin') {
-        if (isGmail) {
-          // Gmail users must use Google Sign-In
-          setFormErrors({ email: 'Gmail users must use "Continue with Google" button above' });
+      if (isSignUp) {
+        const validationResult = validateSignupEmail(formData.email);
+        if (validationResult) {
+          setError(validationResult);
+          setLoading(false);
           return;
         }
-        // Non-Gmail: Direct password signin
-        console.log('🔐 Password signin');
-        await login({
-          email: formData.email,
-          password: formData.password
+
+        await signup({ 
+          email: formData.email, 
+          password: formData.password, 
+          confirmPassword: formData.confirmPassword,
+          name: formData.fullName,
+          acceptTerms: formData.agreeToTerms
         });
+        setSuccess('Account created! Please check your email to verify your account.');
+        
+        setTimeout(() => {
+          navigate('/auth?mode=signin');
+        }, 2000);
       } else {
-        // Signup logic
-        if (isGmail) {
-          // Gmail users must use Google Sign-In
-          setFormErrors({ email: 'Gmail users must use "Continue with Google" button above' });
-          return;
-        }
-        // Non-Gmail users: Send OTP for verification
-        console.log('📧 Sending OTP for non-Gmail signup');
-        await authService.sendOTP(formData.email, formData.name, 'signup');
-        const userData = JSON.stringify({ name: formData.name, email: formData.email, password: formData.password });
-        navigate('/verify-otp?email=' + encodeURIComponent(formData.email) + '&userData=' + encodeURIComponent(userData) + '&authMode=signup');
+        await login({ email: formData.email, password: formData.password });
+        navigate('/dashboard');
       }
     } catch (err: any) {
-      // Handle specific authentication errors
-      console.error('Authentication error:', err);
-      console.log('🔍 Error details:', {
-        error_code: err.error_code,
-        message: err.message,
-        status: err.status,
-        redirect_to_signin: err.redirect_to_signin,
-        redirect_to_signup: err.redirect_to_signup
-      });
-      
-      // Check for specific error codes from backend
-      if (err.error_code === 'EMAIL_EXISTS' && mode === 'signup') {
-        // User tried to signup with existing email - show detailed message
-        const message = err.message || 'An account with this email already exists. Please sign in instead.';
-        setFormErrors({ 
-          email: message
-        });
-        console.log('📧 Existing user signup blocked:', {
-          email: formData.email,
-          message: message,
-          options: err.detailed_instructions?.existing_user_options
-        });
-        // Switch to signin mode after showing the message
-        setTimeout(() => {
-          setMode('signin');
-          setFormErrors({});
-        }, 5000); // Increased to 5 seconds to read the message
-      } else if (err.error_code === 'EMAIL_NOT_FOUND' && mode === 'signin') {
-        // User tried to signin with non-existent email - show detailed message  
-        const message = err.message || 'No account found with this email. Please sign up first.';
-        setFormErrors({ 
-          email: message
-        });
-        console.log('📧 Non-existent user signin blocked:', {
-          email: formData.email,
-          message: message,
-          options: err.detailed_instructions?.new_user_options
-        });
-        // Switch to signup mode after showing the message
-        setTimeout(() => {
-          setMode('signup');
-          setFormErrors({});
-        }, 5000); // Increased to 5 seconds to read the message
-      } else {
-        // Handle fallback cases - check error message content for known patterns
-        const errorMsg = err.message || '';
-        if (errorMsg.includes('Email ID already registered') || errorMsg.includes('User already exists') || errorMsg.includes('already exists') && mode === 'signup') {
-          setFormErrors({ 
-            email: 'An account with this email already exists. Please sign in instead.'
-          });
-          setTimeout(() => {
-            setMode('signin');
-            setFormErrors({});
-          }, 5000);
-        } else if (errorMsg.includes('No account found') && mode === 'signin') {
-          setFormErrors({ 
-            email: 'No account found with this email. Please sign up first.'
-          });
-          setTimeout(() => {
-            setMode('signup');
-            setFormErrors({});
-          }, 5000);
-        } else {
-          // Generic error handling
-          setFormErrors({ 
-            email: errorMsg || 'An error occurred. Please try again.'
-          });
-        }
-      }
+      setError(err.message || `Failed to ${isSignIn ? 'sign in' : 'sign up'}`);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleInputChange = (field: string, value: string | boolean) => {
-    console.log(`🔍 Input change: ${field} = ${value}`, { formData });
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear field error when user starts typing
-    if (formErrors[field]) {
-      setFormErrors(prev => ({ ...prev, [field]: '' }));
+  const features = [
+    {
+      icon: AutoAwesome,
+      title: 'AI-Powered Curation',
+      description: 'Smart algorithms surface the most relevant AI breakthroughs',
+      color: '#667eea'
+    },
+    {
+      icon: TrendingUp,
+      title: 'Real-Time Updates',
+      description: 'Get notified instantly when major AI news breaks',
+      color: '#f093fb'
+    },
+    {
+      icon: Security,
+      title: 'Trusted Sources',
+      description: 'Verified content from leading AI labs and researchers',
+      color: '#4facfe'
+    },
+    {
+      icon: Speed,
+      title: 'Lightning Fast',
+      description: 'Optimized performance for seamless browsing',
+      color: '#43e97b'
     }
-  };
+  ];
 
-  const handleGoogleSuccess = () => {
-    // Let Dashboard component handle routing based on user state
-    navigate('/dashboard');
-  };
-
-  const switchMode = (newMode: AuthMode) => {
-    setMode(newMode);
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      acceptTerms: false
-    });
-    setFormErrors({});
-  };
-
-  const isSignIn = mode === 'signin';
-  const isSignUp = mode === 'signup';
+  const stats = [
+    { value: '50K+', label: 'Active Users' },
+    { value: '10K+', label: 'Daily Articles' },
+    { value: '100+', label: 'AI Sources' },
+    { value: '24/7', label: 'Updates' }
+  ];
 
   return (
-    <div className="auth-page">
-      <div className="auth-layout">
-        <div className="auth-left-panel">
-          <div className="auth-branding">
-            <div className="brand-content">
-              <div className="brand-logo">
-                <div className="neural-icon">🧠</div>
-                <h1>Vidyagam</h1>
-              </div>
-              <h2>Gaining Knowledge, Filtered for You</h2>
-              <p>Join 50,000+ AI researchers, engineers, and visionaries accessing breakthrough intelligence curated by advanced neural networks.</p>
-              
-              <div className="brand-features">
-                <div className="brand-feature">
-                  <div className="feature-icon">🚀</div>
-                  <div>
-                    <strong>Quantum-Speed Intelligence</strong>
-                    <span>Real-time AI developments before they break mainstream</span>
-                  </div>
-                </div>
-                <div className="brand-feature">
-                  <div className="feature-icon">🔬</div>
-                  <div>
-                    <strong>Research-Grade Insights</strong>
-                    <span>Direct pipeline from labs to your dashboard</span>
-                  </div>
-                </div>
-                <div className="brand-feature">
-                  <div className="feature-icon">🎯</div>
-                  <div>
-                    <strong>Neural Personalization</strong>
-                    <span>AI that learns your technical interests</span>
-                  </div>
-                </div>
-                <div className="brand-feature">
-                  <div className="feature-icon">🏛️</div>
-                  <div>
-                    <strong>Elite Network Access</strong>
-                    <span>Trusted by DeepMind, OpenAI, and top AI labs</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="auth-right-panel">
-          <div className="auth-form-container">
-          <div className="auth-card-header">
-            <h2>{isSignIn ? 'Welcome back' : 'Join Vidyagam'}</h2>
-            <p>
-              {isSignIn 
-                ? 'Enter your credentials to access your dashboard' 
-                : 'Enter your details to get started with your AI news experience'
-              }
-            </p>
-          </div>
-
-          <div className="auth-social">
-            <GoogleSignIn onSuccess={handleGoogleSuccess} />
-          </div>
-
-          <div className="auth-divider">
-            <span>or continue with email</span>
-          </div>
-
-          <form onSubmit={handleSubmit} className="auth-form">
-            {isSignUp && (
-              <div className="form-group">
-                <label htmlFor="name">Full Name</label>
-                <div className="input-wrapper">
-                  <User className="input-icon" size={18} />
-                  <input
-                    id="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    required={isSignUp}
-                  />
-                </div>
-                {formErrors.name && (
-                  <div className="field-error">{formErrors.name}</div>
-                )}
-              </div>
-            )}
-
-            <div className="form-group">
-              <label htmlFor="email">Email Address</label>
-              <div className="input-wrapper">
-                <Mail className="input-icon" size={18} />
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  required
-                />
-              </div>
-              {formErrors.email && (
-                <div className="field-error">{formErrors.email}</div>
-              )}
-            </div>
-
-            {/* Password fields for non-Gmail users */}
-            {formData.email && !isGmailDomain(formData.email) && (
-              <>
-                <div className="form-group">
-                  <label htmlFor="password">Password</label>
-                  <div className="input-wrapper">
-                    <Lock className="input-icon" size={18} />
-                    <input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      value={formData.password}
-                      onChange={(e) => handleInputChange('password', e.target.value)}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  {formErrors.password && (
-                    <div className="field-error">{formErrors.password}</div>
-                  )}
-                </div>
-
-                {isSignUp && (
-                  <div className="form-group">
-                    <label htmlFor="confirmPassword">Confirm Password</label>
-                    <div className="input-wrapper">
-                      <Lock className="input-icon" size={18} />
-                      <input
-                        id="confirmPassword"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Confirm your password"
-                        value={formData.confirmPassword}
-                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                        required
-                      />
-                    </div>
-                    {formErrors.confirmPassword && (
-                      <div className="field-error">{formErrors.confirmPassword}</div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* ✅ FIXED: Show Terms checkbox ONLY for Sign Up, NOT for Sign In */}
-            {mode === 'signup' && (
-              <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                <label 
-                  htmlFor="terms-privacy-checkbox"
-                  style={{ 
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px',
-                    cursor: 'pointer',
-                    userSelect: 'none'
+    <Box 
+      sx={{ 
+        minHeight: '100vh',
+        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: '-50%',
+          right: '-20%',
+          width: '800px',
+          height: '800px',
+          background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.15)} 0%, transparent 70%)`,
+          borderRadius: '50%',
+          animation: 'float 20s ease-in-out infinite',
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          bottom: '-30%',
+          left: '-10%',
+          width: '600px',
+          height: '600px',
+          background: `radial-gradient(circle, ${alpha(theme.palette.secondary.main, 0.15)} 0%, transparent 70%)`,
+          borderRadius: '50%',
+          animation: 'float 25s ease-in-out infinite reverse',
+        },
+        '@keyframes float': {
+          '0%, 100%': { transform: 'translate(0, 0) rotate(0deg)' },
+          '50%': { transform: 'translate(30px, 30px) rotate(180deg)' }
+        }
+      }}
+    >
+      <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, position: 'relative', zIndex: 1 }}>
+        <Grid container spacing={{ xs: 2, md: 6 }} alignItems="center" sx={{ minHeight: '100vh' }}>
+          {/* Left Panel - Branding & Features */}
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Fade in timeout={800}>
+              <Box 
+                sx={{ 
+                  pr: { md: 4 },
+                  position: 'relative'
+                }}
+              >
+                <Box
+                  sx={{
+                    background: `linear-gradient(135deg, 
+                      ${alpha('#667eea', 0.95)} 0%, 
+                      ${alpha('#764ba2', 0.95)} 50%,
+                      ${alpha('#f093fb', 0.9)} 100%
+                    )`,
+                    borderRadius: 4,
+                    p: { xs: 3, md: 5 },
+                    position: 'relative',
+                    overflow: 'hidden',
+                    boxShadow: `0 20px 60px ${alpha('#667eea', 0.3)}`,
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: `radial-gradient(circle at 20% 50%, ${alpha('#fff', 0.1)} 0%, transparent 50%),
+                                   radial-gradient(circle at 80% 80%, ${alpha('#fff', 0.05)} 0%, transparent 50%)`,
+                      pointerEvents: 'none'
+                    }
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    id="terms-privacy-checkbox"
-                    checked={formData.acceptTerms}
-                    onChange={(e) => {
-                      handleInputChange('acceptTerms', e.target.checked);
-                      logger.info(`Terms checkbox changed: ${e.target.checked}`);
-                    }}
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      minWidth: '20px',
-                      minHeight: '20px',
-                      marginTop: '2px',
-                      cursor: 'pointer',
-                      accentColor: '#3b82f6',
-                      flexShrink: 0
-                    }}
+                <Stack spacing={4}>
+                  {/* Logo & Tagline */}
+                  <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                      <Box
+                        sx={{
+                          background: 'rgba(255, 255, 255, 0.95)',
+                          borderRadius: 3,
+                          p: 1.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: `0 8px 32px ${alpha('#000', 0.15)}`
+                        }}
+                      >
+                        <BrainIcon sx={{ fontSize: 40, color: '#667eea' }} />
+                      </Box>
+                      <Typography 
+                        variant="h3" 
+                        fontWeight={800}
+                        sx={{
+                          color: 'white',
+                          letterSpacing: '-0.02em',
+                          textShadow: `0 2px 20px ${alpha('#000', 0.2)}`
+                        }}
+                      >
+                        Vidyagam
+                      </Typography>
+                    </Box>
+
+                    <Typography 
+                      variant="h4" 
+                      fontWeight={700}
+                      sx={{ 
+                        mb: 2,
+                        color: 'rgba(255, 255, 255, 0.95)',
+                        textShadow: `0 2px 15px ${alpha('#000', 0.15)}`
+                      }}
+                    >
+                      Your AI Intelligence Hub
+                    </Typography>
+
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        mb: 4, 
+                        lineHeight: 1.8,
+                        color: 'rgba(255, 255, 255, 0.85)',
+                        textShadow: `0 1px 10px ${alpha('#000', 0.1)}`
+                      }}
+                    >
+                      Join the next generation of AI enthusiasts. Get personalized news, 
+                      breakthrough research, and expert insights—all in one place.
+                    </Typography>
+
+                    {/* Stats */}
+                    <Grid container spacing={2} sx={{ mb: 4 }}>
+                      {stats.map((stat, index) => (
+                        <Grid size={{ xs: 6, sm: 3 }} key={index}>
+                          <Paper
+                            elevation={0}
+                            sx={{
+                              p: 2,
+                              textAlign: 'center',
+                              background: 'rgba(255, 255, 255, 0.15)',
+                              backdropFilter: 'blur(10px)',
+                              border: `1px solid rgba(255, 255, 255, 0.2)`,
+                              borderRadius: 2,
+                              transition: 'all 0.3s',
+                              '&:hover': {
+                                transform: 'translateY(-4px)',
+                                background: 'rgba(255, 255, 255, 0.25)',
+                                boxShadow: `0 8px 24px ${alpha('#000', 0.2)}`
+                              }
+                            }}
+                          >
+                            <Typography variant="h5" fontWeight={800} sx={{ color: 'white' }}>
+                              {stat.value}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                              {stat.label}
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
+
+                  {/* Features Grid */}
+                  <Grid container spacing={2}>
+                    {features.map((feature, index) => {
+                      const Icon = feature.icon;
+                      return (
+                        <Grid size={{ xs: 12, sm: 6 }} key={index}>
+                          <Slide direction="up" in timeout={1000 + index * 100}>
+                            <Paper
+                              elevation={0}
+                              sx={{
+                                p: 2.5,
+                                height: '100%',
+                                background: 'rgba(255, 255, 255, 0.95)',
+                                backdropFilter: 'blur(10px)',
+                                border: `1px solid rgba(255, 255, 255, 0.3)`,
+                                borderRadius: 3,
+                                transition: 'all 0.3s',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                '&:hover': {
+                                  transform: 'translateY(-8px)',
+                                  boxShadow: `0 12px 40px ${alpha(feature.color, 0.3)}`,
+                                  borderColor: feature.color,
+                                  background: 'rgba(255, 255, 255, 1)'
+                                },
+                                '&::before': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  height: '3px',
+                                  background: `linear-gradient(90deg, ${feature.color} 0%, transparent 100%)`,
+                                  opacity: 0,
+                                  transition: 'opacity 0.3s'
+                                },
+                                '&:hover::before': {
+                                  opacity: 1
+                                }
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                                <Box
+                                  sx={{
+                                    background: alpha(feature.color, 0.1),
+                                    borderRadius: 2,
+                                    p: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                >
+                                  <Icon sx={{ fontSize: 28, color: feature.color }} />
+                                </Box>
+                                <Box sx={{ flex: 1 }}>
+                                  <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                                    {feature.title}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                                    {feature.description}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </Paper>
+                          </Slide>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+
+                  {/* Trust Badge */}
+                  <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                      {['OpenAI', 'Google AI', 'Anthropic', 'Meta AI', 'DeepMind'].map((company, index) => (
+                        <Chip
+                          key={index}
+                          label={company}
+                          size="small"
+                          sx={{
+                            background: 'rgba(255, 255, 255, 0.2)',
+                            backdropFilter: 'blur(10px)',
+                            border: `1px solid rgba(255, 255, 255, 0.3)`,
+                            color: 'white',
+                            fontWeight: 600,
+                            '&:hover': {
+                              background: 'rgba(255, 255, 255, 0.3)'
+                            }
+                          }}
+                        />
+                      ))}
+                    </Stack>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        mt: 1, 
+                        display: 'block',
+                        color: 'rgba(255, 255, 255, 0.8)'
+                      }}
+                    >
+                      Trusted sources from leading AI organizations
+                    </Typography>
+                  </Box>
+                </Stack>
+                </Box>
+              </Box>
+            </Fade>
+          </Grid>
+
+          {/* Right Panel - Auth Form */}
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Fade in timeout={1000}>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: { xs: 3, md: 5 }, 
+                  maxWidth: 520, 
+                  mx: 'auto',
+                  background: alpha(theme.palette.background.paper, 0.9),
+                  backdropFilter: 'blur(20px)',
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                  borderRadius: 4,
+                  boxShadow: `0 20px 80px ${alpha(theme.palette.common.black, 0.1)}`
+                }}
+              >
+                <Stack spacing={3}>
+                  {/* Header */}
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography 
+                      variant="h4" 
+                      fontWeight={800}
+                      gutterBottom
+                      sx={{
+                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      {isSignIn ? 'Welcome Back' : 'Create Account'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      {isSignIn 
+                        ? 'Sign in to continue your AI journey' 
+                        : 'Join our community of AI enthusiasts'}
+                    </Typography>
+                  </Box>
+
+                  {error && (
+                    <Slide direction="down" in mountOnEnter unmountOnExit>
+                      <Alert 
+                        severity="error" 
+                        onClose={() => setError('')}
+                        sx={{ 
+                          borderRadius: 2,
+                          backdropFilter: 'blur(10px)'
+                        }}
+                      >
+                        {error}
+                      </Alert>
+                    </Slide>
+                  )}
+
+                  {success && (
+                    <Slide direction="down" in mountOnEnter unmountOnExit>
+                      <Alert 
+                        severity="success"
+                        sx={{ 
+                          borderRadius: 2,
+                          backdropFilter: 'blur(10px)'
+                        }}
+                      >
+                        {success}
+                      </Alert>
+                    </Slide>
+                  )}
+
+                  {/* Google Sign In */}
+                  <GoogleSignIn 
+                    onSuccess={() => navigate('/dashboard')}
                   />
-                  <span style={{ fontSize: '14px', color: '#374151', lineHeight: '1.5', flex: 1 }}>
-                    I accept the{' '}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowTermsModal(true);
+
+                  <Divider>
+                    <Chip 
+                      label="or" 
+                      size="small"
+                      sx={{
+                        background: alpha(theme.palette.background.paper, 0.8),
+                        fontWeight: 600
                       }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#3b82f6',
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                        padding: 0,
-                        font: 'inherit'
-                      }}
-                    >
-                      Terms of Service
-                    </button>
-                    {' '}and{' '}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowPrivacyModal(true);
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#3b82f6',
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                        padding: 0,
-                        font: 'inherit'
-                      }}
-                    >
-                      Privacy Policy
-                    </button>
-                  </span>
-                </label>
+                    />
+                  </Divider>
 
-                {/* Visual indicator */}
-                <div style={{
-                  marginTop: '12px',
-                  padding: '12px',
-                  backgroundColor: formData.acceptTerms ? '#dcfce7' : '#fee2e2',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  color: formData.acceptTerms ? '#15803d' : '#991b1b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <span style={{ fontSize: '16px' }}>
-                    {formData.acceptTerms ? '✓' : '!'}
-                  </span>
-                  <span>
-                    {formData.acceptTerms 
-                      ? 'Policies accepted - you can proceed' 
-                      : 'Please accept Terms of Service and Privacy Policy'}
-                  </span>
-                </div>
-              </div>
-            )}
+                  {/* Form */}
+                  <Box component="form" onSubmit={handleSubmit}>
+                    <Stack spacing={2.5}>
+                      {isSignUp && (
+                        <TextField
+                          fullWidth
+                          label="Full Name"
+                          name="fullName"
+                          value={formData.fullName}
+                          onChange={handleInputChange}
+                          error={!!errors.fullName}
+                          helperText={errors.fullName}
+                          disabled={loading}
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <UserIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                              </InputAdornment>
+                            ),
+                          }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 2,
+                              backgroundColor: alpha(theme.palette.background.default, 0.5),
+                              transition: 'all 0.3s',
+                              '&:hover': {
+                                backgroundColor: alpha(theme.palette.background.default, 0.7),
+                              },
+                              '&.Mui-focused': {
+                                backgroundColor: alpha(theme.palette.background.default, 0.8),
+                                boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`
+                              }
+                            }
+                          }}
+                        />
+                      )}
 
-            {error && (
-              <div className="auth-error">
-                {error}
-              </div>
-            )}
+                      <TextField
+                        fullWidth
+                        type="email"
+                        label="Email Address"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        error={!!errors.email}
+                        helperText={errors.email}
+                        disabled={loading}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <MailIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            backgroundColor: alpha(theme.palette.background.default, 0.5),
+                            transition: 'all 0.3s',
+                            '&:hover': {
+                              backgroundColor: alpha(theme.palette.background.default, 0.7),
+                            },
+                            '&.Mui-focused': {
+                              backgroundColor: alpha(theme.palette.background.default, 0.8),
+                              boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`
+                            }
+                          }
+                        }}
+                      />
 
-            {/* Submit Button - LIGHT SKY BLUE */}
-            <button
-              type="submit"
-              disabled={mode === 'signup' ? !formData.acceptTerms || loading : loading}
-              style={{
-                width: '100%',
-                padding: '14px',
-                borderRadius: '12px',
-                border: 'none',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: (mode === 'signup' && !formData.acceptTerms) || loading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.3s ease',
-                backgroundColor: (mode === 'signup' && !formData.acceptTerms) || loading ? '#d1d5db' : '#0ea5e9', // ✅ Light sky blue
-                color: '#ffffff',
-                boxShadow: (mode === 'signup' && !formData.acceptTerms) || loading ? 'none' : '0 2px 4px rgba(14, 165, 233, 0.2)',
-                marginTop: '8px'
-              }}
-              onMouseEnter={(e) => {
-                if ((mode === 'signin' || formData.acceptTerms) && !loading) {
-                  e.currentTarget.style.backgroundColor = '#0284c7'; // Darker sky blue on hover
-                  e.currentTarget.style.boxShadow = '0 4px 6px rgba(14, 165, 233, 0.3)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if ((mode === 'signin' || formData.acceptTerms) && !loading) {
-                  e.currentTarget.style.backgroundColor = '#0ea5e9';
-                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(14, 165, 233, 0.2)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }
-              }}
-            >
-              {loading ? 'Processing...' : (mode === 'signup' ? 'Continue to Sign Up' : 'Continue to Sign In')}
-            </button>
-          </form>
+                      <TextField
+                        fullWidth
+                        type={showPassword ? 'text' : 'password'}
+                        label="Password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        error={!!errors.password}
+                        helperText={errors.password}
+                        disabled={loading}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <LockIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                            </InputAdornment>
+                          ),
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                onClick={() => setShowPassword(!showPassword)}
+                                edge="end"
+                                size="small"
+                              >
+                                {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            backgroundColor: alpha(theme.palette.background.default, 0.5),
+                            transition: 'all 0.3s',
+                            '&:hover': {
+                              backgroundColor: alpha(theme.palette.background.default, 0.7),
+                            },
+                            '&.Mui-focused': {
+                              backgroundColor: alpha(theme.palette.background.default, 0.8),
+                              boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`
+                            }
+                          }
+                        }}
+                      />
 
-          <div className="auth-footer">
-            {isSignIn ? (
-              <>
-                <div className="auth-divider-footer">
-                  <span>or</span>
-                </div>
-                
-                <button 
-                  type="button"
-                  onClick={() => switchMode('signup')} 
-                  className="auth-link-btn auth-signup-link"
-                >
-                  New to Vidyagam? Create account →
-                </button>
-              </>
-            ) : (
-              <>
-                <p>
-                  Already have an account?{' '}
-                  <button 
-                    type="button"
-                    onClick={() => switchMode('signin')} 
-                    className="auth-link-btn"
-                  >
-                    Sign in here
-                  </button>
-                </p>
-                
-                <div className="auth-terms">
-                  <p>
-                    By creating an account, you agree to our{' '}
-                    <Link to="/terms">Terms of Service</Link>{' '}
-                    and <Link to="/privacy">Privacy Policy</Link>
-                  </p>
-                </div>
-              </>
-            )}
-            </div>
-          </div>
-        </div>
-      </div>
+                      {isSignUp && (
+                        <TextField
+                          fullWidth
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          label="Confirm Password"
+                          name="confirmPassword"
+                          value={formData.confirmPassword}
+                          onChange={handleInputChange}
+                          error={!!errors.confirmPassword}
+                          helperText={errors.confirmPassword}
+                          disabled={loading}
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <LockIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                              </InputAdornment>
+                            ),
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <IconButton
+                                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                  edge="end"
+                                  size="small"
+                                >
+                                  {showConfirmPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                                </IconButton>
+                              </InputAdornment>
+                            ),
+                          }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 2,
+                              backgroundColor: alpha(theme.palette.background.default, 0.5),
+                              transition: 'all 0.3s',
+                              '&:hover': {
+                                backgroundColor: alpha(theme.palette.background.default, 0.7),
+                              },
+                              '&.Mui-focused': {
+                                backgroundColor: alpha(theme.palette.background.default, 0.8),
+                                boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`
+                              }
+                            }
+                          }}
+                        />
+                      )}
 
-      {/* ✅ ADD: Terms Modal */}
-      {showTermsModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000
-        }}>
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '32px',
-            maxWidth: '600px',
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
-          }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px', color: '#111827' }}>
-              Terms of Service
-            </h2>
-            <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6', marginBottom: '24px' }}>
-              <p style={{ marginBottom: '12px' }}>
-                By using this service, you agree to our Terms of Service. We are committed to providing you with high-quality AI news and content.
-              </p>
-              <p style={{ marginBottom: '12px' }}>
-                <strong>1. Acceptance of Terms:</strong> By accessing and using this service, you accept and agree to be bound by the terms and provision of this agreement.
-              </p>
-              <p>
-                For complete terms and conditions, please contact our support team.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowTermsModal(false)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#3b82f6',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+                      {isSignUp && (
+                        <Box>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                name="agreeToTerms"
+                                checked={formData.agreeToTerms}
+                                onChange={handleInputChange}
+                                disabled={loading}
+                              />
+                            }
+                            label={
+                              <Typography variant="body2">
+                                I agree to the{' '}
+                                <Link 
+                                  to="#" 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setShowTermsModal(true);
+                                  }}
+                                  style={{ color: theme.palette.primary.main, textDecoration: 'none', fontWeight: 600 }}
+                                >
+                                  Terms & Conditions
+                                </Link>
+                                {' '}and{' '}
+                                <Link 
+                                  to="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setShowPrivacyModal(true);
+                                  }}
+                                  style={{ color: theme.palette.primary.main, textDecoration: 'none', fontWeight: 600 }}
+                                >
+                                  Privacy Policy
+                                </Link>
+                              </Typography>
+                            }
+                          />
+                          {errors.agreeToTerms && (
+                            <Typography variant="caption" color="error" sx={{ ml: 2, display: 'block' }}>
+                              {errors.agreeToTerms}
+                            </Typography>
+                          )}
+                        </Box>
+                      )}
 
-      {/* ✅ ADD: Privacy Modal */}
-      {showPrivacyModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000
-        }}>
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '32px',
-            maxWidth: '600px',
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
-          }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px', color: '#111827' }}>
-              Privacy Policy
-            </h2>
-            <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6', marginBottom: '24px' }}>
-              <p style={{ marginBottom: '12px' }}>
-                We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.
-              </p>
-              <p>
-                For complete privacy information, please contact our support team.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowPrivacyModal(false)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#3b82f6',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+                      <Button
+                        fullWidth
+                        type="submit"
+                        variant="contained"
+                        size="large"
+                        disabled={loading}
+                        sx={{
+                          py: 1.5,
+                          mt: 1,
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          fontSize: '1rem',
+                          fontWeight: 700,
+                          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                          boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.3)}`,
+                          transition: 'all 0.3s',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: `0 12px 32px ${alpha(theme.palette.primary.main, 0.4)}`,
+                          },
+                          '&:disabled': {
+                            background: alpha(theme.palette.action.disabled, 0.3)
+                          }
+                        }}
+                      >
+                        {loading ? 'Please wait...' : (isSignIn ? 'Sign In' : 'Create Account')}
+                      </Button>
+
+                      {isSignIn && (
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Link 
+                            to="/verify-email" 
+                            style={{ 
+                              color: theme.palette.primary.main, 
+                              textDecoration: 'none', 
+                              fontSize: '0.875rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            Forgot Password?
+                          </Link>
+                        </Box>
+                      )}
+
+                      <Divider sx={{ my: 2 }} />
+
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          {isSignIn ? "Don't have an account?" : "Already have an account?"}
+                          {' '}
+                          <Link 
+                            to={`/auth?mode=${isSignIn ? 'signup' : 'signin'}`}
+                            style={{ 
+                              color: theme.palette.primary.main, 
+                              textDecoration: 'none',
+                              fontWeight: 700
+                            }}
+                          >
+                            {isSignIn ? 'Sign Up' : 'Sign In'}
+                          </Link>
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
+                </Stack>
+              </Paper>
+            </Fade>
+          </Grid>
+        </Grid>
+      </Container>
+
+      {/* Terms Modal */}
+      <Dialog 
+        open={showTermsModal} 
+        onClose={() => setShowTermsModal(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            backdropFilter: 'blur(20px)',
+            background: alpha(theme.palette.background.paper, 0.95)
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Terms & Conditions</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" paragraph>
+            Welcome to Vidyagam. By accessing our service, you agree to these terms.
+          </Typography>
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+            1. Use of Service
+          </Typography>
+          <Typography variant="body2" paragraph>
+            You must use Vidyagam in compliance with all applicable laws and regulations.
+          </Typography>
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+            2. User Accounts
+          </Typography>
+          <Typography variant="body2" paragraph>
+            You are responsible for maintaining the confidentiality of your account.
+          </Typography>
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+            3. Content
+          </Typography>
+          <Typography variant="body2" paragraph>
+            We reserve the right to remove any content that violates our policies.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setShowTermsModal(false)} variant="contained">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Privacy Modal */}
+      <Dialog 
+        open={showPrivacyModal} 
+        onClose={() => setShowPrivacyModal(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            backdropFilter: 'blur(20px)',
+            background: alpha(theme.palette.background.paper, 0.95)
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Privacy Policy</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" paragraph>
+            Your privacy is important to us. This policy explains how we handle your data.
+          </Typography>
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+            Information We Collect
+          </Typography>
+          <Typography variant="body2" paragraph>
+            We collect information you provide directly, such as your name and email.
+          </Typography>
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+            How We Use Information
+          </Typography>
+          <Typography variant="body2" paragraph>
+            We use your information to provide and improve our service.
+          </Typography>
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+            Data Security
+          </Typography>
+          <Typography variant="body2" paragraph>
+            We implement appropriate security measures to protect your data.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setShowPrivacyModal(false)} variant="contained">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

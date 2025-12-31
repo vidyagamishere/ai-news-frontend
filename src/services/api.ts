@@ -151,15 +151,12 @@ const mapArticleImages = async (article: any): Promise<any> => {
   let supabaseImage: string | null = null;
   if (supabaseImageService.isEnabled()) {
     supabaseImage = await supabaseImageService.getRandomImageForCategory(categoryLabel);
-    console.log(`📷 Got Supabase image:`, supabaseImage || 'NONE');
   } else {
     console.warn('⚠️ Supabase service is disabled');
   }
   
   // Use Supabase image if available, otherwise use placeholder
   const finalImage = supabaseImage || article.image || '/placeholder-article.jpg';
-  
-  console.log(`✅ Final image for article:`, finalImage);
   
   return {
     ...article,
