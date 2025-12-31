@@ -19,23 +19,13 @@ import {
   Stack,
   Divider
 } from '@mui/material';
-import {
-  Search as SearchIcon,
-  Menu as MenuIcon,
-  KeyboardArrowDown
-} from '@mui/icons-material';
 import SEO from '../components/SEO';
 import { LandingSkeleton } from '../components/LoadingSkeleton';
-import ThreeColumnLayout from '../components/layout/ThreeColumnLayout';
 import Header from '../newcomponents/Header';
 import { SearchProvider } from '../contexts/SearchContext';
-import SidebarNavigation from '../components/layout/SidebarNavigation';
-import RecommendationsPanel from '../components/layout/RecommendationsPanel';
 import { apiService } from '../services/api';
 import type { Article, Category, LandingContent } from '../types/article';
-import { getContentTypeInfo, formatTimeAgo, getArticleSummary, getArticleSource } from '../types/article';
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
-import HorizontalArticleCard from '../newcomponents/cards/HorizontalArticleCard';
 import CardContainer from '../newcomponents/cards/CardContainer';
 import RightSection from '../newcomponents/RightSection';
 
@@ -667,6 +657,7 @@ const Landing: React.FC = () => {
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
+                    px: 2,
                     gap: 2,
                     bgcolor: alpha(theme.palette.info.main, 0.1),
                     borderRadius: 2,

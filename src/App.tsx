@@ -28,6 +28,7 @@ import './App.css';
 import './pages/legal.css';
 import './pages/about.css';
 import NewDashboard from './newcomponents/Dashboard';
+import AuthLayout from './layouts/AuthLayout';
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -134,7 +135,10 @@ function AppContent() {
     <Routes>
       {/* Public Routes - No Header/SideNav/Footer */}
       <Route element={<PublicLayout />}>
-        <Route path="/" element={<LandingRoute />} />
+        <Route path="/" element={<NewDashboard />} />
+      </Route>
+
+      <Route element={<AuthLayout />}>
         <Route path="/home" element={<Home />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/old-landing" element={<Landing />} />

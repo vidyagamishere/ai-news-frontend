@@ -14,8 +14,11 @@ import {
   Badge,
   useMediaQuery,
   useTheme,
-  Container
+  Container,
+  Select,
+  FormControl
 } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material';
 import { styled, alpha } from '@mui/material/styles';
 import {
   Search,
@@ -84,6 +87,9 @@ interface HeaderProps {
   onSearch?: (query: string) => void;
   searchCategoryId?: number;
   showSearch?: boolean;
+  dateFilter?: 1 | 7 | 30 | 365;
+  onDateFilterChange?: (value: 1 | 7 | 30 | 365) => void;
+  onPreferencesClick?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -92,7 +98,10 @@ const Header: React.FC<HeaderProps> = ({
   user,
   onSearch,
   searchCategoryId,
-  showSearch = false
+  showSearch = false,
+  dateFilter,
+  onDateFilterChange,
+  onPreferencesClick
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -130,7 +139,7 @@ const Header: React.FC<HeaderProps> = ({
       color="default"
       elevation={0}
       sx={{
-        background: 'none',
+        background: 'white',
       }}
     >
       <Container maxWidth="xl">
@@ -158,6 +167,34 @@ const Header: React.FC<HeaderProps> = ({
           
           {/* Center Section: Logo */}
           <Box sx={{ display: 'flex', alignItems: 'left', gap: { xs: 0.5, sm: 2 } }}>
+            {/* Date Filter - Only show when authenticated and props provided */}
+            {isAuthenticated && dateFilter && onDateFilterChange && (
+              <FormControl size="small" sx={{ minWidth: { xs: 100, sm: 150 }, display: { xs: 'none', sm: 'block' } }}>
+                <Select
+                  value={dateFilter}
+                  onChange={(e: SelectChangeEvent<number>) => onDateFilterChange(e.target.value as 1 | 7 | 30 | 365)}
+                  sx={{ bgcolor: 'background.paper', borderRadius: 2 }}
+                >
+                  <MenuItem value={1}>Last 24h</MenuItem>
+                  <MenuItem value={7}>Last 7 days</MenuItem>
+                  <MenuItem value={30}>Last 30 days</MenuItem>
+                  <MenuItem value={365}>Last year</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+
+            {/* Preferences Button - Only show when authenticated and handler provided */}
+            {isAuthenticated && onPreferencesClick && (
+              <IconButton
+                color="inherit"
+                onClick={onPreferencesClick}
+                size="small"
+                title="Preferences"
+              >
+                <Settings size={20} />
+              </IconButton>
+            )}
+
             {isAuthenticated ? (
               <>
                 <Button

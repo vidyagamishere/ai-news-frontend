@@ -2,29 +2,37 @@ import React, { useState, useEffect, useRef, createContext, useContext } from 'r
 import {
   Box,
   Container,
+  Paper,
   Typography,
-  Tab,
-  Tabs,
+  Button,
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
+  useTheme,
+  useMediaQuery,
+  alpha,
+  Chip,
+  Stack,
+  Tab,
+  Tabs,
   CircularProgress,
-  Button,
-  Alert
+  Alert,
+  InputLabel
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import { Settings, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import type { Article } from '../services/api';
+import type { LandingContent } from '../types/article';
 import SEO from '../components/SEO';
 import { useNavigate } from 'react-router-dom';
+import { LandingSkeleton } from '../components/LoadingSkeleton';
+import Header from './Header';
+import { SearchProvider } from '../contexts/SearchContext';
 import RightSection from './RightSection';
-import HorizontalArticleCard from './cards/HorizontalArticleCard';
 import CardContainer from './cards/CardContainer';
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
-import { SearchProvider } from '../contexts/SearchContext';
 
 // Context for sharing dashboard state with RightSection
 interface DashboardContextType {
@@ -44,21 +52,37 @@ const DashboardContext = createContext<DashboardContextType>({
 export const useDashboardContext = () => useContext(DashboardContext);
 
 const NewDashboard: React.FC = () => {
-  const { user, isAuthenticated, updatePreferences, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const [content, setContent] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [selectedTab, setSelectedTab] = useState<'news' | 'audio' | 'video' | 'posts' | 'learning'>('news');
-  const [dateFilter, setDateFilter] = useState<1 | 7 | 30 | 365>(7);
+  const [landingContent, setLandingContent] = useState<LandingContent | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<{
+    blogs: Article[];
+    podcasts: Article[];
+    videos: Article[];
+  } | null>(null);
+  const [searchCounts, setSearchCounts] = useState<{
+    blogs: number;
+    podcasts: number;
+    videos: number;
+    total: number;
+  } | null>(null);
   const [contentCounts, setContentCounts] = useState<{
     blogs: number;
     podcasts: number;
     videos: number;
   } | null>(null);
-
+  const [selectedTab, setSelectedTab] = useState<'news' | 'audio' | 'video' | 'posts' | 'learning'>('news');
+  const [dateFilter, setDateFilter] = useState<1 | 7 | 30 | 365>(7);
+  const [error, setError] = useState<string | null>(null);
+  
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [availableContentTypes, setAvailableContentTypes] = useState<any[]>([]);
   const [availablePublishers, setAvailablePublishers] = useState<any[]>([]);
@@ -82,28 +106,6 @@ const NewDashboard: React.FC = () => {
     }
   };
 
-  const getCategoryIcon = (categoryName: string): string => {
-    const iconMap: { [key: string]: string } = {
-      'all': '🏠',
-      'generative ai': '🤖',
-      'machine learning': '🧠',
-      'computer vision': '👁️',
-      'natural language processing': '💬',
-      'robotics': '🤖',
-      'ai research': '🔬',
-      'ai tools': '🛠️',
-      'ai ethics': '⚖️',
-      'deep learning': '🧠',
-      'neural networks': '🕸️',
-      'ai startups': '🚀',
-      'ai news': '📰',
-      'ai events': '📅',
-      'ai education': '🎓',
-      'ai applications': '💼'
-    };
-    return iconMap[categoryName.toLowerCase()] || '📰';
-  };
-
   // Load available options
   useEffect(() => {
     if (hasInitializedOptions.current) return;
@@ -120,157 +122,171 @@ const NewDashboard: React.FC = () => {
         setAvailableCategories(categoriesRes.categories || []);
         setAvailableContentTypes(contentTypesRes.content_types || []);
         setAvailablePublishers(publishersRes.publishers || []);
+        
+        // Once options are loaded, fetch personalized content
+        if (categoriesRes.categories && contentTypesRes.content_types && publishersRes.publishers) {
+          loadPersonalizedFeed();
+        }
       } catch (err) {
         console.error('Error loading options:', err);
+        setLoading(false);
       }
     };
 
     loadOptions();
   }, []);
 
-  // Load feed
-  useEffect(() => {
-    if (availableCategories.length === 0 || availableContentTypes.length === 0 || availablePublishers.length === 0) {
+  // Load personalized feed
+  const loadPersonalizedFeed = async () => {
+    try {
+      setLoading(true);
+
+      let categoryNames: string[];
+      if (activeCategory === 'All') {
+        categoryNames = userPreferences.categories_selected
+          .map((id: any) => availableCategories.find(cat => cat.id === id)?.name)
+          .filter(Boolean) as string[];
+        if (categoryNames.length === 0) {
+          categoryNames = ['Generative AI', 'Machine Learning'];
+        }
+      } else {
+        categoryNames = [activeCategory];
+      }
+
+      let contentTypeNames: string[];
+      const tabToContentTypeMap: Record<string, string> = {
+        'news': 'blog',
+        'audio': 'podcast',
+        'video': 'video'
+      };
+
+      const selectedContentType = tabToContentTypeMap[selectedTab];
+      if (selectedContentType) {
+        contentTypeNames = [selectedContentType];
+      } else {
+        contentTypeNames = ['blog', 'video', 'podcast'];
+      }
+
+      let publisherNames: string[];
+      if (userPreferences.publishers_selected.includes('all') || userPreferences.publishers_selected.length === 0) {
+        publisherNames = ['all'];
+      } else {
+        publisherNames = userPreferences.publishers_selected
+          .map((id: any) => {
+            if (typeof id === 'number') {
+              return availablePublishers.find(pub => pub.id === id)?.name;
+            }
+            return id;
+          })
+          .filter(Boolean) as string[];
+      }
+
+      const filterRequest = {
+        interests: categoryNames,
+        content_types: contentTypeNames,
+        publishers: publisherNames,
+        time_filter: getTimeFilterString(dateFilter),
+        search_query: '',
+        limit: 500
+      };
+
+      const response = await apiService.getPersonalizedFeed(filterRequest);
+
+      // Transform personalized feed into LandingContent structure
+      const articles: Article[] = [];
+      response.grouped_content?.forEach((group: any) => {
+        group.items?.forEach((item: any) => {
+          articles.push({
+            id: item.id?.toString() || Math.random().toString(),
+            title: item.title || 'Untitled',
+            url: item.url || '#',
+            source: item.source || 'Unknown',
+            source_name: item.source || 'Unknown',
+            time: item.published_date || new Date().toISOString(),
+            published_date: item.published_date || new Date().toISOString(),
+            summary: item.summary || item.description || 'No description available',
+            description: item.summary || item.description,
+            type: item.content_type_label || item.content_type || item.type || 'blog',
+            content_type: item.content_type_label || item.content_type || item.type,
+            category: group.category,
+            category_name: group.category,
+            thumbnail_url: item.thumbnail_url || item.thumbnail || item.image,
+            image: item.thumbnail_url || item.thumbnail || item.image,
+            readTime: item.read_time || item.readTime || '5 min'
+          } as Article);
+        });
+      });
+
+      // Group articles by category
+      const categoriesMap = new Map<string, { blogs: Article[]; podcasts: Article[]; videos: Article[] }>();
+      
+      articles.forEach(article => {
+        const cat = article.category_name || 'General';
+        if (!categoriesMap.has(cat)) {
+          categoriesMap.set(cat, { blogs: [], podcasts: [], videos: [] });
+        }
+        
+        const content = categoriesMap.get(cat)!;
+        const type = article.content_type?.toLowerCase() || '';
+        
+        if (type.includes('blog') || type.includes('article')) {
+          content.blogs.push(article);
+        } else if (type.includes('podcast')) {
+          content.podcasts.push(article);
+        } else if (type.includes('video')) {
+          content.videos.push(article);
+        }
+      });
+
+      // Convert to LandingContent structure
+      const transformedContent: LandingContent = {
+        categories: Array.from(categoriesMap.entries()).map(([name, content], index) => ({
+          id: index + 1,
+          name,
+          priority: index + 1,
+          description: '',
+          content
+        })),
+        total_categories: categoriesMap.size
+      };
+
+      setLandingContent(transformedContent);
+      updateContentCounts(transformedContent);
       setLoading(false);
-      return;
+    } catch (err) {
+      console.error('Error loading personalized feed:', err);
+      setLoading(false);
+    }
+  };
+
+  const updateContentCounts = (content: LandingContent) => {
+    let blogsCount = 0;
+    let podcastsCount = 0;
+    let videosCount = 0;
+
+    if (content && content.categories) {
+      content.categories.forEach(cat => {
+        blogsCount += (cat.content?.blogs || []).length;
+        podcastsCount += (cat.content?.podcasts || []).length;
+        videosCount += (cat.content?.videos || []).length;
+      });
     }
 
-    const loadFeed = async () => {
-      setLoading(true);
-      setError(null);
+    setContentCounts({
+      blogs: blogsCount,
+      podcasts: podcastsCount,
+      videos: videosCount
+    });
+  };
 
-      try {
-        let categoryNames: string[];
-        if (selectedCategory === 'All' || !selectedCategory) {
-          categoryNames = userPreferences.categories_selected
-            .map((id: any) => availableCategories.find(cat => cat.id === id)?.name)
-            .filter(Boolean) as string[];
-        } else {
-          categoryNames = [selectedCategory];
-        }
+  // Reload feed when filters change
+  useEffect(() => {
+    if (availableCategories.length > 0 && availableContentTypes.length > 0 && availablePublishers.length > 0) {
+      loadPersonalizedFeed();
+    }
+  }, [dateFilter, activeCategory, selectedTab]);
 
-        let contentTypeNames: string[];
-        const tabToContentTypeMap: Record<string, string> = {
-          'news': 'blog',
-          'audio': 'podcast',
-          'video': 'video',
-          'posts': 'post',
-          'learning': 'course'
-        };
-
-        const selectedContentType = tabToContentTypeMap[selectedTab];
-        if (selectedContentType && selectedTab !== 'news') {
-          contentTypeNames = [selectedContentType];
-        } else {
-          contentTypeNames = userPreferences.content_types_selected
-            .map((id: any) => availableContentTypes.find(ct => ct.id === id)?.name)
-            .filter(Boolean) as string[];
-        }
-
-        let publisherNames: string[];
-        if (userPreferences.publishers_selected.includes('all')) {
-          publisherNames = ['all'];
-        } else {
-          publisherNames = userPreferences.publishers_selected
-            .map((id: any) => {
-              if (typeof id === 'number') {
-                return availablePublishers.find(pub => pub.id === id)?.name;
-              }
-              return id;
-            })
-            .filter(Boolean) as string[];
-        }
-
-        const filterRequest = {
-          interests: categoryNames.length > 0 ? categoryNames : ['Generative AI', 'Machine Learning'],
-          content_types: contentTypeNames.length > 0 ? contentTypeNames : ['blog', 'video', 'podcast'],
-          publishers: publisherNames.length > 0 ? publisherNames : ['all'],
-          time_filter: getTimeFilterString(dateFilter),
-          search_query: '',
-          limit: 500
-        };
-
-        const response = await apiService.getPersonalizedFeed(filterRequest);
-
-        const articles: Article[] = [];
-        response.grouped_content?.forEach((group: any) => {
-          group.items?.forEach((item: any) => {
-            articles.push({
-              id: item.id?.toString() || Math.random().toString(),
-              title: item.title || 'Untitled',
-              url: item.url || '#',
-              source: item.source || 'Unknown',
-              source_name: item.source || 'Unknown',
-              time: item.published_date || new Date().toISOString(),
-              published_date: item.published_date || new Date().toISOString(),
-              significanceScore: item.significance_score || 5,
-              summary: item.summary || item.description || 'No description available',
-              description: item.summary || item.description,
-              content_summary: item.content_summary,
-              type: item.content_type_label || item.content_type || item.type || 'BLOGS',
-              content_type: item.content_type_label || item.content_type || item.type,
-              content_type_name: item.content_type_label || item.content_type || item.type,
-              significance: item.significance_score || 5,
-              significance_score: item.significance_score,
-              read_time: item.read_time || item.readTime || item.estimated_read_time,
-              readTime: item.read_time || item.readTime,
-              complexity: item.complexity || item.complexity_level,
-              impact: item.impact || item.impact_level || 'medium',
-              duration: item.duration,
-              category: group.category,
-              category_name: group.category,
-              thumbnail_url: item.thumbnail_url || item.thumbnail || item.image,
-              thumbnail: item.thumbnail_url || item.thumbnail,
-              imageUrl: item.thumbnail_url || item.thumbnail,
-              image: item.thumbnail_url || item.thumbnail || item.image,
-              ranking_score: item.ranking_score || item.rankingScore,
-              rankingScore: item.ranking_score || item.rankingScore,
-              topics: item.topics ? item.topics.map((t: any) => ({
-                id: 0,
-                name: typeof t === 'string' ? t : t.name,
-                category: '',
-                significance_weight: 1
-              })) : undefined,
-              topic_names: item.topic_names,
-              is_bookmarked: false,
-              is_liked: false,
-              likes_count: 0,
-              views_count: 0,
-              bookmarks_count: 0,
-              engagement_score: 0
-            });
-          });
-        });
-
-        setContent(articles);
-
-        const counts = {
-          blogs: articles.filter(a => ['blog', 'blogs', 'article'].includes(a.content_type?.toLowerCase() || '')).length,
-          podcasts: articles.filter(a => ['podcast', 'podcasts'].includes(a.content_type?.toLowerCase() || '')).length,
-          videos: articles.filter(a => ['video', 'videos'].includes(a.content_type?.toLowerCase() || '')).length
-        };
-        setContentCounts(counts);
-      } catch (err) {
-        console.error('Error loading feed:', err);
-        setError('Failed to load content');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadFeed();
-  }, [
-    dateFilter,
-    selectedCategory,
-    selectedTab,
-    JSON.stringify(userPreferences.categories_selected),
-    JSON.stringify(userPreferences.content_types_selected),
-    JSON.stringify(userPreferences.publishers_selected),
-    availableCategories.length,
-    availableContentTypes.length,
-    availablePublishers.length
-  ]);
-
+  // Update preferences when user changes
   useEffect(() => {
     if (user?.preferences) {
       setUserPreferences({
@@ -284,30 +300,111 @@ const NewDashboard: React.FC = () => {
   }, [user?.preferences]);
 
   const getTabContent = () => {
-    let filteredContent = content;
-
-    if (selectedCategory !== 'All') {
-      filteredContent = filteredContent.filter(item =>
-        item.category_name?.toLowerCase() === selectedCategory.toLowerCase() ||
-        item.category?.toLowerCase() === selectedCategory.toLowerCase()
-      );
+    if (isSearchActive && searchResults) {
+      // Return search results
+      switch (selectedTab) {
+        case 'news':
+          return searchResults.blogs;
+        case 'audio':
+          return searchResults.podcasts;
+        case 'video':
+          return searchResults.videos;
+        default:
+          return [];
+      }
     }
 
-    switch (selectedTab) {
-      case 'news':
-        return filteredContent.filter(item =>
-          ['blog', 'blogs', 'article'].includes(item.content_type?.toLowerCase() || '')
-        );
-      case 'audio':
-        return filteredContent.filter(item =>
-          ['podcast', 'podcasts'].includes(item.content_type?.toLowerCase() || '')
-        );
-      case 'video':
-        return filteredContent.filter(item =>
-          ['video', 'videos'].includes(item.content_type?.toLowerCase() || '')
-        );
-      default:
-        return [];
+    if (!landingContent?.categories) return [];
+
+    // Get content from all categories or filtered category
+    const relevantCategories = activeCategory === 'All'
+      ? landingContent.categories
+      : landingContent.categories.filter(cat => cat.name === activeCategory);
+
+    let allContent: Article[] = [];
+    relevantCategories.forEach(cat => {
+      switch (selectedTab) {
+        case 'news':
+          allContent = [...allContent, ...(cat.content?.blogs || [])];
+          break;
+        case 'audio':
+          allContent = [...allContent, ...(cat.content?.podcasts || [])];
+          break;
+        case 'video':
+          allContent = [...allContent, ...(cat.content?.videos || [])];
+          break;
+      }
+    });
+
+    return allContent;
+  };
+
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) {
+      setIsSearchActive(false);
+      setSearchResults(null);
+      setSearchCounts(null);
+      setSearchQuery('');
+      setSearchError(null);
+      loadPersonalizedFeed();
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setIsSearchActive(true);
+      setSearchQuery(query);
+      setSearchError(null);
+
+      const categoryId = activeCategory === 'All' 
+        ? undefined 
+        : availableCategories.find(cat => cat.name === activeCategory)?.id;
+
+      const searchResponse = await apiService.searchContent(
+        query,
+        categoryId,
+        dateFilter,
+        20
+      );
+
+      const totalResults = searchResponse.counts.total;
+      if (totalResults === 0) {
+        setSearchError(`No results found for "${query}"`);
+        setSearchResults({ blogs: [], podcasts: [], videos: [] });
+        setSearchCounts({ blogs: 0, podcasts: 0, videos: 0, total: 0 });
+      } else {
+        setSearchResults({
+          blogs: searchResponse.results.blogs.map((item: any) => ({
+            ...item,
+            time: item.published_date || new Date().toISOString(),
+            published_date: item.published_date || null,
+            readTime: '5 min'
+          })),
+          podcasts: searchResponse.results.podcasts.map((item: any) => ({
+            ...item,
+            time: item.published_date || new Date().toISOString(),
+            published_date: item.published_date || null,
+            readTime: '30 min'
+          })),
+          videos: searchResponse.results.videos.map((item: any) => ({
+            ...item,
+            time: item.published_date || new Date().toISOString(),
+            published_date: item.published_date || null,
+            readTime: '15 min'
+          }))
+        });
+
+        setSearchCounts(searchResponse.counts);
+        setSearchError(null);
+      }
+    } catch (err: any) {
+      console.error('Search failed:', err);
+      setSearchError(`Search temporarily unavailable. Please try again.`);
+      setIsSearchActive(true);
+      setSearchResults({ blogs: [], podcasts: [], videos: [] });
+      setSearchCounts({ blogs: 0, podcasts: 0, videos: 0, total: 0 });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -316,15 +413,9 @@ const NewDashboard: React.FC = () => {
     navigate('/');
   };
 
-  const handleSearch = (query: string) => {
-    // TODO: Implement search logic for Dashboard
-    console.log('Search query:', query);
-    // You can filter content or navigate to search results
-  };
-
   const dashboardContextValue: DashboardContextType = {
-    content,
-    selectedCategory,
+    content: getTabContent(),
+    selectedCategory: activeCategory,
     selectedTab,
     categories: availableCategories.map(cat => cat.name)
   };
@@ -332,113 +423,191 @@ const NewDashboard: React.FC = () => {
   return (
     <SearchProvider
       onSearch={handleSearch}
-      categoryId={selectedCategory === 'All' ? undefined : availableCategories.find(cat => cat.name === selectedCategory)?.id}
+      categoryId={activeCategory === 'All' ? undefined : availableCategories.find(cat => cat.name === activeCategory)?.id}
       showSearch={true}
     >
       <DashboardContext.Provider value={dashboardContextValue}>
-      <SEO
-        title="AI News Dashboard | Vidyagam"
-        description="Your personalized AI news dashboard"
-        keywords="AI news, dashboard, artificial intelligence"
-      />
+        <SEO
+          title="AI News Dashboard | Vidyagam"
+          description="Your personalized AI news dashboard"
+          keywords="AI news, dashboard, artificial intelligence"
+        />
 
-      <Box sx={{ display: 'flex', flex: 1 }}>
-        {/* Main Content */}
-        <Container maxWidth="lg" sx={{ flex: 1, py: 4 }}>
-          {/* Controls */}
-          <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <FormControl size="small" sx={{ minWidth: 200 }}>
-              <InputLabel>Time Filter</InputLabel>
-              <Select
-                value={dateFilter}
-                label="Time Filter"
-                onChange={(e: SelectChangeEvent<number>) => setDateFilter(e.target.value as 1 | 7 | 30 | 365)}
-              >
-                <MenuItem value={1}>Last 24 hours</MenuItem>
-                <MenuItem value={7}>Last 7 days</MenuItem>
-                <MenuItem value={30}>Last 30 days</MenuItem>
-                <MenuItem value={365}>Last year</MenuItem>
-              </Select>
-            </FormControl>
-
-            <Button
-              variant="outlined"
-              startIcon={<Settings />}
-              onClick={() => navigate('/preferences')}
-            >
-              Preferences
-            </Button>
-
-            <Button
-              variant="outlined"
-              startIcon={<LogOut />}
-              onClick={handleLogout}
-              color="error"
-            >
-              Sign Out
-            </Button>
-          </Box>
-
-          {/* Tabs */}
-          <Tabs
-            value={selectedTab}
-            onChange={(_, newValue) => setSelectedTab(newValue)}
-            sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
-          >
-            <Tab label={`📰 News${contentCounts?.blogs ? ` (${contentCounts.blogs})` : ''}`} value="news" />
-            <Tab label={`🎙️ Podcasts${contentCounts?.podcasts ? ` (${contentCounts.podcasts})` : ''}`} value="audio" />
-            <Tab label={`🎥 Videos${contentCounts?.videos ? ` (${contentCounts.videos})` : ''}`} value="video" />
-            <Tab label="💬 Posts" value="posts" disabled />
-            <Tab label="🎓 Learning" value="learning" disabled />
-          </Tabs>
-
-          {/* Content */}
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-              <CircularProgress />
-            </Box>
-          ) : error ? (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-              <Button onClick={() => window.location.reload()} sx={{ ml: 2 }}>
-                Retry
-              </Button>
-            </Alert>
-          ) : (
-            <CardContainer
-              headerTitle={
-                selectedTab === 'news' ? 'Latest AI News' :
-                selectedTab === 'audio' ? 'AI Podcasts' :
-                'AI Videos'
-              }
-              headerSubtitle={selectedCategory === 'All' ? 'All categories' : selectedCategory}
-              articles={getTabContent().slice(0, 20)}
-              contentType={selectedTab === 'news' ? 'blog' : selectedTab}
-              showInteractions={false}
-              emptyMessage="No content found"
-              emptyIcon={
-                selectedTab === 'news' ? '📰' :
-                selectedTab === 'audio' ? '🎧' :
-                '📹'
-              }
+        {loading ? (
+          <LandingSkeleton />
+        ) : (
+          <>
+            <Header 
+              isAuthenticated={true} 
+              user={user ? { name: user.email || 'User', email: user.email } : undefined}
+              dateFilter={dateFilter}
+              onDateFilterChange={setDateFilter}
+              onPreferencesClick={() => navigate('/preferences')}
             />
-          )}
-        </Container>
+            
+            <Stack spacing={2} direction="row" sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+              <Container maxWidth="lg" sx={{ pt: 2, pb: 4 }}>
 
-        {/* Right Sidebar */}
-        <Box
-          sx={{
-            width: 320,
-            flexShrink: 0,
-            display: { xs: 'none', lg: 'block' },
-            pr: 2,
-            py: 4
-          }}
-        >
-          <RightSection />
-        </Box>
-      </Box>
-    </DashboardContext.Provider>
+                {/* Search Error/No Results Message */}
+                {isSearchActive && searchError && (
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 6,
+                      textAlign: 'center',
+                      bgcolor: alpha(theme.palette.primary.main, 0.05),
+                      borderRadius: 3,
+                      mb: 3
+                    }}
+                  >
+                    <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔍</Typography>
+                    <Typography variant="h5" fontWeight={700} gutterBottom>
+                      {searchError}
+                    </Typography>
+                    <Typography color="text.secondary" sx={{ mb: 3 }}>
+                      Try adjusting your search terms or filters
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      onClick={() => handleSearch('')}
+                    >
+                      Clear Search
+                    </Button>
+                  </Paper>
+                )}
+
+                {/* Search Active Indicator */}
+                {isSearchActive && !searchError && searchCounts && (
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      px: 2,
+                      py: 1,
+                      mb: 3,
+                      gap: 2,
+                      bgcolor: alpha(theme.palette.info.main, 0.1),
+                      borderRadius: 2,
+                      border: 1,
+                      borderColor: alpha(theme.palette.info.main, 0.2)
+                    }}
+                  >
+                    <Typography sx={{ flex: 1 }}>
+                      🔍 Showing search results for <strong>"{searchQuery}"</strong>
+                    </Typography>
+                    <Chip
+                      label={`${searchCounts.total} result${searchCounts.total !== 1 ? 's' : ''}`}
+                      color="info"
+                      size="small"
+                    />
+                    <Button
+                      size="small"
+                      onClick={() => handleSearch('')}
+                    >
+                      Clear ✕
+                    </Button>
+                  </Paper>
+                )}
+
+                {/* Content Section */}
+                {selectedTab === 'news' && (
+                  <CardContainer
+                    headerTitle="Your Personalized AI News"
+                    headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                    articles={getTabContent().slice(0, 20)}
+                    contentType="blog"
+                    showInteractions={true}
+                    emptyMessage="No articles found. Try adjusting your preferences."
+                    emptyIcon="📰"
+                  />
+                )}
+
+                {/* Audio Tab */}
+                {selectedTab === 'audio' && (
+                  <CardContainer
+                    headerTitle="Your AI Podcasts"
+                    headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                    articles={getTabContent().slice(0, 20)}
+                    contentType="podcast"
+                    showInteractions={true}
+                    emptyMessage="No podcasts available. Try adjusting your preferences."
+                    emptyIcon="🎧"
+                  />
+                )}
+
+                {/* Video Tab */}
+                {selectedTab === 'video' && (
+                  <CardContainer
+                    headerTitle="Your AI Videos"
+                    headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                    articles={getTabContent().slice(0, 20)}
+                    contentType="video"
+                    showInteractions={true}
+                    emptyMessage="No videos available. Try adjusting your preferences."
+                    emptyIcon="📹"
+                  />
+                )}
+
+                {/* Posts Tab */}
+                {selectedTab === 'posts' && (
+                  <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
+                    <Typography sx={{ fontSize: '4rem', mb: 2 }}>🗨️</Typography>
+                    <Typography variant="h3" fontWeight={700} gutterBottom>
+                      Community Coming Soon
+                    </Typography>
+                    <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                      Join discussions with AI experts and learners
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      size="large"
+                      onClick={() => navigate('/preferences')}
+                      sx={{ px: 4 }}
+                    >
+                      Manage Preferences
+                    </Button>
+                  </Box>
+                )}
+
+                {/* Learning Tab */}
+                {selectedTab === 'learning' && (
+                  <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
+                    <Typography sx={{ fontSize: '4rem', mb: 2 }}>🎓</Typography>
+                    <Typography variant="h3" fontWeight={700} gutterBottom>
+                      Learning Paths Coming Soon
+                    </Typography>
+                    <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                      Structured courses from beginner to expert
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      size="large"
+                      onClick={() => navigate('/preferences')}
+                      sx={{ px: 4 }}
+                    >
+                      Manage Preferences
+                    </Button>
+                  </Box>
+                )}
+              </Container>
+
+              {/* Right Sidebar */}
+              <Box
+                sx={{
+                  width: 320,
+                  flexShrink: 0,
+                  display: { xs: 'none', lg: 'block' },
+                  pr: 2,
+                  py: 4
+                }}
+              >
+                <RightSection />
+              </Box>
+            </Stack>
+          </>
+        )}
+      </DashboardContext.Provider>
     </SearchProvider>
   );
 };

@@ -1,17 +1,16 @@
 import React from 'react';
-import { Box, Stack } from '@mui/material';
+import { Box } from '@mui/material';
 import { Outlet } from 'react-router-dom';
-import Header from '../newcomponents/Header';
 import SideNav from '../newcomponents/SideNav';
-import Footer from '../newcomponents/Footer';
-import { useAuth } from '../contexts/AuthContext';
+import Header from '../newcomponents/Header';
 
-const AuthenticatedLayout: React.FC = () => {
-  const { user } = useAuth();
-
+/**
+ * Public Layout - Simple layout for non-authenticated pages
+ * No header, sidebar, or footer - each page controls its own layout
+ */
+const AuthLayout: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <SideNav />
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Box component="main" sx={{ flex: 1 }}>
           <Outlet />
@@ -22,4 +21,4 @@ const AuthenticatedLayout: React.FC = () => {
   );
 };
 
-export default AuthenticatedLayout;
+export default AuthLayout;
