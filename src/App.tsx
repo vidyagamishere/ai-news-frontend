@@ -135,7 +135,7 @@ function AppContent() {
     <Routes>
       {/* Public Routes - No Header/SideNav/Footer */}
       <Route element={<PublicLayout />}>
-        <Route path="/" element={<NewDashboard />} />
+        <Route path="/" element={<LandingRoute />} />
       </Route>
 
       <Route element={<AuthLayout />}>
