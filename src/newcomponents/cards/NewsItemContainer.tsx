@@ -1,9 +1,10 @@
 import React from 'react';
 import { Box, Paper, Typography, Stack, useTheme, Container } from '@mui/material';
-import HorizontalArticleCard from './HorizontalArticleCard';
+import HorizontalArticleCard from './NewsItemContainer';
 import type { Article } from '../../types/article';
+import NewsItem from './NewsItem';
 
-interface CardContainerProps {
+interface NewsItemContainerProps {
   title?: string;
   headerTitle?: string;
   headerSubtitle?: string;
@@ -17,7 +18,7 @@ interface CardContainerProps {
   emptyIcon?: string;
 }
 
-const CardContainer: React.FC<CardContainerProps> = ({
+const NewsItemContainer: React.FC<NewsItemContainerProps> = ({
   title,
   headerTitle,
   headerSubtitle,
@@ -73,7 +74,7 @@ const CardContainer: React.FC<CardContainerProps> = ({
       {articles.length > 0 ? (
         <Stack spacing={0} divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}>
           {articles.map((article, index) => (
-            <HorizontalArticleCard
+            <NewsItem
               key={article.id || index}
               article={article}
               contentType={contentType}
@@ -105,4 +106,4 @@ const CardContainer: React.FC<CardContainerProps> = ({
   );
 };
 
-export default CardContainer;
+export default NewsItemContainer;

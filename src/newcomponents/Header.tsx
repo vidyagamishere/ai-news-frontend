@@ -142,13 +142,12 @@ const Header: React.FC<HeaderProps> = ({
         background: 'white',
       }}
     >
-      <Container maxWidth="xl">
         <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 0, sm: 2 } }}>
           {/* Right Section: Actions */}
           <Box sx={{ display: 'flex', alignItems: 'left', gap: { xs: 0.5, sm: 2 } }}>
             {/* Search Bar - Desktop */}
             {finalShowSearch && finalOnSearch && !isMobile && (
-              <Box sx={{ width: { md: 400, lg: 500 }, mr: 2 }}>
+              <Box sx={{ width: { md: 300, lg: 400 }, mr: 2 }}>
                 <EnhancedSearchBar
                   onSearch={finalOnSearch}
                   categoryId={finalCategoryId}
@@ -270,7 +269,6 @@ const Header: React.FC<HeaderProps> = ({
             )}
           </Box>
         </Toolbar>
-      </Container>
 
       {/* User Profile Menu */}
       <Menu

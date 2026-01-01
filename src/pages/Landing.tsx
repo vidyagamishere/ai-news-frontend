@@ -26,7 +26,7 @@ import { SearchProvider } from '../contexts/SearchContext';
 import { apiService } from '../services/api';
 import type { Article, Category, LandingContent } from '../types/article';
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
-import CardContainer from '../newcomponents/cards/CardContainer';
+import NewsItemContainer from '../newcomponents/cards/NewsItemContainer';
 import RightSection from '../newcomponents/RightSection';
 
 interface MenuItem {
@@ -601,6 +601,7 @@ const Landing: React.FC = () => {
   };
 
   return (
+
     <>
       <SEO
         title="Vidyagam - Master AI & Tech Skills"
@@ -619,10 +620,13 @@ const Landing: React.FC = () => {
           }
           showSearch={true}
         >
-          <Header isAuthenticated={false} />
-          
-          <Stack spacing={2} direction="row" sx={{ minHeight: '100vh', bgcolor: 'background.default' }} >
-            <Container maxWidth="lg" sx={{ pt: 2, pb: 4 }}>
+
+          <Stack sx={{ bgcolor: 'background.default', justifyContent: 'space-between' }} >
+            <Header isAuthenticated={false} />
+          </Stack>
+
+          <Stack spacing={2} direction="row" sx={{ justifyContent: 'center', marginRight: '320px' }} >
+            <Container maxWidth="lg">
               {/* Search Error/No Results Message */}
               {isSearchActive && searchError && (
                 <Paper
@@ -684,7 +688,7 @@ const Landing: React.FC = () => {
 
               {/* Content Section */}
               {selectedTab === 'news' && (
-                <CardContainer
+                <NewsItemContainer
                   headerTitle="Latest AI News"
                   headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                   articles={getTabContent().slice(0, 20)}
@@ -697,7 +701,7 @@ const Landing: React.FC = () => {
 
               {/* Audio Tab */}
               {selectedTab === 'audio' && (
-                <CardContainer
+                <NewsItemContainer
                   headerTitle="AI Podcasts"
                   headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                   articles={getTabContent().slice(0, 20)}
@@ -710,7 +714,7 @@ const Landing: React.FC = () => {
 
               {/* Video Tab */}
               {selectedTab === 'video' && (
-                <CardContainer
+                <NewsItemContainer
                   headerTitle="AI Videos"
                   headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                   articles={getTabContent().slice(0, 20)}
@@ -762,21 +766,11 @@ const Landing: React.FC = () => {
                   </Button>
                 </Box>
               )}
-          </Container>
-          <Box
-            sx={{
-              width: 320,
-              flexShrink: 0,
-              display: { xs: 'none', lg: 'block' },
-              pr: 2,
-              py: 4
-            }}
-          >
-            <RightSection />
-          </Box>
-        </Stack>
+            </Container>
+          </Stack>
         </SearchProvider>
-      )}
+      )
+      }
     </>
   );
 };

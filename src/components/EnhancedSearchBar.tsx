@@ -298,9 +298,9 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   };
 
   return (
-    <Box ref={searchRef} sx={{ position: 'relative', width: '100%' }} className={className}>
+    <Box ref={searchRef} >
       {/* Search Input */}
-      <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+      <form onSubmit={handleSubmit}>
         <TextField
           inputRef={inputRef}
           fullWidth
@@ -312,7 +312,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
           }}
           placeholder=""
           variant="outlined"
-          size="small"
+          size="medium"
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -324,7 +324,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
                 {loading && <CircularProgress size={20} />}
                 {query && !loading && (
                   <IconButton
-                    size="small"
+                    size="medium"
                     onClick={handleClear}
                     edge="end"
                   >
@@ -334,7 +334,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
               </InputAdornment>
             ),
             sx: {
-              bgcolor: 'background.paper',
+              bgcolor: 'background.default',
               borderRadius: 8,
               '& fieldset': {
                 borderColor: 'divider',
@@ -350,7 +350,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
           }}
           sx={{
             '& .MuiInputBase-input': {
-              fontSize: '0.875rem',
+              fontSize: '1.125rem',
               py: 0.75
             }
           }}

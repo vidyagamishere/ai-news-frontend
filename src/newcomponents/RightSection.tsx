@@ -25,13 +25,13 @@ const RightSection: React.FC = () => {
   // Extract trending topics from actual content
   const trendingTopics = useMemo(() => {
     const topicCounts = new Map<string, number>();
-    
+
     content.forEach(article => {
       article.topics?.forEach(topic => {
         const name = topic.name;
         topicCounts.set(name, (topicCounts.get(name) || 0) + 1);
       });
-      
+
       // Also consider category names
       if (article.category_name) {
         topicCounts.set(article.category_name, (topicCounts.get(article.category_name) || 0) + 1);
@@ -51,7 +51,7 @@ const RightSection: React.FC = () => {
   // Get category-based article counts for recommendations
   const categoryStats = useMemo(() => {
     const stats = new Map<string, number>();
-    
+
     content.forEach(article => {
       const category = article.category_name || article.category || 'Other';
       stats.set(category, (stats.get(category) || 0) + 1);
@@ -92,7 +92,7 @@ const RightSection: React.FC = () => {
   ];
 
   return (
-    <Box sx={{ position: 'sticky', top: 80, maxWidth: 320 }}>
+    <Box>
       {/* Recommended Topics */}
       <Paper
         elevation={0}
@@ -110,7 +110,7 @@ const RightSection: React.FC = () => {
             Recommended Topics
           </Typography>
         </Stack>
-        
+
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Explore the most popular AI topics and stay updated with the latest trends
         </Typography>

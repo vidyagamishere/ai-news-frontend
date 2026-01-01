@@ -18,7 +18,7 @@ import {
 import type { Article } from '../../types/article';
 import { formatTimeAgo, getArticleSummary, getArticleSource } from '../../types/article';
 
-interface HorizontalArticleCardProps {
+interface NewsItemProps {
   article: Article;
   contentType: string;
   onLike?: (articleId: number) => void;
@@ -27,7 +27,7 @@ interface HorizontalArticleCardProps {
   showInteractions?: boolean;
 }
 
-const HorizontalArticleCard: React.FC<HorizontalArticleCardProps> = ({
+const NewsItem: React.FC<NewsItemProps> = ({
   article,
   contentType,
   onLike,
@@ -85,6 +85,7 @@ const HorizontalArticleCard: React.FC<HorizontalArticleCardProps> = ({
             variant="caption"
             sx={{
               fontWeight: 600,
+              fontSize: '0.625rem',
               color: 'text.secondary',
               textTransform: 'uppercase',
               letterSpacing: '0.5px'
@@ -101,7 +102,7 @@ const HorizontalArticleCard: React.FC<HorizontalArticleCardProps> = ({
           className="article-title"
           sx={{
             fontWeight: 700,
-            fontSize: { xs: '1rem', sm: '1.125rem' },
+            fontSize: { xs: '1rem', sm: '1.5rem' },
             lineHeight: 1.4,
             mb: 1,
             display: '-webkit-box',
@@ -238,4 +239,4 @@ const HorizontalArticleCard: React.FC<HorizontalArticleCardProps> = ({
   );
 };
 
-export default HorizontalArticleCard;
+export default NewsItem;

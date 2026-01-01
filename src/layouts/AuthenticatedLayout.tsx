@@ -5,6 +5,7 @@ import Header from '../newcomponents/Header';
 import SideNav from '../newcomponents/SideNav';
 import Footer from '../newcomponents/Footer';
 import { useAuth } from '../contexts/AuthContext';
+import RightSection from '../newcomponents/RightSection';
 
 const AuthenticatedLayout: React.FC = () => {
   const { user } = useAuth();
@@ -12,9 +13,19 @@ const AuthenticatedLayout: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <SideNav />
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'row' }}>
         <Box component="main" sx={{ flex: 1 }}>
           <Outlet />
+        </Box>
+        <Box
+          sx={{
+            width: 320,
+            position: 'absolute',
+            top: 80,
+            right: 5,
+          }}
+        >
+          <RightSection />
         </Box>
         {/* <Footer /> */}
       </Box>

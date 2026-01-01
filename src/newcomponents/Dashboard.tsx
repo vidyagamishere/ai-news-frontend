@@ -31,7 +31,7 @@ import { LandingSkeleton } from '../components/LoadingSkeleton';
 import Header from './Header';
 import { SearchProvider } from '../contexts/SearchContext';
 import RightSection from './RightSection';
-import CardContainer from './cards/CardContainer';
+import NewsItemContainer from './cards/NewsItemContainer';
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
 
 // Context for sharing dashboard state with RightSection
@@ -445,7 +445,7 @@ const NewDashboard: React.FC = () => {
               onPreferencesClick={() => navigate('/preferences')}
             />
             
-            <Stack spacing={2} direction="row" sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+            <Stack spacing={2} direction="row" sx={{ justifyContent: 'center', marginRight: '320px' }}>
               <Container maxWidth="lg" sx={{ pt: 2, pb: 4 }}>
 
                 {/* Search Error/No Results Message */}
@@ -512,7 +512,7 @@ const NewDashboard: React.FC = () => {
 
                 {/* Content Section */}
                 {selectedTab === 'news' && (
-                  <CardContainer
+                  <NewsItemContainer
                     headerTitle="Your Personalized AI News"
                     headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                     articles={getTabContent().slice(0, 20)}
@@ -525,7 +525,7 @@ const NewDashboard: React.FC = () => {
 
                 {/* Audio Tab */}
                 {selectedTab === 'audio' && (
-                  <CardContainer
+                  <NewsItemContainer
                     headerTitle="Your AI Podcasts"
                     headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                     articles={getTabContent().slice(0, 20)}
@@ -538,7 +538,7 @@ const NewDashboard: React.FC = () => {
 
                 {/* Video Tab */}
                 {selectedTab === 'video' && (
-                  <CardContainer
+                  <NewsItemContainer
                     headerTitle="Your AI Videos"
                     headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                     articles={getTabContent().slice(0, 20)}
@@ -591,19 +591,6 @@ const NewDashboard: React.FC = () => {
                   </Box>
                 )}
               </Container>
-
-              {/* Right Sidebar */}
-              <Box
-                sx={{
-                  width: 320,
-                  flexShrink: 0,
-                  display: { xs: 'none', lg: 'block' },
-                  pr: 2,
-                  py: 4
-                }}
-              >
-                <RightSection />
-              </Box>
             </Stack>
           </>
         )}
