@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, User, UserPlus, Settings, LogOut } from 'lucide-react';
+import { Menu, X, User, UserPlus, Settings, LogOut, TrendingUp } from 'lucide-react';
 
 interface ContentTab {
   id: string;
@@ -30,6 +30,7 @@ interface MobileHeaderProps {
   showAuth?: boolean;
   onPreferences?: () => void;  // NEW
   onSignOut?: () => void;      // NEW
+  onTrendingClick?: () => void; // NEW - for right section drawer
 }
 
 export const MobileHeader: React.FC<MobileHeaderProps> = ({
@@ -48,6 +49,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   showAuth = true,
   onPreferences,
   onSignOut,
+  onTrendingClick,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -99,6 +101,17 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 
           {/* Right Side Buttons */}
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Trending Topics Button (always visible) */}
+            {onTrendingClick && (
+              <div
+                onClick={onTrendingClick}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Trending topics"
+                style={{ color: '#000000', outline: 'none' }}
+              >
+                <TrendingUp size={18} strokeWidth={2} style={{ color: '#000000' }} />
+              </div>
+            )}
             {/* Show Preferences + Sign Out for authenticated users */}
             {onPreferences && onSignOut ? (
               <>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -40,6 +40,10 @@ const Landing: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
+  const outletContext = useOutletContext<{ 
+    dateFilter?: 1 | 7 | 30 | 365;
+    onDateFilterChange?: (filter: 1 | 7 | 30 | 365) => void;
+  }>();
 
   // Check if caching is enabled via environment variable (disabled by default)
   const isCacheEnabled = import.meta.env.VITE_ENABLE_CACHE === 'true';
@@ -69,7 +73,8 @@ const Landing: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<'news' | 'posts' | 'audio' | 'video' | 'learning'>('news');
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [contentTypeTabs, setContentTypeTabs] = useState<Array<{ id: string; icon: string; label: string }>>([]);
-  const [dateFilter, setDateFilter] = useState<1 | 7 | 30 | 365>(7); // Default 7 days
+  const dateFilter = outletContext?.dateFilter || 7;
+  const setDateFilter = outletContext?.onDateFilterChange || (() => {});
   const [loadedContentTypes, setLoadedContentTypes] = useState<Set<number>>(new Set([1])); // Track loaded content types (start with blogs)
   const [contentTypeCache, setContentTypeCache] = useState<Map<string, any>>(new Map()); // Cache content by category+type
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -625,7 +630,7 @@ const Landing: React.FC = () => {
             <Header isAuthenticated={false} />
           </Stack>
 
-          <Stack spacing={2} direction="row" sx={{ justifyContent: 'center', marginRight: '320px' }} >
+          <Stack spacing={2} direction="row" sx={{ justifyContent: 'center' }} >
             <Container maxWidth="lg">
               {/* Search Error/No Results Message */}
               {isSearchActive && searchError && (

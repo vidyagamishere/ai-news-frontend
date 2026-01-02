@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Box,
+  Container,
   Skeleton,
   Stack,
   Typography
@@ -19,15 +20,15 @@ export const HorizontalArticleCardSkeleton: React.FC = () => (
     <Box sx={{ flex: 1 }}>
       {/* Publisher/Source */}
       <Skeleton variant="text" width="30%" height={16} sx={{ mb: 1 }} />
-      
+
       {/* Title */}
       <Skeleton variant="text" width="90%" height={28} sx={{ mb: 0.5 }} />
       <Skeleton variant="text" width="70%" height={28} sx={{ mb: 1 }} />
-      
+
       {/* Summary */}
       <Skeleton variant="text" width="100%" height={20} sx={{ mb: 0.5 }} />
       <Skeleton variant="text" width="85%" height={20} sx={{ mb: 2 }} />
-      
+
       {/* Metadata */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
         <Skeleton variant="text" width={80} height={20} />
@@ -50,28 +51,23 @@ export const HorizontalArticleCardSkeleton: React.FC = () => (
 );
 
 // Container with header and multiple horizontal cards
-export const ArticleListSkeleton: React.FC<{ count?: number; showHeader?: boolean }> = ({ 
+export const ArticleListSkeleton: React.FC<{ count?: number; showHeader?: boolean }> = ({
   count = 5,
-  showHeader = true 
+  showHeader = true
 }) => (
-  <Box>
-    {/* Header */}
-    {showHeader && (
-      <Box sx={{ mb: 4 }}>
-        <Skeleton variant="text" width="40%" height={48} sx={{ mb: 1 }} />
-        <Skeleton variant="text" width="25%" height={24} />
+  <Box sx={{ mt: 10 }}>
+    <Container maxWidth="lg" disableGutters sx={{marginRight: 60  }}>
+      {/* Content with dividers */}
+      <Box sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
+        <Stack spacing={0} divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}>
+          {Array.from({ length: count }).map((_, i) => (
+            <HorizontalArticleCardSkeleton key={i} />
+          ))}
+        </Stack>
       </Box>
-    )}
+    </Container>
 
-    {/* Content with dividers */}
-    <Box sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
-      <Stack spacing={0} divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}>
-        {Array.from({ length: count }).map((_, i) => (
-          <HorizontalArticleCardSkeleton key={i} />
-        ))}
-      </Stack>
-    </Box>
-  </Box>
+  </Box >
 );
 
 // Legacy vertical card skeleton (kept for backward compatibility)
@@ -84,7 +80,6 @@ export const ArticleCardSkeleton: React.FC = () => (
       overflow: 'hidden'
     }}
   >
-    <Skeleton variant="rectangular" height={200} />
     <Box sx={{ p: 2 }}>
       <Stack spacing={1}>
         <Skeleton variant="text" width="60%" height={32} />
@@ -107,13 +102,6 @@ export const LandingSkeleton: React.FC = () => (
 export const DashboardSkeleton: React.FC = () => (
   <Box sx={{ p: 3 }}>
     <Stack spacing={3}>
-      {/* Tabs Skeleton */}
-      <Box sx={{ display: 'flex', gap: 2, borderBottom: 1, borderColor: 'divider', pb: 2 }}>
-        <Skeleton variant="text" width={100} height={40} />
-        <Skeleton variant="text" width={100} height={40} />
-        <Skeleton variant="text" width={100} height={40} />
-      </Box>
-
       {/* Content Skeleton */}
       <ArticleListSkeleton count={5} showHeader={true} />
     </Stack>

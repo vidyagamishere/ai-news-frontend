@@ -21,14 +21,14 @@ import Admin from './pages/Admin';
 import AdminLogin from './pages/AdminLogin';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import Loading from './components/Loading';
-import AuthenticatedLayout from './layouts/AuthenticatedLayout';
-import PublicLayout from './layouts/PublicLayout';
+import ResponsiveLayout from './layouts/ResponsiveLayout';
 import theme from './theme/theme';
 import './App.css';
 import './pages/legal.css';
 import './pages/about.css';
 import NewDashboard from './newcomponents/Dashboard';
 import AuthLayout from './layouts/AuthLayout';
+import ResponsivePublicLayout from './layouts/ResponsiveLayout';
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -134,7 +134,7 @@ function AppContent() {
   return (
     <Routes>
       {/* Public Routes - No Header/SideNav/Footer */}
-      <Route element={<PublicLayout />}>
+      <Route element={<ResponsiveLayout />}>
         <Route path="/" element={<LandingRoute />} />
       </Route>
 
@@ -154,7 +154,7 @@ function AppContent() {
       </Route>
 
       {/* Authenticated Routes - With Header/SideNav/Footer */}
-      <Route element={<AuthenticatedLayout />}>
+      <Route element={<ResponsiveLayout />}>
         <Route path="/preferences" element={<ProtectedRoute><Preferences /></ProtectedRoute>} />
         <Route path="/dashboard" element={<NewDashboard />} />
         <Route path="/archive" element={<ProtectedRoute><Archive /></ProtectedRoute>} />

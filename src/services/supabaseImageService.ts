@@ -144,7 +144,6 @@ class SupabaseImageService {
             .getPublicUrl(filePath);
           
           if (data?.publicUrl) {
-            console.log(`✅ Added ${fileName}`);
             imageUrls.push(data.publicUrl);
           }
         }

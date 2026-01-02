@@ -26,7 +26,7 @@ import { apiService } from '../services/api';
 import type { Article } from '../services/api';
 import type { LandingContent } from '../types/article';
 import SEO from '../components/SEO';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { LandingSkeleton } from '../components/LoadingSkeleton';
 import Header from './Header';
 import { SearchProvider } from '../contexts/SearchContext';
@@ -56,6 +56,11 @@ const NewDashboard: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const outletContext = useOutletContext<{ 
+    onTrendingClick?: () => void;
+    dateFilter?: 1 | 7 | 30 | 365;
+    onDateFilterChange?: (filter: 1 | 7 | 30 | 365) => void;
+  }>();
 
   const [landingContent, setLandingContent] = useState<LandingContent | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -80,7 +85,8 @@ const NewDashboard: React.FC = () => {
     videos: number;
   } | null>(null);
   const [selectedTab, setSelectedTab] = useState<'news' | 'audio' | 'video' | 'posts' | 'learning'>('news');
-  const [dateFilter, setDateFilter] = useState<1 | 7 | 30 | 365>(7);
+  const dateFilter = outletContext?.dateFilter || 7;
+  const setDateFilter = outletContext?.onDateFilterChange || (() => {});
   const [error, setError] = useState<string | null>(null);
   
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
@@ -443,9 +449,10 @@ const NewDashboard: React.FC = () => {
               dateFilter={dateFilter}
               onDateFilterChange={setDateFilter}
               onPreferencesClick={() => navigate('/preferences')}
+              onTrendingClick={outletContext?.onTrendingClick}
             />
             
-            <Stack spacing={2} direction="row" sx={{ justifyContent: 'center', marginRight: '320px' }}>
+            <Stack spacing={2} direction="row" sx={{ justifyContent: 'center'}}>
               <Container maxWidth="lg" sx={{ pt: 2, pb: 4 }}>
 
                 {/* Search Error/No Results Message */}

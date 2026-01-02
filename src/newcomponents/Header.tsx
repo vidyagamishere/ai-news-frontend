@@ -28,7 +28,8 @@ import {
   User,
   Settings,
   LogOut,
-  BookmarkPlus
+  BookmarkPlus,
+  TrendingUp
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import EnhancedSearchBar from '../components/EnhancedSearchBar';
@@ -90,6 +91,7 @@ interface HeaderProps {
   dateFilter?: 1 | 7 | 30 | 365;
   onDateFilterChange?: (value: 1 | 7 | 30 | 365) => void;
   onPreferencesClick?: () => void;
+  onTrendingClick?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -101,7 +103,8 @@ const Header: React.FC<HeaderProps> = ({
   showSearch = false,
   dateFilter,
   onDateFilterChange,
-  onPreferencesClick
+  onPreferencesClick,
+  onTrendingClick
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -117,10 +120,6 @@ const Header: React.FC<HeaderProps> = ({
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
-  };
-
-  const handleNotificationOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationAnchor(event.currentTarget);
   };
 
   const handleClose = () => {
@@ -142,12 +141,12 @@ const Header: React.FC<HeaderProps> = ({
         background: 'white',
       }}
     >
-        <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 0, sm: 2 } }}>
-          {/* Right Section: Actions */}
-          <Box sx={{ display: 'flex', alignItems: 'left', gap: { xs: 0.5, sm: 2 } }}>
+        <Toolbar sx={{ px: {lg : 5 }, py: 1 }}>
+          {/* Left Section: Search Bar */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 2 }, flex: 1 }}>
             {/* Search Bar - Desktop */}
             {finalShowSearch && finalOnSearch && !isMobile && (
-              <Box sx={{ width: { md: 300, lg: 400 }, mr: 2 }}>
+              <Box sx={{ width: { md: 300, lg: 400 } }}>
                 <EnhancedSearchBar
                   onSearch={finalOnSearch}
                   categoryId={finalCategoryId}
@@ -158,21 +157,33 @@ const Header: React.FC<HeaderProps> = ({
             )}
 
             {isMobile && (
-              <IconButton color="inherit" size="small">
-                <Search size={20} />
-              </IconButton>
+              <>
+                <IconButton color="inherit" size="small">
+                  <Search size={20} />
+                </IconButton>
+                {onTrendingClick && (
+                  <IconButton color="inherit" size="small" onClick={onTrendingClick} title="Trending Topics">
+                    <TrendingUp size={20} />
+                  </IconButton>
+                )}
+              </>
             )}
           </Box>
           
-          {/* Center Section: Logo */}
-          <Box sx={{ display: 'flex', alignItems: 'left', gap: { xs: 0.5, sm: 2 } }}>
-            {/* Date Filter - Only show when authenticated and props provided */}
-            {isAuthenticated && dateFilter && onDateFilterChange && (
-              <FormControl size="small" sx={{ minWidth: { xs: 100, sm: 150 }, display: { xs: 'none', sm: 'block' } }}>
+          {/* Right Section: Date Filter */}
+          {dateFilter !== undefined && onDateFilterChange && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FormControl size="small" sx={{ minWidth: 140 }}>
                 <Select
                   value={dateFilter}
                   onChange={(e: SelectChangeEvent<number>) => onDateFilterChange(e.target.value as 1 | 7 | 30 | 365)}
-                  sx={{ bgcolor: 'background.paper', borderRadius: 2 }}
+                  sx={{ 
+                    bgcolor: 'background.paper', 
+                    borderRadius: 2,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'divider'
+                    }
+                  }}
                 >
                   <MenuItem value={1}>Last 24h</MenuItem>
                   <MenuItem value={7}>Last 7 days</MenuItem>
@@ -180,94 +191,8 @@ const Header: React.FC<HeaderProps> = ({
                   <MenuItem value={365}>Last year</MenuItem>
                 </Select>
               </FormControl>
-            )}
-
-            {/* Preferences Button - Only show when authenticated and handler provided */}
-            {isAuthenticated && onPreferencesClick && (
-              <IconButton
-                color="inherit"
-                onClick={onPreferencesClick}
-                size="small"
-                title="Preferences"
-              >
-                <Settings size={20} />
-              </IconButton>
-            )}
-
-            {isAuthenticated ? (
-              <>
-                <Button
-                  startIcon={<Edit size={18} />}
-                  variant="text"
-                  onClick={() => navigate('/write')}
-                  sx={{
-                    textTransform: 'none',
-                    display: { xs: 'none', sm: 'flex' },
-                    color: 'text.secondary'
-                  }}
-                >
-                  Write
-                </Button>
-
-                <IconButton
-                  color="inherit"
-                  onClick={() => navigate('/write')}
-                  sx={{ display: { xs: 'flex', sm: 'none' } }}
-                >
-                  <Edit size={20} />
-                </IconButton>
-
-                <IconButton
-                  color="inherit"
-                  onClick={handleNotificationOpen}
-                  size="small"
-                >
-                  <Badge badgeContent={3} color="error">
-                    <Bell size={20} />
-                  </Badge>
-                </IconButton>
-
-                <IconButton
-                  onClick={handleProfileMenuOpen}
-                  size="small"
-                  sx={{ ml: 0.5 }}
-                >
-                  <Avatar
-                    src={user?.avatar}
-                    alt={user?.name}
-                    sx={{ width: 32, height: 32 }}
-                  >
-                    {user?.name?.[0] || 'U'}
-                  </Avatar>
-                </IconButton>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant="text"
-                  onClick={() => navigate('/auth')}
-                  sx={{
-                    textTransform: 'none',
-                    color: 'text.secondary',
-                    display: { xs: 'none', sm: 'block' }
-                  }}
-                >
-                  Sign in
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={() => navigate('/auth?mode=signup')}
-                  sx={{
-                    textTransform: 'none',
-                    borderRadius: 8,
-                    px: { xs: 2, sm: 3 }
-                  }}
-                >
-                  Get Started
-                </Button>
-              </>
-            )}
-          </Box>
+            </Box>
+          )}
         </Toolbar>
 
       {/* User Profile Menu */}

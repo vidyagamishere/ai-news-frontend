@@ -38,7 +38,11 @@ interface NavItem {
     badge?: number;
 }
 
-const SideNav: React.FC = () => {
+interface SideNavProps {
+    onTrendingClick?: () => void;
+}
+
+const SideNav: React.FC<SideNavProps> = ({ onTrendingClick }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const theme = useTheme();
@@ -330,47 +334,7 @@ const SideNav: React.FC = () => {
 
     return (
         <>
-            {/* Mobile Toggle Button */}
-            {isMobile && (
-                <IconButton
-                    onClick={handleDrawerToggle}
-                    sx={{
-                        position: 'fixed',
-                        left: 16,
-                        bottom: 16,
-                        zIndex: 1200,
-                        backgroundColor: 'primary.main',
-                        color: 'white',
-                        boxShadow: 3,
-                        '&:hover': {
-                            backgroundColor: 'primary.dark',
-                        },
-                    }}
-                >
-                    <MenuIcon size={24} />
-                </IconButton>
-            )}
-
-            {/* Drawer */}
-            <Drawer
-                variant={isMobile ? 'temporary' : 'permanent'}
-                open={isMobile ? mobileOpen : true}
-                onClose={() => setMobileOpen(false)}
-                ModalProps={{
-                    keepMounted: true, // Better mobile performance
-                }}
-                sx={{
-                    width: 280,
-                    flexShrink: 0,
-                    '& .MuiDrawer-paper': {
-                        width: 280,
-                        boxSizing: 'border-box',
-                        background: 'none'
-                    },
-                }}
-            >
-                {drawerContent}
-            </Drawer>
+            {drawerContent}
         </>
     );
 };

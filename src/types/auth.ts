@@ -5,6 +5,7 @@ export interface User {
   profileImage?: string;
   subscriptionTier: 'free' | 'premium';
   preferences: UserPreferences;
+  avatar?: string;
   createdAt: string;
   lastLoginAt: string;
   emailVerified?: boolean;

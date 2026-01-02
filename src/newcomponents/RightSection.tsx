@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box,
   Typography,
@@ -6,11 +6,32 @@ import {
   Paper,
   Stack,
   Divider,
-  alpha,
-  useTheme
+  useTheme,
+  IconButton,
+  Button
 } from '@mui/material';
-import { TrendingUp, Sparkles } from 'lucide-react';
+import { TrendingUp, Sparkles, EditIcon } from 'lucide-react';
 import { useDashboardContext } from './Dashboard';
+import { Edit, Settings } from '@mui/icons-material';
+import {
+  Avatar,
+  Badge,
+  useMediaQuery,
+  Container,
+} from '@mui/material';
+import { styled, alpha } from '@mui/material/styles';
+import {
+  Search,
+  Bell,
+  Menu as MenuIcon,
+  User,
+  LogOut,
+  BookmarkPlus,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import EnhancedSearchBar from '../components/EnhancedSearchBar';
+import { useSearch } from '../contexts/SearchContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Topic {
   id: string;
@@ -21,7 +42,11 @@ interface Topic {
 const RightSection: React.FC = () => {
   const theme = useTheme();
   const { content, selectedCategory, categories } = useDashboardContext();
+  const { user, isAuthenticated, logout } = useAuth();
+  const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
+  const navigate = useNavigate();
   // Extract trending topics from actual content
   const trendingTopics = useMemo(() => {
     const topicCounts = new Map<string, number>();
@@ -91,8 +116,106 @@ const RightSection: React.FC = () => {
     { id: 'llm', label: 'Large Language Models', count: 0 }
   ];
 
+
+  const handleNotificationOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setNotificationAnchor(event.currentTarget);
+  };
+
+
+    const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+      setAnchorEl(event.currentTarget);
+    };
+
+
   return (
-    <Box>
+    <Box sx={{ p: 2, width: '100%', boxSizing: 'border-box' }}>
+      {/* Center Section: User Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, pb: 3 }}>
+        {/* Preferences Button - Only show when not authenticated */}
+        {!isAuthenticated && (
+          <IconButton
+            color="inherit"
+            onClick={() => navigate('/preferences')}
+            size="small"
+            title="Preferences"
+          >
+            <Settings fontSize="small" />
+          </IconButton>
+        )}
+
+        {!isAuthenticated ? (
+          <>
+            <Button
+              startIcon={<Edit fontSize="small" />}
+              variant="text"
+              onClick={() => navigate('/write')}
+              sx={{
+                textTransform: 'none',
+                display: { xs: 'none', sm: 'flex' },
+                color: 'text.secondary'
+              }}
+            >
+              Write
+            </Button>
+
+            <IconButton
+              color="inherit"
+              onClick={() => navigate('/write')}
+              sx={{ display: { xs: 'flex', sm: 'none' } }}
+            >
+              <EditIcon size={20} />
+            </IconButton>
+
+            <IconButton
+              color="inherit"
+              onClick={handleNotificationOpen}
+              size="small"
+            >
+              <Badge badgeContent={3} color="error">
+                <Bell size={20} />
+              </Badge>
+            </IconButton>
+
+            <IconButton
+              onClick={handleProfileMenuOpen}
+              size="small"
+              sx={{ ml: 0.5 }}
+            >
+              <Avatar
+                src={user?.avatar}
+                alt={user?.name}
+                sx={{ width: 32, height: 32 }}
+              >
+                {user?.name?.[0] || 'U'}
+              </Avatar>
+            </IconButton>
+          </>
+        ) : (
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Button
+              variant="text"
+              onClick={() => navigate('/auth')}
+              sx={{
+                textTransform: 'none',
+                color: 'text.secondary'
+              }}
+            >
+              Sign in
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/auth?mode=signup')}
+              sx={{
+                textTransform: 'none',
+                borderRadius: 8,
+                px: { xs: 2, sm: 3 }
+              }}
+            >
+              Get Started
+            </Button>
+          </Stack>
+        )}
+      </Box>
       {/* Recommended Topics */}
       <Paper
         elevation={0}
