@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -20,7 +20,7 @@ import {
   InputLabel
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
-import { Settings, LogOut } from 'lucide-react';
+import { Settings, LogOut, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import type { Article } from '../services/api';
@@ -60,6 +60,8 @@ const NewDashboard: React.FC = () => {
     onTrendingClick?: () => void;
     dateFilter?: 1 | 7 | 30 | 365;
     onDateFilterChange?: (filter: 1 | 7 | 30 | 365) => void;
+    selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
+    onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
   }>();
 
   const [landingContent, setLandingContent] = useState<LandingContent | null>(null);
@@ -119,22 +121,56 @@ const NewDashboard: React.FC = () => {
 
     const loadOptions = async () => {
       try {
+        console.log('🔄 Loading available options...');
+        
         const [categoriesRes, contentTypesRes, publishersRes] = await Promise.all([
           cacheService.get('available_categories', () => apiService.getAvailableCategories(), CACHE_DURATION.LONG),
           cacheService.get('available_content_types', () => apiService.getAvailableContentTypes(), CACHE_DURATION.LONG),
           cacheService.get('available_publishers', () => apiService.getAvailablePublishers(), CACHE_DURATION.MEDIUM)
         ]);
 
-        setAvailableCategories(categoriesRes.categories || []);
-        setAvailableContentTypes(contentTypesRes.content_types || []);
-        setAvailablePublishers(publishersRes.publishers || []);
+        console.log('📦 Categories response:', categoriesRes);
+        console.log('📦 Content types response:', contentTypesRes);
+        console.log('📦 Publishers response:', publishersRes);
+
+        // Validate and set categories
+        if (categoriesRes && Array.isArray(categoriesRes.categories)) {
+          console.log('✅ Setting categories:', categoriesRes.categories.length, 'items');
+          setAvailableCategories(categoriesRes.categories);
+        } else {
+          console.warn('⚠️ Invalid categories response structure:', categoriesRes);
+          setAvailableCategories([]);
+        }
+
+        // Validate and set content types
+        if (contentTypesRes && Array.isArray(contentTypesRes.content_types)) {
+          console.log('✅ Setting content types:', contentTypesRes.content_types.length, 'items');
+          setAvailableContentTypes(contentTypesRes.content_types);
+        } else {
+          console.warn('⚠️ Invalid content types response structure:', contentTypesRes);
+          setAvailableContentTypes([]);
+        }
+
+        // Validate and set publishers
+        if (publishersRes && Array.isArray(publishersRes.publishers)) {
+          console.log('✅ Setting publishers:', publishersRes.publishers.length, 'items');
+          setAvailablePublishers(publishersRes.publishers);
+        } else {
+          console.warn('⚠️ Invalid publishers response structure:', publishersRes);
+          setAvailablePublishers([]);
+        }
         
         // Once options are loaded, fetch personalized content
         if (categoriesRes.categories && contentTypesRes.content_types && publishersRes.publishers) {
+          console.log('🚀 All options loaded successfully, fetching personalized feed...');
           loadPersonalizedFeed();
+        } else {
+          console.error('❌ Failed to load all options, cannot fetch personalized feed');
+          setLoading(false);
         }
       } catch (err) {
-        console.error('Error loading options:', err);
+        console.error('❌ Error loading options:', err);
+        setError('Failed to load filter options. Please refresh the page.');
         setLoading(false);
       }
     };
@@ -419,12 +455,41 @@ const NewDashboard: React.FC = () => {
     navigate('/');
   };
 
-  const dashboardContextValue: DashboardContextType = {
-    content: getTabContent(),
-    selectedCategory: activeCategory,
-    selectedTab,
-    categories: availableCategories.map(cat => cat.name)
+  const handleCategoryChange = (categoryName: string) => {
+    console.log('🔄 Dashboard: Category changed to:', categoryName);
+    setActiveCategory(categoryName);
+    
+    // Clear search if active
+    if (isSearchActive) {
+      setIsSearchActive(false);
+      setSearchResults(null);
+      setSearchCounts(null);
+      setSearchQuery('');
+    }
+    
+    // loadPersonalizedFeed will be called by the useEffect watching activeCategory
   };
+
+  // Simplified context value - RightSection now fetches its own categories
+  const dashboardContextValue: DashboardContextType = useMemo(() => {
+    const contextValue = {
+      content: getTabContent(),
+      selectedCategory: activeCategory,
+      selectedTab,
+      categories: availableCategories && Array.isArray(availableCategories) 
+        ? availableCategories.map(cat => cat.name).filter(Boolean)
+        : []
+    };
+    
+    return contextValue;
+  }, [availableCategories, activeCategory, selectedTab, landingContent, isSearchActive, searchResults]);
+
+  // Remove the debug window exposure in production
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      (window as any).dashboardContext = dashboardContextValue;
+    }
+  }, [dashboardContextValue]);
 
   return (
     <SearchProvider
@@ -452,153 +517,220 @@ const NewDashboard: React.FC = () => {
               onTrendingClick={outletContext?.onTrendingClick}
             />
             
-            <Stack spacing={2} direction="row" sx={{ justifyContent: 'center'}}>
-              <Container maxWidth="lg" sx={{ pt: 2, pb: 4 }}>
-
-                {/* Search Error/No Results Message */}
-                {isSearchActive && searchError && (
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 6,
-                      textAlign: 'center',
-                      bgcolor: alpha(theme.palette.primary.main, 0.05),
-                      borderRadius: 3,
-                      mb: 3
-                    }}
-                  >
-                    <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔍</Typography>
-                    <Typography variant="h5" fontWeight={700} gutterBottom>
-                      {searchError}
-                    </Typography>
-                    <Typography color="text.secondary" sx={{ mb: 3 }}>
-                      Try adjusting your search terms or filters
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      onClick={() => handleSearch('')}
+            {/* Content wrapper - properly aligned */}
+            <Box sx={{ 
+              width: '100%',
+              minHeight: '100vh',
+              p: 3
+            }}>
+              <Box sx={{ 
+                display: 'flex',
+                gap: 3,
+                maxWidth: '1400px',  // ✅ Adjusted max width
+                mx: 'auto',
+                width: '100%'
+              }}>
+                {/* Center Content */}
+                <Box sx={{ 
+                  flex: 1,
+                  minWidth: 0
+                }}>
+                  {/* Breadcrumb showing active filters */}
+                  {!isSearchActive && (
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        px: 2,
+                        py: 1,
+                        mb: 2,
+                        gap: 1,
+                        bgcolor: alpha(theme.palette.primary.main, 0.05),
+                        borderRadius: 2,
+                        border: 1,
+                        borderColor: alpha(theme.palette.primary.main, 0.1)
+                      }}
                     >
-                      Clear Search
-                    </Button>
-                  </Paper>
-                )}
+                      <Typography variant="body2" color="text.secondary">
+                        Your Feed:
+                      </Typography>
+                      <Chip
+                        label={activeCategory}
+                        size="small"
+                        color={activeCategory === 'All' ? 'default' : 'primary'}
+                        sx={{ fontWeight: 600 }}
+                      />
+                      <ChevronRight size={16} color={theme.palette.text.secondary} />
+                      <Chip
+                        label={selectedTab === 'news' ? 'Articles' : selectedTab === 'audio' ? 'Podcasts' : selectedTab === 'video' ? 'Videos' : selectedTab}
+                        size="small"
+                        color="secondary"
+                        sx={{ fontWeight: 600 }}
+                      />
+                      <ChevronRight size={16} color={theme.palette.text.secondary} />
+                      <Chip
+                        label={`Last ${dateFilter === 1 ? '24h' : dateFilter === 7 ? 'Week' : dateFilter === 30 ? 'Month' : 'Year'}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Paper>
+                  )}
 
-                {/* Search Active Indicator */}
-                {isSearchActive && !searchError && searchCounts && (
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      px: 2,
-                      py: 1,
-                      mb: 3,
-                      gap: 2,
-                      bgcolor: alpha(theme.palette.info.main, 0.1),
-                      borderRadius: 2,
-                      border: 1,
-                      borderColor: alpha(theme.palette.info.main, 0.2)
-                    }}
-                  >
-                    <Typography sx={{ flex: 1 }}>
-                      🔍 Showing search results for <strong>"{searchQuery}"</strong>
-                    </Typography>
-                    <Chip
-                      label={`${searchCounts.total} result${searchCounts.total !== 1 ? 's' : ''}`}
-                      color="info"
-                      size="small"
+                  {/* Search Error/No Results Message */}
+                  {isSearchActive && searchError && (
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 6,
+                        textAlign: 'center',
+                        bgcolor: alpha(theme.palette.primary.main, 0.05),
+                        borderRadius: 3,
+                        mb: 3
+                      }}
+                    >
+                      <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔍</Typography>
+                      <Typography variant="h5" fontWeight={700} gutterBottom>
+                        {searchError}
+                      </Typography>
+                      <Typography color="text.secondary" sx={{ mb: 3 }}>
+                        Try adjusting your search terms or filters
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        onClick={() => handleSearch('')}
+                      >
+                        Clear Search
+                      </Button>
+                    </Paper>
+                  )}
+
+                  {/* Search Active Indicator */}
+                  {isSearchActive && !searchError && searchCounts && (
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        px: 2,
+                        py: 1,
+                        mb: 3,
+                        gap: 2,
+                        bgcolor: alpha(theme.palette.info.main, 0.1),
+                        borderRadius: 2,
+                        border: 1,
+                        borderColor: alpha(theme.palette.info.main, 0.2)
+                      }}
+                    >
+                      <Typography sx={{ flex: 1 }}>
+                        🔍 Showing search results for <strong>"{searchQuery}"</strong>
+                      </Typography>
+                      <Chip
+                        label={`${searchCounts.total} result${searchCounts.total !== 1 ? 's' : ''}`}
+                        color="info"
+                        size="small"
+                      />
+                      <Button
+                        size="small"
+                        onClick={() => handleSearch('')}
+                      >
+                        Clear ✕
+                      </Button>
+                    </Paper>
+                  )}
+
+                  {/* Content Section */}
+                  {selectedTab === 'news' && (
+                    <NewsItemContainer
+                      headerTitle="Your Personalized AI News"
+                      headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                      articles={getTabContent().slice(0, 20)}
+                      contentType="blog"
+                      showInteractions={true}
+                      emptyMessage="No articles found. Try adjusting your preferences."
+                      emptyIcon="📰"
                     />
-                    <Button
-                      size="small"
-                      onClick={() => handleSearch('')}
-                    >
-                      Clear ✕
-                    </Button>
-                  </Paper>
-                )}
+                  )}
 
-                {/* Content Section */}
-                {selectedTab === 'news' && (
-                  <NewsItemContainer
-                    headerTitle="Your Personalized AI News"
-                    headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                    articles={getTabContent().slice(0, 20)}
-                    contentType="blog"
-                    showInteractions={true}
-                    emptyMessage="No articles found. Try adjusting your preferences."
-                    emptyIcon="📰"
-                  />
-                )}
+                  {/* Audio Tab */}
+                  {selectedTab === 'audio' && (
+                    <NewsItemContainer
+                      headerTitle="Your AI Podcasts"
+                      headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                      articles={getTabContent().slice(0, 20)}
+                      contentType="podcast"
+                      showInteractions={true}
+                      emptyMessage="No podcasts available. Try adjusting your preferences."
+                      emptyIcon="🎧"
+                    />
+                  )}
 
-                {/* Audio Tab */}
-                {selectedTab === 'audio' && (
-                  <NewsItemContainer
-                    headerTitle="Your AI Podcasts"
-                    headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                    articles={getTabContent().slice(0, 20)}
-                    contentType="podcast"
-                    showInteractions={true}
-                    emptyMessage="No podcasts available. Try adjusting your preferences."
-                    emptyIcon="🎧"
-                  />
-                )}
+                  {/* Video Tab */}
+                  {selectedTab === 'video' && (
+                    <NewsItemContainer
+                      headerTitle="Your AI Videos"
+                      headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                      articles={getTabContent().slice(0, 20)}
+                      contentType="video"
+                      showInteractions={true}
+                      emptyMessage="No videos available. Try adjusting your preferences."
+                      emptyIcon="📹"
+                    />
+                  )}
 
-                {/* Video Tab */}
-                {selectedTab === 'video' && (
-                  <NewsItemContainer
-                    headerTitle="Your AI Videos"
-                    headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                    articles={getTabContent().slice(0, 20)}
-                    contentType="video"
-                    showInteractions={true}
-                    emptyMessage="No videos available. Try adjusting your preferences."
-                    emptyIcon="📹"
-                  />
-                )}
+                  {/* Posts Tab */}
+                  {selectedTab === 'posts' && (
+                    <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
+                      <Typography sx={{ fontSize: '4rem', mb: 2 }}>🗨️</Typography>
+                      <Typography variant="h3" fontWeight={700} gutterBottom>
+                        Community Coming Soon
+                      </Typography>
+                      <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                        Join discussions with AI experts and learners
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        size="large"
+                        onClick={() => navigate('/preferences')}
+                        sx={{ px: 4 }}
+                      >
+                        Manage Preferences
+                      </Button>
+                    </Box>
+                  )}
 
-                {/* Posts Tab */}
-                {selectedTab === 'posts' && (
-                  <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
-                    <Typography sx={{ fontSize: '4rem', mb: 2 }}>🗨️</Typography>
-                    <Typography variant="h3" fontWeight={700} gutterBottom>
-                      Community Coming Soon
-                    </Typography>
-                    <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-                      Join discussions with AI experts and learners
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      size="large"
-                      onClick={() => navigate('/preferences')}
-                      sx={{ px: 4 }}
-                    >
-                      Manage Preferences
-                    </Button>
-                  </Box>
-                )}
+                  {/* Learning Tab */}
+                  {selectedTab === 'learning' && (
+                    <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
+                      <Typography sx={{ fontSize: '4rem', mb: 2 }}>🎓</Typography>
+                      <Typography variant="h3" fontWeight={700} gutterBottom>
+                        Learning Paths Coming Soon
+                      </Typography>
+                      <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                        Structured courses from beginner to expert
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        size="large"
+                        onClick={() => navigate('/preferences')}
+                        sx={{ px: 4 }}
+                      >
+                        Manage Preferences
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
 
-                {/* Learning Tab */}
-                {selectedTab === 'learning' && (
-                  <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
-                    <Typography sx={{ fontSize: '4rem', mb: 2 }}>🎓</Typography>
-                    <Typography variant="h3" fontWeight={700} gutterBottom>
-                      Learning Paths Coming Soon
-                    </Typography>
-                    <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-                      Structured courses from beginner to expert
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      size="large"
-                      onClick={() => navigate('/preferences')}
-                      sx={{ px: 4 }}
-                    >
-                      Manage Preferences
-                    </Button>
-                  </Box>
-                )}
-              </Container>
-            </Stack>
+                {/* RightSection */}
+                <Box sx={{ 
+                  width: 320,
+                  flexShrink: 0,
+                  display: { xs: 'none', md: 'block' }
+                }}>
+                  <RightSection onCategoryChange={handleCategoryChange} />
+                </Box>
+              </Box>
+            </Box>
           </>
         )}
       </DashboardContext.Provider>

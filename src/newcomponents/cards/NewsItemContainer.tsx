@@ -34,11 +34,11 @@ const NewsItemContainer: React.FC<NewsItemContainerProps> = ({
   const theme = useTheme();
 
   return (
-    <Box
-      sx={{
-        px: { xs: 2, sm: 3 },
-        py: 2
-      }}>
+    <Box sx={{ 
+      width: '100%',
+      px: { xs: 0, md: 2 },  // ✅ Add horizontal padding
+      py: { xs: 1, md: 2 }   // ✅ Add vertical padding
+    }}>
       {/* Large Header Section */}
       {headerTitle && (
         <Box sx={{ mb: 2 }}>

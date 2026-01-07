@@ -17,7 +17,10 @@ import {
   alpha,
   Chip,
   Stack,
-  Divider
+  Divider,
+  Tabs,
+  Tab,
+  Drawer
 } from '@mui/material';
 import SEO from '../components/SEO';
 import { LandingSkeleton } from '../components/LoadingSkeleton';
@@ -28,6 +31,8 @@ import type { Article, Category, LandingContent } from '../types/article';
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
 import NewsItemContainer from '../newcomponents/cards/NewsItemContainer';
 import RightSection from '../newcomponents/RightSection';
+import { ChevronRight } from 'lucide-react';
+import SideNav from '../newcomponents/SideNav';
 
 interface MenuItem {
   id: string;
@@ -43,10 +48,15 @@ const Landing: React.FC = () => {
   const outletContext = useOutletContext<{ 
     dateFilter?: 1 | 7 | 30 | 365;
     onDateFilterChange?: (filter: 1 | 7 | 30 | 365) => void;
+    selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
+    onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;  // ✅ Add this
   }>();
 
   // Check if caching is enabled via environment variable (disabled by default)
   const isCacheEnabled = import.meta.env.VITE_ENABLE_CACHE === 'true';
+
+  // ✅ ADD THIS STATE
+  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
 
   const [landingContent, setLandingContent] = useState<LandingContent | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -226,57 +236,44 @@ const Landing: React.FC = () => {
       }
 
       setLoading(true);
+      console.log('🔄 Fetching content - Category:', categoryId, 'ContentType:', contentTypeId, 'Days:', days);
 
       const landingResponse = await apiService.getLandingContent(50, days, categoryId, contentTypeId);
 
-      console.log('📰 Landing Response:', landingResponse, 'ContentType:', contentTypeId, 'Days:', days); // ✅ DEBUG LOG
+      console.log('📰 Landing Response:', landingResponse, 'for contentTypeId:', contentTypeId);
 
       if (landingResponse?.categories) {
         const transformedContent: LandingContent = {
-          categories: landingResponse.categories.map(cat => {
-            // Get existing content for this category to merge with
-            const existingCat = landingContent?.categories.find(c => c.id === cat.id);
-
-            return {
-              ...cat,
-              content: {
-                // Merge new content with existing content
-                blogs: [
-                  ...(existingCat?.content?.blogs || []),
-                  ...(cat.content?.blogs || []).map((item: any) => ({
-                    ...item,
-                    time: item.published_date || new Date().toISOString(),
-                    published_date: item.published_date || null,
-                    readTime: '5 min'
-                  }))
-                ].filter((item, index, self) =>
-                  index === self.findIndex(t => t.url === item.url) // Remove duplicates
-                ),
-                podcasts: [
-                  ...(existingCat?.content?.podcasts || []),
-                  ...(cat.content?.podcasts || []).map((item: any) => ({
-                    ...item,
-                    time: item.published_date || new Date().toISOString(),
-                    published_date: item.published_date || null,
-                    readTime: '30 min'
-                  }))
-                ].filter((item, index, self) =>
-                  index === self.findIndex(t => t.url === item.url)
-                ),
-                videos: [
-                  ...(existingCat?.content?.videos || []),
-                  ...(cat.content?.videos || []).map((item: any) => ({
-                    ...item,
-                    time: item.published_date || new Date().toISOString(),
-                    published_date: item.published_date || null,
-                    readTime: '15 min'
-                  }))
-                ].filter((item, index, self) =>
-                  index === self.findIndex(t => t.url === item.url)
-                )
-              }
-            };
-          }),
+          categories: landingResponse.categories.map(cat => ({
+            ...cat,
+            content: {
+              // Only keep the content for the requested type
+              blogs: contentTypeId === 1 || !contentTypeId
+                ? (cat.content?.blogs || []).map((item: any) => ({
+                  ...item,
+                  time: item.published_date || new Date().toISOString(),
+                  published_date: item.published_date || null,
+                  readTime: '5 min'
+                }))
+                : [],
+              podcasts: contentTypeId === 3 || !contentTypeId
+                ? (cat.content?.podcasts || []).map((item: any) => ({
+                  ...item,
+                  time: item.published_date || new Date().toISOString(),
+                  published_date: item.published_date || null,
+                  readTime: '30 min'
+                }))
+                : [],
+              videos: contentTypeId === 2 || !contentTypeId
+                ? (cat.content?.videos || []).map((item: any) => ({
+                  ...item,
+                  time: item.published_date || new Date().toISOString(),
+                  published_date: item.published_date || null,
+                  readTime: '15 min'
+                }))
+                : []
+            }
+          })),
           total_categories: landingResponse.total_categories
         };
 
@@ -295,6 +292,11 @@ const Landing: React.FC = () => {
         updateContentCounts(transformedContent);
 
         console.log('📰 Content loaded:', transformedContent.categories.length, 'categories');
+        console.log('📊 Content by type:', {
+          blogs: transformedContent.categories.reduce((sum, cat) => sum + (cat.content?.blogs?.length || 0), 0),
+          podcasts: transformedContent.categories.reduce((sum, cat) => sum + (cat.content?.podcasts?.length || 0), 0),
+          videos: transformedContent.categories.reduce((sum, cat) => sum + (cat.content?.videos?.length || 0), 0)
+        });
       }
     } catch (err: any) {
       console.error('Failed to fetch landing content:', err);
@@ -452,20 +454,19 @@ const Landing: React.FC = () => {
 
     // Handle initial load ONCE
     if (isInitialMount) {
-      hasInitializedRef.current = true; // Mark as initialized immediately
+      hasInitializedRef.current = true;
 
       const loadInitialData = async () => {
         console.log('⚡ Starting initial data load...');
         const startTime = performance.now();
 
         try {
-          // Load categories and content types in parallel
           await Promise.all([
             fetchCategories(),
             fetchContentTypes()
           ]);
 
-          // Then load initial content (blogs only)
+          // Load initial content with proper content type ID (blogs = 1)
           await fetchLandingContent(dateFilter, undefined, 1);
 
           const loadTime = performance.now() - startTime;
@@ -476,7 +477,7 @@ const Landing: React.FC = () => {
       };
 
       loadInitialData();
-      return; // ✅ EXIT: Don't run the filter logic on initial mount
+      return;
     }
 
     // ✅ Handle search mode
@@ -485,46 +486,45 @@ const Landing: React.FC = () => {
       return;
     }
 
-    // ✅ Handle date filter changes
-    // When date filter changes, clear cache and reset loaded content types
+    // ✅ Handle filter changes
     console.log('📅 Loading content with filters - Date:', dateFilter, 'days, Category:', activeCategory, 'Tab:', selectedTab);
 
-    if (isCacheEnabled) {
-      setContentTypeCache(new Map()); // Clear cache
-      setLoadedContentTypes(new Set()); // Reset loaded types
-    }
-
-    // Map selected tab to content type ID
     const contentTypeMap: Record<string, number> = {
       news: 1,    // blogs
       audio: 3,   // podcasts
       video: 2,   // videos
-      posts: 4,   // posts
-      learning: 5 // learning
+      posts: 4,
+      learning: 5
     };
     const contentTypeId = contentTypeMap[selectedTab];
 
     // Get category ID
-    const categoryId = activeCategory === 'All' ? undefined :
-      landingContent?.categories.find(cat => cat.name === activeCategory)?.id;
+    const categoryId = activeCategory === 'All' 
+      ? undefined 
+      : getCategoryIdFromName(activeCategory);
 
-    // Check cache with date filter included (only if caching is enabled)
-    if (isCacheEnabled) {
-      const cacheKey = getCacheKey(categoryId, contentTypeId, dateFilter);
-      const isContentLoaded = contentTypeCache.has(cacheKey);
+    // Always fetch with the specific content type ID
+    console.log('🔄 Loading content:', selectedTab, 'for category:', activeCategory, 'contentTypeId:', contentTypeId);
+    fetchLandingContent(dateFilter, categoryId, contentTypeId);
 
-      if (isContentLoaded) {
-        console.log('✅ Using cached content for:', selectedTab, 'category:', activeCategory);
-        return;
-      }
+  }, [dateFilter, activeCategory, selectedTab]);
+
+  // Sync with parent layout's tab state (if available, but don't require it)
+  useEffect(() => {
+    if (outletContext?.selectedTab && outletContext.selectedTab !== selectedTab) {
+      console.log('🔄 Landing: Syncing tab from layout:', outletContext.selectedTab);
+      setSelectedTab(outletContext.selectedTab);
     }
+  }, [outletContext?.selectedTab]);
 
-    // Load content with current filters
-    console.log('🔄 Loading content:', selectedTab, 'for category:', activeCategory);
-    fetchLandingContent(dateFilter, categoryId, contentTypeId).then(() => {
-      setLoadedContentTypes(prev => new Set([...prev, contentTypeId]));
-    });
-  }, [dateFilter, activeCategory, selectedTab]); // ✅ Combined dependencies
+  const handleTabChange = (newTab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => {
+    console.log('📑 Landing: Tab changed locally to:', newTab);
+    setSelectedTab(newTab);
+    // Try to sync with parent if handler exists
+    if (outletContext?.onTabChange) {  // ✅ Now properly typed
+      outletContext.onTabChange(newTab);
+    }
+  };
 
   const getCurrentContent = () => {    // If search is active, use search results
     if (isSearchActive && searchResults) {
@@ -605,8 +605,40 @@ const Landing: React.FC = () => {
     }
   };
 
-  return (
+  const handleSearchQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const query = event.target.value;
+    setSearchQuery(query);
 
+    // Debounce search - wait for user to stop typing
+    clearTimeout((window as any).searchTimeout);
+    (window as any).searchTimeout = setTimeout(() => {
+      handleSearch(query);
+    }, 300);
+  };
+
+  const handleCategoryChange = (categoryName: string) => {
+    console.log('🔄 Landing: Category changed to:', categoryName);
+    setActiveCategory(categoryName);
+    
+    // Clear search if active
+    if (isSearchActive) {
+      setIsSearchActive(false);
+      setSearchResults(null);
+      setSearchCounts(null);
+      setSearchQuery('');
+    }
+    
+    // Fetch content for the selected category
+    const categoryId = categoryName === 'All' 
+      ? undefined 
+      : getCategoryIdFromName(categoryName);
+    
+    const contentTypeId = getContentTypeIdFromTab(selectedTab);
+    
+    fetchLandingContent(dateFilter, categoryId, contentTypeId);
+  };
+
+  return (
     <>
       <SEO
         title="Vidyagam - Master AI & Tech Skills"
@@ -625,157 +657,306 @@ const Landing: React.FC = () => {
           }
           showSearch={true}
         >
-
-          <Stack sx={{ bgcolor: 'background.default', justifyContent: 'space-between' }} >
+          {/* Header */}
+          <Stack sx={{ bgcolor: 'background.default', justifyContent: 'space-between' }}>
             <Header isAuthenticated={false} />
           </Stack>
 
-          <Stack spacing={2} direction="row" sx={{ justifyContent: 'center' }} >
-            <Container maxWidth="lg">
-              {/* Search Error/No Results Message */}
-              {isSearchActive && searchError && (
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 6,
-                    textAlign: 'center',
-                    bgcolor: alpha(theme.palette.primary.main, 0.05),
-                    borderRadius: 3
-                  }}
-                >
-                  <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔍</Typography>
-                  <Typography variant="h5" fontWeight={700} gutterBottom>
-                    {searchError}
-                  </Typography>
-                  <Typography color="text.secondary" sx={{ mb: 3 }}>
-                    Try adjusting your search terms or filters
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    onClick={() => handleSearch('')}
+          {/* Main Layout with SideNav */}
+          <Box sx={{ display: 'flex' }}>
+            {/* Left Sidebar - SideNav */}
+            <Drawer
+              variant={isMobile ? 'temporary' : 'permanent'}
+              open={isMobile ? leftDrawerOpen : true}
+              onClose={() => setLeftDrawerOpen(false)}
+              sx={{
+                width: 280,
+                flexShrink: 0,
+                '& .MuiDrawer-paper': {
+                  width: 280,
+                  boxSizing: 'border-box',
+                  borderRight: 1,
+                  borderColor: 'divider',
+                  mt: '64px',
+                  position: 'fixed',  // ✅ Keep sidebar fixed
+                  height: 'calc(100vh - 64px)'
+                },
+              }}
+            >
+              <SideNav 
+                selectedTab={selectedTab} 
+                onTabChange={handleTabChange}
+              />
+            </Drawer>
+
+            {/* Main Content Area - WITH proper left margin for sidebar */}
+            <Box
+              component="main"
+              sx={{
+                flexGrow: 1,
+                width: '100%',
+                minHeight: '100vh',
+                ml: { xs: 0, md: '280px' },  // ✅ Add back the margin left for sidebar
+                p: 3
+              }}
+            >
+              {/* Content wrapper */}
+              <Box sx={{ 
+                display: 'flex',
+                gap: 3,
+                maxWidth: '1400px',  // ✅ Adjusted max width
+                mx: 'auto',
+                width: '100%'
+              }}>
+                {/* Center Content */}
+                <Box sx={{ 
+                  flex: 1,
+                  minWidth: 0
+                }}>
+                  {/* Breadcrumb showing active filters */}
+                  {!isSearchActive && (
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        px: 2,
+                        py: 1,
+                        mb: 2,
+                        gap: 1,
+                        bgcolor: alpha(theme.palette.primary.main, 0.05),
+                        borderRadius: 2,
+                        border: 1,
+                        borderColor: alpha(theme.palette.primary.main, 0.1)
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        Viewing:
+                      </Typography>
+                      <Chip
+                        label={activeCategory}
+                        size="small"
+                        color={activeCategory === 'All' ? 'default' : 'primary'}
+                        sx={{ fontWeight: 600 }}
+                      />
+                      <ChevronRight size={16} color={theme.palette.text.secondary} />
+                      <Chip
+                        label={selectedTab === 'news' ? 'Articles' : selectedTab === 'audio' ? 'Podcasts' : selectedTab === 'video' ? 'Videos' : selectedTab}
+                        size="small"
+                        color="secondary"
+                        sx={{ fontWeight: 600 }}
+                      />
+                      <ChevronRight size={16} color={theme.palette.text.secondary} />
+                      <Chip
+                        label={`Last ${dateFilter === 1 ? '24h' : dateFilter === 7 ? 'Week' : dateFilter === 30 ? 'Month' : 'Year'}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Paper>
+                  )}
+
+                  {/* Content Type Tabs */}
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      mb: 3,
+                      border: 1,
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      overflow: 'hidden'
+                    }}
                   >
-                    Clear Search
-                  </Button>
-                </Paper>
-              )}
+                    <Tabs
+                      value={selectedTab}
+                      onChange={(e, newValue) => {
+                        console.log('📑 Tab changed to:', newValue);
+                        handleTabChange(newValue);
+                      }}
+                      variant="fullWidth"
+                      sx={{
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        '& .MuiTab-root': {
+                          textTransform: 'none',
+                          fontWeight: 600,
+                        }
+                      }}
+                    >
+                      <Tab 
+                        icon="📰" 
+                        label="Articles" 
+                        value="news"
+                        iconPosition="start"
+                      />
+                      <Tab 
+                        icon="🎧" 
+                        label="Podcasts" 
+                        value="audio"
+                        iconPosition="start"
+                      />
+                      <Tab 
+                        icon="📹" 
+                        label="Videos" 
+                        value="video"
+                        iconPosition="start"
+                      />
+                    </Tabs>
+                  </Paper>
 
-              {/* Search Active Indicator */}
-              {isSearchActive && !searchError && searchCounts && (
-                <Paper
-                  elevation={0}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    px: 2,
-                    gap: 2,
-                    bgcolor: alpha(theme.palette.info.main, 0.1),
-                    borderRadius: 2,
-                    border: 1,
-                    borderColor: alpha(theme.palette.info.main, 0.2)
-                  }}
-                >
-                  <Typography sx={{ flex: 1 }}>
-                    🔍 Showing search results for <strong>"{searchQuery}"</strong>
-                  </Typography>
-                  <Chip
-                    label={`${searchCounts.total} result${searchCounts.total !== 1 ? 's' : ''}`}
-                    color="info"
-                    size="small"
-                  />
-                  <Button
-                    size="small"
-                    onClick={() => handleSearch('')}
-                  >
-                    Clear ✕
-                  </Button>
-                </Paper>
-              )}
+                  {/* Search Error/No Results Message */}
+                  {isSearchActive && searchError && (
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 6,
+                        textAlign: 'center',
+                        bgcolor: alpha(theme.palette.primary.main, 0.05),
+                        borderRadius: 3
+                      }}
+                    >
+                      <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔍</Typography>
+                      <Typography variant="h5" fontWeight={700} gutterBottom>
+                        {searchError}
+                      </Typography>
+                      <Typography color="text.secondary" sx={{ mb: 3 }}>
+                        Try adjusting your search terms or filters
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        onClick={() => handleSearch('')}
+                      >
+                        Clear Search
+                      </Button>
+                    </Paper>
+                  )}
 
-              {/* Content Section */}
-              {selectedTab === 'news' && (
-                <NewsItemContainer
-                  headerTitle="Latest AI News"
-                  headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                  articles={getTabContent().slice(0, 20)}
-                  contentType="blog"
-                  showInteractions={false}
-                  emptyMessage="No articles found"
-                  emptyIcon="📰"
-                />
-              )}
+                  {/* Search Active Indicator */}
+                  {isSearchActive && !searchError && searchCounts && (
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        px: 2,
+                        gap: 2,
+                        bgcolor: alpha(theme.palette.info.main, 0.1),
+                        borderRadius: 2,
+                        border: 1,
+                        borderColor: alpha(theme.palette.info.main, 0.2)
+                      }}
+                    >
+                      <Typography sx={{ flex: 1 }}>
+                        🔍 Showing search results for <strong>"{searchQuery}"</strong>
+                      </Typography>
+                      <Chip
+                        label={`${searchCounts.total} result${searchCounts.total !== 1 ? 's' : ''}`}
+                        color="info"
+                        size="small"
+                      />
+                      <Button
+                        size="small"
+                        onClick={() => handleSearch('')}
+                      >
+                        Clear ✕
+                      </Button>
+                    </Paper>
+                  )}
 
-              {/* Audio Tab */}
-              {selectedTab === 'audio' && (
-                <NewsItemContainer
-                  headerTitle="AI Podcasts"
-                  headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                  articles={getTabContent().slice(0, 20)}
-                  contentType="podcast"
-                  showInteractions={false}
-                  emptyMessage="No podcasts available yet"
-                  emptyIcon="🎧"
-                />
-              )}
+                  {/* Content Section */}
+                  {selectedTab === 'news' && (
+                    <NewsItemContainer
+                      headerTitle="Latest AI News"
+                      headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                      articles={getTabContent().slice(0, 20)}
+                      contentType="blog"
+                      showInteractions={false}
+                      emptyMessage="No articles found"
+                      emptyIcon="📰"
+                    />
+                  )}
 
-              {/* Video Tab */}
-              {selectedTab === 'video' && (
-                <NewsItemContainer
-                  headerTitle="AI Videos"
-                  headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                  articles={getTabContent().slice(0, 20)}
-                  contentType="video"
-                  showInteractions={false}
-                  emptyMessage="No videos available yet"
-                  emptyIcon="📹"
-                />
-              )}
+                  {/* Audio Tab */}
+                  {selectedTab === 'audio' && (
+                    <NewsItemContainer
+                      headerTitle="AI Podcasts"
+                      headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                      articles={getTabContent().slice(0, 20)}
+                      contentType="podcast"
+                      showInteractions={false}
+                      emptyMessage="No podcasts available yet"
+                      emptyIcon="🎧"
+                    />
+                  )}
 
-              {/* Posts Tab */}
-              {selectedTab === 'posts' && (
-                <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
-                  <Typography sx={{ fontSize: '4rem', mb: 2 }}>🗨️</Typography>
-                  <Typography variant="h3" fontWeight={700} gutterBottom>
-                    Community Coming Soon
-                  </Typography>
-                  <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-                    Join discussions with AI experts and learners
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    onClick={() => navigate('/auth')}
-                    sx={{ px: 4 }}
-                  >
-                    Join Waitlist
-                  </Button>
+                  {/* Video Tab */}
+                  {selectedTab === 'video' && (
+                    <NewsItemContainer
+                      headerTitle="AI Videos"
+                      headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                      articles={getTabContent().slice(0, 20)}
+                      contentType="video"
+                      showInteractions={false}
+                      emptyMessage="No videos available yet"
+                      emptyIcon="📹"
+                    />
+                  )}
+
+                  {/* Posts Tab */}
+                  {selectedTab === 'posts' && (
+                    <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
+                      <Typography sx={{ fontSize: '4rem', mb: 2 }}>🗨️</Typography>
+                      <Typography variant="h3" fontWeight={700} gutterBottom>
+                        Community Coming Soon
+                      </Typography>
+                      <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                        Join discussions with AI experts and learners
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        size="large"
+                        onClick={() => navigate('/auth')}
+                        sx={{ px: 4 }}
+                      >
+                        Join Waitlist
+                      </Button>
+                    </Box>
+                  )}
+
+                  {/* Learning Tab */}
+                  {selectedTab === 'learning' && (
+                    <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
+                      <Typography sx={{ fontSize: '4rem', mb: 2 }}>🎓</Typography>
+                      <Typography variant="h3" fontWeight={700} gutterBottom>
+                        Learning Paths Coming Soon
+                      </Typography>
+                      <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                        Structured courses from beginner to expert
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        size="large"
+                        onClick={() => navigate('/auth')}
+                        sx={{ px: 4 }}
+                      >
+                        Join Waitlist
+                      </Button>
+                    </Box>
+                  )}
                 </Box>
-              )}
 
-              {/* Learning Tab */}
-              {selectedTab === 'learning' && (
-                <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
-                  <Typography sx={{ fontSize: '4rem', mb: 2 }}>🎓</Typography>
-                  <Typography variant="h3" fontWeight={700} gutterBottom>
-                    Learning Paths Coming Soon
-                  </Typography>
-                  <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-                    Structured courses from beginner to expert
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    onClick={() => navigate('/auth')}
-                    sx={{ px: 4 }}
-                  >
-                    Join Waitlist
-                  </Button>
+                {/* RightSection */}
+                <Box sx={{ 
+                  width: 320,
+                  flexShrink: 0,
+                  display: { xs: 'none', md: 'block' }
+                }}>
+                  <RightSection onCategoryChange={handleCategoryChange} />
                 </Box>
-              )}
-            </Container>
-          </Stack>
+              </Box>
+            </Box>
+          </Box>
         </SearchProvider>
-      )
-      }
+      )}
     </>
   );
 };

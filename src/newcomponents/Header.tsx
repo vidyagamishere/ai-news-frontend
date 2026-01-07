@@ -34,6 +34,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import EnhancedSearchBar from '../components/EnhancedSearchBar';
 import { useSearch } from '../contexts/SearchContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const SearchContainer = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -109,6 +110,7 @@ const Header: React.FC<HeaderProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
 
@@ -130,6 +132,11 @@ const Header: React.FC<HeaderProps> = ({
   const handleNavigate = (path: string) => {
     navigate(path);
     handleClose();
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   return (
@@ -193,6 +200,78 @@ const Header: React.FC<HeaderProps> = ({
               </FormControl>
             </Box>
           )}
+
+          {/* Right Section: User Actions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {isAuthenticated ? (
+              <>
+                {/* Preferences */}
+                <IconButton
+                  onClick={onPreferencesClick}
+                  size="small"
+                  title="Preferences"
+                >
+                  <Settings fontSize="small" />
+                </IconButton>
+
+                {/* Write Button */}
+                <Button
+                  startIcon={<Edit size={16} />}
+                  variant="text"
+                  onClick={() => navigate('/write')}
+                  sx={{
+                    textTransform: 'none',
+                    display: { xs: 'none', sm: 'flex' },
+                  }}
+                >
+                  Write
+                </Button>
+
+                {/* Notifications */}
+                <IconButton size="small">
+                  <Badge badgeContent={3} color="error">
+                    <Bell size={20} />
+                  </Badge>
+                </IconButton>
+
+                {/* User Avatar */}
+                <IconButton
+                  size="small"
+                  onClick={() => handleProfileMenuOpen}
+                >
+                  <Avatar
+                    src={user?.avatar}
+                    alt={user?.name}
+                    sx={{ width: 32, height: 32 }}
+                  >
+                    {user?.name?.[0] || 'U'}
+                  </Avatar>
+                </IconButton>
+              </>
+            ) : (
+              <>
+                {/* Sign In / Sign Up for non-authenticated users */}
+                <Button
+                  variant="text"
+                  onClick={() => navigate('/auth')}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Sign in
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => navigate('/auth?mode=signup')}
+                  sx={{
+                    textTransform: 'none',
+                    borderRadius: 8,
+                    px: 3,
+                  }}
+                >
+                  Get Started
+                </Button>
+              </>
+            )}
+          </Box>
         </Toolbar>
 
       {/* User Profile Menu */}
@@ -276,6 +355,17 @@ const Header: React.FC<HeaderProps> = ({
           <Typography variant="body2">View all notifications</Typography>
         </MenuItem>
       </Menu>
+
+      {/* Add Logout Button */}
+      {isAuthenticated && (
+        <IconButton
+          onClick={handleLogout}
+          title="Sign Out"
+          sx={{ ml: 1 }}
+        >
+          <LogOut size={20} />
+        </IconButton>
+      )}
     </AppBar>
   );
 };

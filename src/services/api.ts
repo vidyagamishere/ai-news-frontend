@@ -923,12 +923,25 @@ export class ApiService {
   }
 
   async getAvailableCategories(): Promise<{ categories: Array<{id: number; name: string; description?: string; priority?: number}>; count: number }> {
+    console.log('📂 Fetching available categories...');
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
-      return await makeModularRequest('api/v1/available-categories', 'GET', {}, null, headers);
+      const response = await makeModularRequest('api/v1/available-categories', 'GET', {}, null, headers);
+      console.log('✅ Categories fetched successfully:', response);
+      
+      // Ensure response has expected structure
+      if (!response.categories || !Array.isArray(response.categories)) {
+        console.warn('⚠️ Invalid categories response structure:', response);
+        return { categories: [], count: 0 };
+      }
+      
+      return {
+        categories: response.categories,
+        count: response.count || response.categories.length
+      };
     } catch (error) {
-      console.warn('Failed to fetch categories, using fallback:', error);
+      console.error('❌ Failed to fetch categories:', error);
       return { categories: [], count: 0 };
     }
   }

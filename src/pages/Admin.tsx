@@ -358,6 +358,9 @@ const Admin: React.FC = () => {
       console.log('ℹ️ Polling for job status...');
       console.log('Response:', response);
       // Poll for status every 5 seconds
+      let consecutiveErrors = 0;
+      const maxConsecutiveErrors = 3;
+      
       const pollInterval = setInterval(async () => {
         try {
           const statusResponse = await apiService.callEndpoint(
@@ -370,12 +373,16 @@ const Admin: React.FC = () => {
             }
           );
           
+          // Reset error counter on successful response
+          consecutiveErrors = 0;
+          
           const status = statusResponse.status;
           console.log(`🔄 Job status: ${status}`);
           
           if (status === 'completed') {
             clearInterval(pollInterval);
-            setScrapingLoading(false); // ✅ FIX: Changed from setIsScrapingLoading
+            clearTimeout(timeoutId);
+            setScrapingLoading(false);
             setResult({
               success: true,
               message: 'Scraping completed successfully!',
@@ -385,25 +392,34 @@ const Admin: React.FC = () => {
             console.log('📊 Result:', statusResponse.result);
           } else if (status === 'failed') {
             clearInterval(pollInterval);
-            setScrapingLoading(false); // ✅ FIX: Changed from setIsScrapingLoading
+            clearTimeout(timeoutId);
+            setScrapingLoading(false);
             setError(statusResponse.error || 'Scraping failed');
           }
         } catch (pollError) {
-          console.error('❌ Polling error:', pollError);
-          clearInterval(pollInterval);
-          setScrapingLoading(false); // ✅ FIX: Changed from setIsScrapingLoading
-          setError('Failed to check scraping status');
+          consecutiveErrors++;
+          console.error(`❌ Polling error (${consecutiveErrors}/${maxConsecutiveErrors}):`, pollError);
+          
+          // Only stop polling after multiple consecutive errors
+          if (consecutiveErrors >= maxConsecutiveErrors) {
+            console.error('❌ Too many consecutive polling errors, stopping...');
+            clearInterval(pollInterval);
+            clearTimeout(timeoutId);
+            setScrapingLoading(false);
+            setError('Failed to check scraping status - network error');
+          }
+          // Otherwise, continue polling (transient network issues)
         }
       }, 5000); // Poll every 5 seconds
       
-      // ✅ ADD TIMEOUT: Stop polling after 10 minutes
-      setTimeout(() => {
+      // ✅ ADD TIMEOUT: Stop polling after 30 minutes (for 1-day scraping)
+      const timeoutId = setTimeout(() => {
         clearInterval(pollInterval);
         if (scrapingLoading) {
           setScrapingLoading(false);
-          setError('Scraping timeout - job may still be running in background');
+          setError('Scraping timeout (30 min) - job may still be running in background');
         }
-      }, 600000); // 10 minutes timeout
+      }, 1800000); // 30 minutes timeout
       
     } catch (error) {
       console.error('❌ Scraping error:', error);
@@ -439,6 +455,9 @@ const Admin: React.FC = () => {
       console.log('ℹ️ Polling for job status...');
       
       // Poll for status every 5 seconds
+      let podcastConsecutiveErrors = 0;
+      const maxConsecutiveErrors = 3;
+      
       const pollInterval = setInterval(async () => {
         try {
           const statusResponse = await apiService.callEndpoint(
@@ -451,10 +470,14 @@ const Admin: React.FC = () => {
             }
           );
           
+          // Reset error counter on successful response
+          podcastConsecutiveErrors = 0;
+          
           console.log('📊 Podcast job status:', statusResponse.status);
           
           if (statusResponse.status === 'completed') {
             clearInterval(pollInterval);
+            clearTimeout(podcastTimeoutId);
             setPodcastScrapingLoading(false);
             setPodcastResult({
               success: true,
@@ -464,14 +487,34 @@ const Admin: React.FC = () => {
             console.log('✅ Podcast scraping completed:', statusResponse.result);
           } else if (statusResponse.status === 'failed') {
             clearInterval(pollInterval);
+            clearTimeout(podcastTimeoutId);
             setPodcastScrapingLoading(false);
             setPodcastError(statusResponse.error || 'Podcast scraping failed');
             console.error('❌ Podcast scraping failed:', statusResponse.error);
           }
         } catch (pollError) {
-          console.error('❌ Error polling podcast job status:', pollError);
+          podcastConsecutiveErrors++;
+          console.error(`❌ Error polling podcast job status (${podcastConsecutiveErrors}/${maxConsecutiveErrors}):`, pollError);
+          
+          // Only stop polling after multiple consecutive errors
+          if (podcastConsecutiveErrors >= maxConsecutiveErrors) {
+            console.error('❌ Too many consecutive polling errors, stopping...');
+            clearInterval(pollInterval);
+            clearTimeout(podcastTimeoutId);
+            setPodcastScrapingLoading(false);
+            setPodcastError('Failed to check scraping status - network error');
+          }
         }
       }, 5000);
+      
+      // Add timeout: Stop polling after 10 minutes
+      const podcastTimeoutId = setTimeout(() => {
+        clearInterval(pollInterval);
+        if (podcastScrapingLoading) {
+          setPodcastScrapingLoading(false);
+          setPodcastError('Scraping timeout - job may still be running in background');
+        }
+      }, 600000);
       
     } catch (error) {
       console.error('❌ Podcast scraping error:', error);
@@ -507,6 +550,9 @@ const Admin: React.FC = () => {
       console.log('ℹ️ Polling for job status...');
       
       // Poll for status every 5 seconds
+      let videoConsecutiveErrors = 0;
+      const maxConsecutiveErrors = 3;
+      
       const pollInterval = setInterval(async () => {
         try {
           const statusResponse = await apiService.callEndpoint(
@@ -519,10 +565,14 @@ const Admin: React.FC = () => {
             }
           );
           
+          // Reset error counter on successful response
+          videoConsecutiveErrors = 0;
+          
           console.log('📊 Video job status:', statusResponse.status);
           
           if (statusResponse.status === 'completed') {
             clearInterval(pollInterval);
+            clearTimeout(videoTimeoutId);
             setVideoScrapingLoading(false);
             setVideoResult({
               success: true,
@@ -532,14 +582,34 @@ const Admin: React.FC = () => {
             console.log('✅ Video scraping completed:', statusResponse.result);
           } else if (statusResponse.status === 'failed') {
             clearInterval(pollInterval);
+            clearTimeout(videoTimeoutId);
             setVideoScrapingLoading(false);
             setVideoError(statusResponse.error || 'Video scraping failed');
             console.error('❌ Video scraping failed:', statusResponse.error);
           }
         } catch (pollError) {
-          console.error('❌ Error polling video job status:', pollError);
+          videoConsecutiveErrors++;
+          console.error(`❌ Error polling video job status (${videoConsecutiveErrors}/${maxConsecutiveErrors}):`, pollError);
+          
+          // Only stop polling after multiple consecutive errors
+          if (videoConsecutiveErrors >= maxConsecutiveErrors) {
+            console.error('❌ Too many consecutive polling errors, stopping...');
+            clearInterval(pollInterval);
+            clearTimeout(videoTimeoutId);
+            setVideoScrapingLoading(false);
+            setVideoError('Failed to check scraping status - network error');
+          }
         }
       }, 5000);
+      
+      // Add timeout: Stop polling after 10 minutes
+      const videoTimeoutId = setTimeout(() => {
+        clearInterval(pollInterval);
+        if (videoScrapingLoading) {
+          setVideoScrapingLoading(false);
+          setVideoError('Scraping timeout - job may still be running in background');
+        }
+      }, 600000);
       
     } catch (error) {
       console.error('❌ Video scraping error:', error);

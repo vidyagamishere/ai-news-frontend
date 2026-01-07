@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Typography,
@@ -10,9 +10,8 @@ import {
   IconButton,
   Button
 } from '@mui/material';
-import { TrendingUp, Sparkles, EditIcon } from 'lucide-react';
+import { TrendingUp, Sparkles } from 'lucide-react';
 import { useDashboardContext } from './Dashboard';
-import { Edit, Settings } from '@mui/icons-material';
 import {
   Avatar,
   Badge,
@@ -28,10 +27,12 @@ import {
   LogOut,
   BookmarkPlus,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import EnhancedSearchBar from '../components/EnhancedSearchBar';
 import { useSearch } from '../contexts/SearchContext';
 import { useAuth } from '../contexts/AuthContext';
+import { apiService } from '../services/api';
+import { cacheService, CACHE_DURATION } from '../utils/cacheService';
 
 interface Topic {
   id: string;
@@ -39,20 +40,91 @@ interface Topic {
   count?: number;
 }
 
-const RightSection: React.FC = () => {
+// Add prop to receive category change handler
+interface RightSectionProps {
+  onCategoryChange?: (categoryName: string) => void;
+}
+
+const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
   const theme = useTheme();
-  const { content, selectedCategory, categories } = useDashboardContext();
+  const location = useLocation();
+  const isDashboard = location.pathname.includes('/dashboard');
+  const isLanding = location.pathname === '/' || location.pathname === '/landing';
+  
+  // Add unique ID for debugging
+  const instanceId = React.useRef(Math.random().toString(36).substr(2, 9));
+  
+  useEffect(() => {
+    console.log(`🔍 RightSection Instance: ${instanceId.current}`);
+    console.log(`📍 Location: ${location.pathname}`);
+    console.log(`🎯 Is Dashboard: ${isDashboard}`);
+    console.log(`🏠 Is Landing: ${isLanding}`);
+  }, [location.pathname, isDashboard, isLanding]);
+  
+  // Only use dashboard context if on dashboard page
+  let contextContent: any[] = [];
+  let contextCategories: string[] = [];
+  let contextSelectedCategory = 'All';
+  
+  if (isDashboard) {
+    try {
+      const dashboardContext = useDashboardContext();
+      contextContent = dashboardContext.content;
+      contextCategories = dashboardContext.categories;
+      contextSelectedCategory = dashboardContext.selectedCategory;
+    } catch (e) {
+      // Context not available, use defaults
+      console.log('Dashboard context not available');
+    }
+  }
+  
   const { user, isAuthenticated, logout } = useAuth();
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-
   const navigate = useNavigate();
+  
+  // Fetch categories directly from API
+  const [availableCategories, setAvailableCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        console.log('🔄 RightSection: Fetching categories directly from API...');
+        const response = await cacheService.get(
+          'available_categories', 
+          () => apiService.getAvailableCategories(), 
+          CACHE_DURATION.LONG
+        );
+        
+        if (response && Array.isArray(response.categories)) {
+          console.log('✅ RightSection: Categories fetched:', response.categories.length);
+          setAvailableCategories(response.categories);
+        }
+      } catch (error) {
+        console.error('❌ RightSection: Failed to fetch categories:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Use directly fetched categories instead of context
+  const categories = availableCategories.map(cat => cat.name);
+  const content = isDashboard ? contextContent : [];
+  const selectedCategory = isDashboard ? contextSelectedCategory : 'All';
+
+  console.log('📊 RightSection: Using categories:', categories);
+  console.log('📍 RightSection: Current page:', isDashboard ? 'Dashboard' : isLanding ? 'Landing' : 'Other');
+
   // Extract trending topics from actual content
   const trendingTopics = useMemo(() => {
     const topicCounts = new Map<string, number>();
 
     content.forEach(article => {
-      article.topics?.forEach(topic => {
+      article.topics?.forEach((topic: any) => {  // ✅ Add type annotation
         const name = topic.name;
         topicCounts.set(name, (topicCounts.get(name) || 0) + 1);
       });
@@ -86,7 +158,7 @@ const RightSection: React.FC = () => {
   }, [content]);
 
   const recommendedTopics: Topic[] = useMemo(() => {
-    // Use actual categories from dashboard with article counts
+    // Use directly fetched categories with article counts
     const topics = categories.map(category => ({
       id: category.toLowerCase().replace(/\s+/g, '-'),
       label: category,
@@ -126,96 +198,52 @@ const RightSection: React.FC = () => {
       setAnchorEl(event.currentTarget);
     };
 
+    // Show loading state if categories are still being fetched
+    if (loading) {
+      return (
+        <Box sx={{ p: 2, width: '100%', boxSizing: 'border-box' }}>
+          <Typography>Loading...</Typography>
+        </Box>
+      );
+    }
+
+  const handleCategoryClick = (categoryName: string) => {
+    console.log('📂 Category clicked:', categoryName);
+    
+    // Call the parent handler if provided
+    if (onCategoryChange) {
+      onCategoryChange(categoryName);
+    }
+    
+    // For non-authenticated users on landing, navigate to auth
+    {/*if (!isAuthenticated && isLanding) {
+      navigate('/auth?mode=signup');
+    }*/}
+  };
 
   return (
-    <Box sx={{ p: 2, width: '100%', boxSizing: 'border-box' }}>
-      {/* Center Section: User Actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, pb: 3 }}>
-        {/* Preferences Button - Only show when not authenticated */}
-        {!isAuthenticated && (
-          <IconButton
-            color="inherit"
-            onClick={() => navigate('/preferences')}
-            size="small"
-            title="Preferences"
-          >
-            <Settings fontSize="small" />
-          </IconButton>
-        )}
-
-        {!isAuthenticated ? (
-          <>
-            <Button
-              startIcon={<Edit fontSize="small" />}
-              variant="text"
-              onClick={() => navigate('/write')}
-              sx={{
-                textTransform: 'none',
-                display: { xs: 'none', sm: 'flex' },
-                color: 'text.secondary'
-              }}
-            >
-              Write
-            </Button>
-
-            <IconButton
-              color="inherit"
-              onClick={() => navigate('/write')}
-              sx={{ display: { xs: 'flex', sm: 'none' } }}
-            >
-              <EditIcon size={20} />
-            </IconButton>
-
-            <IconButton
-              color="inherit"
-              onClick={handleNotificationOpen}
-              size="small"
-            >
-              <Badge badgeContent={3} color="error">
-                <Bell size={20} />
-              </Badge>
-            </IconButton>
-
-            <IconButton
-              onClick={handleProfileMenuOpen}
-              size="small"
-              sx={{ ml: 0.5 }}
-            >
-              <Avatar
-                src={user?.avatar}
-                alt={user?.name}
-                sx={{ width: 32, height: 32 }}
-              >
-                {user?.name?.[0] || 'U'}
-              </Avatar>
-            </IconButton>
-          </>
-        ) : (
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Button
-              variant="text"
-              onClick={() => navigate('/auth')}
-              sx={{
-                textTransform: 'none',
-                color: 'text.secondary'
-              }}
-            >
-              Sign in
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => navigate('/auth?mode=signup')}
-              sx={{
-                textTransform: 'none',
-                borderRadius: 8,
-                px: { xs: 2, sm: 3 }
-              }}
-            >
-              Get Started
-            </Button>
-          </Stack>
-        )}
-      </Box>
+    <Box 
+      sx={{ p: 2, width: '100%', boxSizing: 'border-box' }}
+      data-rightsection-id={instanceId.current}
+    >
+   
+      
+      {/*process.env.NODE_ENV === 'development' && (
+        <Box sx={{ 
+          bgcolor: 'error.main', 
+          color: 'white', 
+          p: 1, 
+          mb: 2, 
+          fontSize: '10px',
+          fontFamily: 'monospace'
+        }}>
+          RightSection ID: {instanceId.current}<br/>
+          Page: {isDashboard ? 'Dashboard' : isLanding ? 'Landing' : 'Other'}
+        </Box>
+      )*/}
+    
+    
+      
       {/* Recommended Topics */}
       <Paper
         elevation={0}
@@ -242,6 +270,7 @@ const RightSection: React.FC = () => {
           {displayRecommendedTopics.map((topic) => (
             <Box
               key={topic.id}
+              onClick={() => handleCategoryClick(topic.label)}
               sx={{
                 display: 'flex',
                 justifyContent: 'space-between',
