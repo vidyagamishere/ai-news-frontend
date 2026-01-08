@@ -154,40 +154,26 @@ const SideNav: React.FC<SideNavProps> = ({ selectedTab = 'news', onTabChange }) 
     };
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', py: 2 }}>
-            {/* Debug banner (only in development) */}
-            {/* process.env.NODE_ENV === 'development' && (
-                <Box sx={{ 
-                    bgcolor: 'warning.main', 
-                    color: 'white', 
-                    p: 1, 
-                    mb: 2, 
-                    fontSize: '10px',
-                    fontFamily: 'monospace',
-                    mx: 1
-                }}>
-                    SideNav ID: {instanceId.current}<br/>
-                    Page: {isDashboard ? 'Dashboard' : isLanding ? 'Landing' : 'Other'}
-                </Box>
-            )*/}
 
-            {/* Logo/Brand */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, pl: 2 }}>
-                <Psychology sx={{ fontSize: 40, color: 'orange' }} />
-                <Typography
-                    variant="h3"
-                    fontWeight={800}
-                    sx={{
-                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                        backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        letterSpacing: '-0.02em'
-                    }}
-                >
-                    Vidyagam
-                </Typography>
-            </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', py: 2 }}>
+        {/* Logo/Brand - Above everything display: 'flex', flexDirection: 'column', height: '100%', py: 2  */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: { xs: 2, sm: 3, lg: 5 }, pt: 2, pb: 1 }}>
+            <Psychology sx={{ fontSize: 40, color: 'orange' }} />
+            <Typography
+              variant="h3"
+              fontWeight={800}
+              sx={{
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                letterSpacing: '-0.02em',
+                display: { xs: 'none', sm: 'block' }
+              }}
+            >
+              Vidyagam
+            </Typography>
+          </Box>
 
             <List sx={{ px: 1 }}>
                 {/* Home */}

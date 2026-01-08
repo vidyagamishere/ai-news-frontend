@@ -35,6 +35,7 @@ import { useNavigate } from 'react-router-dom';
 import EnhancedSearchBar from '../components/EnhancedSearchBar';
 import { useSearch } from '../contexts/SearchContext';
 import { useAuth } from '../contexts/AuthContext';
+import { Psychology } from '@mui/icons-material';
 
 const SearchContainer = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -148,8 +149,11 @@ const Header: React.FC<HeaderProps> = ({
         background: 'white',
       }}
     >
+
+
         <Toolbar sx={{ px: {lg : 5 }, py: 1 }}>
-          {/* Left Section: Search Bar */}
+          
+          {/* Middle Section: Search Bar */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 2 }, flex: 1 }}>
             {/* Search Bar - Desktop */}
             {finalShowSearch && finalOnSearch && !isMobile && (

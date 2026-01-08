@@ -664,43 +664,17 @@ const Landing: React.FC = () => {
 
           {/* Main Layout with SideNav */}
           <Box sx={{ display: 'flex' }}>
-            {/* Left Sidebar - SideNav */}
-            <Drawer
-              variant={isMobile ? 'temporary' : 'permanent'}
-              open={isMobile ? leftDrawerOpen : true}
-              onClose={() => setLeftDrawerOpen(false)}
-              sx={{
-                width: 280,
-                flexShrink: 0,
-                '& .MuiDrawer-paper': {
-                  width: 280,
-                  boxSizing: 'border-box',
-                  borderRight: 1,
-                  borderColor: 'divider',
-                  mt: '64px',
-                  position: 'fixed',  // ✅ Keep sidebar fixed
-                  height: 'calc(100vh - 64px)'
-                },
-              }}
-            >
-              <SideNav 
-                selectedTab={selectedTab} 
-                onTabChange={handleTabChange}
-              />
-            </Drawer>
-
-            {/* Main Content Area - WITH proper left margin for sidebar */}
             <Box
               component="main"
               sx={{
                 flexGrow: 1,
+                display: 'flex',
                 width: '100%',
                 minHeight: '100vh',
-                ml: { xs: 0, md: '280px' },  // ✅ Add back the margin left for sidebar
-                p: 3
+                //ml: {xs: 0, md: '0px' },  // ✅ Add back the margin left for sidebar
               }}
             >
-              {/* Content wrapper */}
+              
               <Box sx={{ 
                 display: 'flex',
                 gap: 3,
@@ -708,7 +682,7 @@ const Landing: React.FC = () => {
                 mx: 'auto',
                 width: '100%'
               }}>
-                {/* Center Content */}
+          
                 <Box sx={{ 
                   flex: 1,
                   minWidth: 0
@@ -756,53 +730,7 @@ const Landing: React.FC = () => {
                   )}
 
                   {/* Content Type Tabs */}
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      mb: 3,
-                      border: 1,
-                      borderColor: 'divider',
-                      borderRadius: 2,
-                      overflow: 'hidden'
-                    }}
-                  >
-                    <Tabs
-                      value={selectedTab}
-                      onChange={(e, newValue) => {
-                        console.log('📑 Tab changed to:', newValue);
-                        handleTabChange(newValue);
-                      }}
-                      variant="fullWidth"
-                      sx={{
-                        borderBottom: 1,
-                        borderColor: 'divider',
-                        '& .MuiTab-root': {
-                          textTransform: 'none',
-                          fontWeight: 600,
-                        }
-                      }}
-                    >
-                      <Tab 
-                        icon="📰" 
-                        label="Articles" 
-                        value="news"
-                        iconPosition="start"
-                      />
-                      <Tab 
-                        icon="🎧" 
-                        label="Podcasts" 
-                        value="audio"
-                        iconPosition="start"
-                      />
-                      <Tab 
-                        icon="📹" 
-                        label="Videos" 
-                        value="video"
-                        iconPosition="start"
-                      />
-                    </Tabs>
-                  </Paper>
-
+                 
                   {/* Search Error/No Results Message */}
                   {isSearchActive && searchError && (
                     <Paper
@@ -865,7 +793,7 @@ const Landing: React.FC = () => {
                   {/* Content Section */}
                   {selectedTab === 'news' && (
                     <NewsItemContainer
-                      headerTitle="Latest AI News"
+              
                       headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                       articles={getTabContent().slice(0, 20)}
                       contentType="blog"
@@ -878,7 +806,6 @@ const Landing: React.FC = () => {
                   {/* Audio Tab */}
                   {selectedTab === 'audio' && (
                     <NewsItemContainer
-                      headerTitle="AI Podcasts"
                       headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                       articles={getTabContent().slice(0, 20)}
                       contentType="podcast"
@@ -891,7 +818,6 @@ const Landing: React.FC = () => {
                   {/* Video Tab */}
                   {selectedTab === 'video' && (
                     <NewsItemContainer
-                      headerTitle="AI Videos"
                       headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                       articles={getTabContent().slice(0, 20)}
                       contentType="video"

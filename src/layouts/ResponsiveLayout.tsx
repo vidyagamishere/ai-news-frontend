@@ -40,26 +40,26 @@ export default function ResponsiveLayout() {
       <CssBaseline />
 
       {/* LEFT SIDENAV - Only show on Dashboard, not on Landing */}
-      {!isLandingPage && (
-        <Drawer
-          variant={isMobile ? 'temporary' : 'permanent'}
-          open={isMobile ? leftOpen : true}
-          onClose={() => setLeftOpen(false)}
-          sx={{
+      
+    <Drawer
+        variant={isMobile ? 'temporary' : 'permanent'}
+        open={isMobile ? leftOpen : true}
+        onClose={() => setLeftOpen(false)}
+        sx={{
+          width: LEFT_WIDTH,
+          '& .MuiDrawer-paper': {
             width: LEFT_WIDTH,
-            '& .MuiDrawer-paper': {
-              width: LEFT_WIDTH,
-              borderRight: '1px solid ' + theme.palette.divider,
-              backgroundColor: 'background.default',
-            },
-          }}
-        >
-          <SideNav 
-            selectedTab={selectedTab} 
-            onTabChange={handleTabChange}
-          />
-        </Drawer>
-      )}
+            borderRight: '1px solid ' + theme.palette.divider,
+            backgroundColor: 'background.default',
+          },
+        }}
+      >
+        <SideNav 
+          selectedTab={selectedTab} 
+          onTabChange={handleTabChange}
+        />
+      </Drawer>
+      
 
       {/* CENTER CONTENT */}
       <Box
