@@ -78,7 +78,6 @@ class SupabaseImageService {
       // Check cache first
       const cached = this.imageCache[category];
       if (cached && Date.now() - cached.lastFetched < this.cacheExpiry) {
-        console.log(`🚀 Using cached images for category: ${category}`);
         return cached.images;
       }
 

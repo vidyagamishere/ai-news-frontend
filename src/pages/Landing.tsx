@@ -30,9 +30,7 @@ import { apiService } from '../services/api';
 import type { Article, Category, LandingContent } from '../types/article';
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
 import NewsItemContainer from '../newcomponents/cards/NewsItemContainer';
-import RightSection from '../newcomponents/RightSection';
 import { ChevronRight } from 'lucide-react';
-import SideNav from '../newcomponents/SideNav';
 
 interface MenuItem {
   id: string;
@@ -45,11 +43,14 @@ const Landing: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
-  const outletContext = useOutletContext<{ 
+  const outletContext = useOutletContext<{
     dateFilter?: 1 | 7 | 30 | 365;
     onDateFilterChange?: (filter: 1 | 7 | 30 | 365) => void;
     selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
-    onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;  // ✅ Add this
+    onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
+    onCategoryChangeHandlerSet?: (handler: (category: string) => void) => void;
+    rightOpen?: boolean;
+    setRightOpen?: (open: boolean) => void;
   }>();
 
   // Check if caching is enabled via environment variable (disabled by default)
@@ -84,13 +85,17 @@ const Landing: React.FC = () => {
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [contentTypeTabs, setContentTypeTabs] = useState<Array<{ id: string; icon: string; label: string }>>([]);
   const dateFilter = outletContext?.dateFilter || 7;
-  const setDateFilter = outletContext?.onDateFilterChange || (() => {});
+  const setDateFilter = outletContext?.onDateFilterChange || (() => { });
   const [loadedContentTypes, setLoadedContentTypes] = useState<Set<number>>(new Set([1])); // Track loaded content types (start with blogs)
   const [contentTypeCache, setContentTypeCache] = useState<Map<string, any>>(new Map()); // Cache content by category+type
   const dropdownRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false); // ✅ Prevent duplicate initial loads
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+
+  // Get right drawer state from context
+  const rightOpen = outletContext?.rightOpen ?? false;
+  const setRightOpen = outletContext?.setRightOpen ?? (() => { });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -499,8 +504,8 @@ const Landing: React.FC = () => {
     const contentTypeId = contentTypeMap[selectedTab];
 
     // Get category ID
-    const categoryId = activeCategory === 'All' 
-      ? undefined 
+    const categoryId = activeCategory === 'All'
+      ? undefined
       : getCategoryIdFromName(activeCategory);
 
     // Always fetch with the specific content type ID
@@ -616,10 +621,10 @@ const Landing: React.FC = () => {
     }, 300);
   };
 
-  const handleCategoryChange = (categoryName: string) => {
+  const handleCategoryChange = React.useCallback((categoryName: string) => {
     console.log('🔄 Landing: Category changed to:', categoryName);
     setActiveCategory(categoryName);
-    
+
     // Clear search if active
     if (isSearchActive) {
       setIsSearchActive(false);
@@ -627,16 +632,23 @@ const Landing: React.FC = () => {
       setSearchCounts(null);
       setSearchQuery('');
     }
-    
+
     // Fetch content for the selected category
-    const categoryId = categoryName === 'All' 
-      ? undefined 
+    const categoryId = categoryName === 'All'
+      ? undefined
       : getCategoryIdFromName(categoryName);
-    
+
     const contentTypeId = getContentTypeIdFromTab(selectedTab);
-    
+
     fetchLandingContent(dateFilter, categoryId, contentTypeId);
-  };
+  }, [isSearchActive, selectedTab, dateFilter]);
+
+  // Register category change handler with parent layout
+  useEffect(() => {
+    if (outletContext?.onCategoryChangeHandlerSet) {
+      outletContext.onCategoryChangeHandlerSet(handleCategoryChange);
+    }
+  }, [handleCategoryChange, outletContext]);
 
   return (
     <>
@@ -674,63 +686,66 @@ const Landing: React.FC = () => {
                 //ml: {xs: 0, md: '0px' },  // ✅ Add back the margin left for sidebar
               }}
             >
-              
-              <Box sx={{ 
+
+              <Box sx={{
                 display: 'flex',
                 gap: 3,
                 maxWidth: '1400px',  // ✅ Adjusted max width
                 mx: 'auto',
                 width: '100%'
               }}>
-          
-                <Box sx={{ 
+
+                <Box sx={{
                   flex: 1,
                   minWidth: 0
                 }}>
                   {/* Breadcrumb showing active filters */}
                   {!isSearchActive && (
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        px: 2,
-                        py: 1,
-                        mb: 2,
-                        gap: 1,
-                        bgcolor: alpha(theme.palette.primary.main, 0.05),
-                        borderRadius: 2,
-                        border: 1,
-                        borderColor: alpha(theme.palette.primary.main, 0.1)
-                      }}
-                    >
-                      <Typography variant="body2" color="text.secondary">
-                        Viewing:
-                      </Typography>
-                      <Chip
-                        label={activeCategory}
-                        size="small"
-                        color={activeCategory === 'All' ? 'default' : 'primary'}
-                        sx={{ fontWeight: 600 }}
-                      />
-                      <ChevronRight size={16} color={theme.palette.text.secondary} />
-                      <Chip
-                        label={selectedTab === 'news' ? 'Articles' : selectedTab === 'audio' ? 'Podcasts' : selectedTab === 'video' ? 'Videos' : selectedTab}
-                        size="small"
-                        color="secondary"
-                        sx={{ fontWeight: 600 }}
-                      />
-                      <ChevronRight size={16} color={theme.palette.text.secondary} />
-                      <Chip
-                        label={`Last ${dateFilter === 1 ? '24h' : dateFilter === 7 ? 'Week' : dateFilter === 30 ? 'Month' : 'Year'}`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </Paper>
+                    <Box sx={{ p: 2 }}>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          px: 2,
+                          py: 1,
+                          mx: 1,
+                          mb: 2,
+                          gap: 1,
+                          bgcolor: alpha(theme.palette.primary.main, 0.05),
+                          borderRadius: 2,
+                          border: 1,
+                          borderColor: alpha(theme.palette.primary.main, 0.1)
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          Viewing:
+                        </Typography>
+                        <Chip
+                          label={activeCategory}
+                          size="small"
+                          color={activeCategory === 'All' ? 'default' : 'primary'}
+                          sx={{ fontWeight: 600 }}
+                        />
+                        <ChevronRight size={16} color={theme.palette.text.secondary} />
+                        <Chip
+                          label={selectedTab === 'news' ? 'Articles' : selectedTab === 'audio' ? 'Podcasts' : selectedTab === 'video' ? 'Videos' : selectedTab}
+                          size="small"
+                          color="secondary"
+                          sx={{ fontWeight: 600 }}
+                        />
+                        <ChevronRight size={16} color={theme.palette.text.secondary} />
+                        <Chip
+                          label={`Last ${dateFilter === 1 ? '24h' : dateFilter === 7 ? 'Week' : dateFilter === 30 ? 'Month' : 'Year'}`}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Paper>
+                    </Box>
                   )}
 
                   {/* Content Type Tabs */}
-                 
+
                   {/* Search Error/No Results Message */}
                   {isSearchActive && searchError && (
                     <Paper
@@ -793,7 +808,7 @@ const Landing: React.FC = () => {
                   {/* Content Section */}
                   {selectedTab === 'news' && (
                     <NewsItemContainer
-              
+
                       headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                       articles={getTabContent().slice(0, 20)}
                       contentType="blog"
@@ -870,14 +885,7 @@ const Landing: React.FC = () => {
                   )}
                 </Box>
 
-                {/* RightSection */}
-                <Box sx={{ 
-                  width: 320,
-                  flexShrink: 0,
-                  display: { xs: 'none', md: 'block' }
-                }}>
-                  <RightSection onCategoryChange={handleCategoryChange} />
-                </Box>
+                {/* RightSection moved to ResponsiveLayout.tsx */}
               </Box>
             </Box>
           </Box>

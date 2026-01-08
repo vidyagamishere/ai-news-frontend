@@ -8,25 +8,28 @@ import {
   Divider,
   useTheme,
   IconButton,
-  Button
-} from '@mui/material';
-import { TrendingUp, Sparkles } from 'lucide-react';
-import { useDashboardContext } from './Dashboard';
-import {
+  Button,
   Avatar,
   Badge,
   useMediaQuery,
   Container,
+  Menu,
+  MenuItem
 } from '@mui/material';
 import { styled, alpha } from '@mui/material/styles';
 import {
+  TrendingUp,
+  Sparkles,
   Search,
   Bell,
   Menu as MenuIcon,
   User,
   LogOut,
   BookmarkPlus,
+  Settings,
+  Edit
 } from 'lucide-react';
+import { useDashboardContext } from './Dashboard';
 import { useNavigate, useLocation } from 'react-router-dom';
 import EnhancedSearchBar from '../components/EnhancedSearchBar';
 import { useSearch } from '../contexts/SearchContext';
@@ -193,19 +196,25 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
     setNotificationAnchor(event.currentTarget);
   };
 
+  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
 
-    const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-      setAnchorEl(event.currentTarget);
-    };
+  const handleClose = () => {
+    setAnchorEl(null);
+    setNotificationAnchor(null);
+  };
 
-    // Show loading state if categories are still being fetched
-    if (loading) {
-      return (
-        <Box sx={{ p: 2, width: '100%', boxSizing: 'border-box' }}>
-          <Typography>Loading...</Typography>
-        </Box>
-      );
-    }
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    handleClose();
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    handleClose();
+  };
 
   const handleCategoryClick = (categoryName: string) => {
     console.log('📂 Category clicked:', categoryName);
@@ -226,24 +235,129 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
       sx={{ p: 2, width: '100%', boxSizing: 'border-box' }}
       data-rightsection-id={instanceId.current}
     >
-   
-      
-      {/*process.env.NODE_ENV === 'development' && (
-        <Box sx={{ 
-          bgcolor: 'error.main', 
-          color: 'white', 
-          p: 1, 
-          mb: 2, 
-          fontSize: '10px',
-          fontFamily: 'monospace'
-        }}>
-          RightSection ID: {instanceId.current}<br/>
-          Page: {isDashboard ? 'Dashboard' : isLanding ? 'Landing' : 'Other'}
-        </Box>
-      )*/}
-    
-    
-      
+      {/* Authentication Section - Only show on Landing page for non-authenticated users */}
+      {isLanding && !isAuthenticated && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            mb: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            textAlign: 'center'
+          }}
+        >
+          <Typography variant="h6" fontWeight={700} gutterBottom>
+            Join Vidyagam
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Get personalized AI content and insights
+          </Typography>
+          <Stack spacing={1.5}>
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={() => navigate('/auth?mode=signup')}
+              sx={{
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.25,
+                fontWeight: 600
+              }}
+            >
+              Get Started
+            </Button>
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={() => navigate('/auth')}
+              sx={{
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.25,
+                fontWeight: 600
+              }}
+            >
+              Sign In
+            </Button>
+          </Stack>
+        </Paper>
+      )}
+
+      {/* User Actions - Only show for authenticated users */}
+      {isAuthenticated && (
+        <Stack 
+          direction="row" 
+          spacing={1} 
+          justifyContent="center"
+          sx={{ mb: 3 }}
+        >
+          <IconButton
+            onClick={handleProfileMenuOpen}
+            size="medium"
+            title="Profile"
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                borderColor: 'primary.main'
+              }
+            }}
+          >
+            <User size={20} />
+          </IconButton>
+          <IconButton
+            onClick={() => navigate('/write')}
+            size="medium"
+            title="Write"
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                borderColor: 'primary.main'
+              }
+            }}
+          >
+            <Edit size={20} />
+          </IconButton>
+          <IconButton
+            onClick={(e) => handleNotificationOpen(e)}
+            size="medium"
+            title="Notifications"
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                borderColor: 'primary.main'
+              }
+            }}
+          >
+            <Badge badgeContent={3} color="error">
+              <Bell size={20} />
+            </Badge>
+          </IconButton>
+          <IconButton
+            onClick={() => navigate('/settings')}
+            size="medium"
+            title="Settings"
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                borderColor: 'primary.main'
+              }
+            }}
+          >
+            <Settings size={20} />
+          </IconButton>
+        </Stack>
+      )}
+
       {/* Recommended Topics */}
       <Paper
         elevation={0}
@@ -406,6 +520,88 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
           Get Started
         </Box>
       </Paper>
+
+      {/* User Profile Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleClose}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        PaperProps={{
+          sx: { width: 240, mt: 1 }
+        }}
+      >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Typography variant="subtitle2" fontWeight={600}>
+            {user?.name || 'User Name'}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {user?.email || 'user@example.com'}
+          </Typography>
+        </Box>
+        <Divider />
+        <MenuItem onClick={() => handleNavigate('/profile')}>
+          <User size={18} style={{ marginRight: 12 }} />
+          Profile
+        </MenuItem>
+        <MenuItem onClick={() => handleNavigate('/library')}>
+          <BookmarkPlus size={18} style={{ marginRight: 12 }} />
+          Library
+        </MenuItem>
+        <MenuItem onClick={() => handleNavigate('/settings')}>
+          <Settings size={18} style={{ marginRight: 12 }} />
+          Settings
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleLogout}>
+          <LogOut size={18} style={{ marginRight: 12 }} />
+          Sign out
+        </MenuItem>
+      </Menu>
+
+      {/* Notifications Menu */}
+      <Menu
+        anchorEl={notificationAnchor}
+        open={Boolean(notificationAnchor)}
+        onClose={handleClose}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        PaperProps={{
+          sx: { width: 360, mt: 1, maxHeight: 400 }
+        }}
+      >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Typography variant="subtitle2" fontWeight={600}>
+            Notifications
+          </Typography>
+        </Box>
+        <Divider />
+        <MenuItem onClick={handleClose}>
+          <Box>
+            <Typography variant="body2" fontWeight={500}>
+              New article published
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Check out the latest AI breakthrough
+            </Typography>
+          </Box>
+        </MenuItem>
+        <MenuItem onClick={handleClose}>
+          <Box>
+            <Typography variant="body2" fontWeight={500}>
+              Someone liked your comment
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Your insight on GPT-4 got attention
+            </Typography>
+          </Box>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleClose} sx={{ justifyContent: 'center', color: 'primary.main' }}>
+          <Typography variant="body2">View all notifications</Typography>
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };

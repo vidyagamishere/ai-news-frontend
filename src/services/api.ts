@@ -14,7 +14,7 @@ console.log('🚀 Direct endpoint calls (no router middleware)');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000, // 60 seconds for Google auth and complex operations
+  timeout: 120000, // 120 seconds for Google auth and complex operations
   headers: {
     'Content-Type': 'application/json',
   },
@@ -144,8 +144,6 @@ const mapArticleImages = async (article: any): Promise<any> => {
   // This directly matches Supabase folder names (e.g., "generative_ai", "ai_startups")
   // Otherwise fallback to category name conversion
   const categoryLabel = article.category_label || article.category || article.category_name || article.topic_category || 'General';
-  
-  console.log(`🎨 Mapping image for article: "${article.title?.substring(0, 50)}..." in category: ${categoryLabel}`);
   
   // Fetch random image from Supabase for this category
   let supabaseImage: string | null = null;

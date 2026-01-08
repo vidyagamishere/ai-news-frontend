@@ -11,7 +11,10 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import SideNav from '../newcomponents/SideNav';
+import RightSection from '../newcomponents/RightSection';
+
 const LEFT_WIDTH = 280;
+const RIGHT_WIDTH = 320;
 export default function ResponsiveLayout() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -19,8 +22,10 @@ export default function ResponsiveLayout() {
   const navigate = useNavigate();
 
   const [leftOpen, setLeftOpen] = React.useState(false);
+  const [rightOpen, setRightOpen] = React.useState(false);
   const [dateFilter, setDateFilter] = React.useState<1 | 7 | 30 | 365>(7);
   const [selectedTab, setSelectedTab] = React.useState<'news' | 'audio' | 'video' | 'posts' | 'learning'>('news');
+  const [categoryChangeHandler, setCategoryChangeHandler] = React.useState<((category: string) => void) | undefined>(undefined);
 
   // Check if we're on Landing page (no SideNav needed)
   const isLandingPage = location.pathname === '/' || location.pathname === '/landing';
@@ -28,7 +33,7 @@ export default function ResponsiveLayout() {
   const handleTabChange = (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => {
     console.log('📑 ResponsiveLayout: Tab changed to:', tab);
     setSelectedTab(tab);
-    
+
     // Close mobile drawer
     if (isMobile) {
       setLeftOpen(false);
@@ -40,8 +45,8 @@ export default function ResponsiveLayout() {
       <CssBaseline />
 
       {/* LEFT SIDENAV - Only show on Dashboard, not on Landing */}
-      
-    <Drawer
+
+      <Drawer
         variant={isMobile ? 'temporary' : 'permanent'}
         open={isMobile ? leftOpen : true}
         onClose={() => setLeftOpen(false)}
@@ -54,12 +59,12 @@ export default function ResponsiveLayout() {
           },
         }}
       >
-        <SideNav 
-          selectedTab={selectedTab} 
+        <SideNav
+          selectedTab={selectedTab}
           onTabChange={handleTabChange}
         />
       </Drawer>
-      
+
 
       {/* CENTER CONTENT */}
       <Box
@@ -68,10 +73,7 @@ export default function ResponsiveLayout() {
           flexGrow: 1,
           display: 'flex',
           justifyContent: 'center',
-          overflow: 'auto',
           px: { md: 0, lg: 2 },
-          // Adjust margin when no sidebar
-          ml: !isLandingPage && !isMobile ? `${LEFT_WIDTH}px` : 0
         }}
       >
         <Box sx={{ width: '100%', maxWidth: 1200 }}>
@@ -91,14 +93,38 @@ export default function ResponsiveLayout() {
             </Box>
           )}
 
-          <Outlet context={{ 
-            dateFilter, 
+          <Outlet context={{
+            dateFilter,
             onDateFilterChange: setDateFilter,
             selectedTab,
-            onTabChange: handleTabChange 
+            onTabChange: handleTabChange,
+            onCategoryChangeHandlerSet: setCategoryChangeHandler,
+            rightOpen,
+            setRightOpen
           }} />
         </Box>
       </Box>
+
+      {/* RIGHT SECTION - Show on Landing page */}
+      <Drawer
+        anchor="right"
+        variant={isMobile ? 'temporary' : 'permanent'}
+        open={isMobile ? rightOpen : true}
+        onClose={() => setRightOpen(false)}
+        sx={{
+          width: RIGHT_WIDTH,
+          marginRight: isMobile ? 0 : 2,
+          '& .MuiDrawer-paper': {
+            width: RIGHT_WIDTH,
+            backgroundColor: 'background.default',
+            borderLeft: 'none',
+          },
+        }}
+      >
+        <RightSection
+          onCategoryChange={categoryChangeHandler}
+        />
+      </Drawer>
     </Box>
   );
 }

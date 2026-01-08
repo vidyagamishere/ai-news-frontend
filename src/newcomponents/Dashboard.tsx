@@ -720,15 +720,6 @@ const NewDashboard: React.FC = () => {
                     </Box>
                   )}
                 </Box>
-
-                {/* RightSection */}
-                <Box sx={{ 
-                  width: 320,
-                  flexShrink: 0,
-                  display: { xs: 'none', md: 'block' }
-                }}>
-                  <RightSection onCategoryChange={handleCategoryChange} />
-                </Box>
               </Box>
             </Box>
           </>
