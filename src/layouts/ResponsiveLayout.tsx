@@ -30,6 +30,12 @@ export default function ResponsiveLayout() {
   // Check if we're on Landing page (no SideNav needed)
   const isLandingPage = location.pathname === '/' || location.pathname === '/landing';
 
+  // Wrapper function to properly set the category change handler
+  // React's setState treats functions specially, so we need to wrap it
+  const handleSetCategoryHandler = React.useCallback((handler: (category: string) => void) => {
+    setCategoryChangeHandler(() => handler);
+  }, []);
+
   const handleTabChange = (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => {
     console.log('📑 ResponsiveLayout: Tab changed to:', tab);
     setSelectedTab(tab);
@@ -98,7 +104,7 @@ export default function ResponsiveLayout() {
             onDateFilterChange: setDateFilter,
             selectedTab,
             onTabChange: handleTabChange,
-            onCategoryChangeHandlerSet: setCategoryChangeHandler,
+            onCategoryChangeHandlerSet: handleSetCategoryHandler,
             rightOpen,
             setRightOpen
           }} />

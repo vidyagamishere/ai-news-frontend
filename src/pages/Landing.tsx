@@ -544,7 +544,7 @@ const Landing: React.FC = () => {
     // Normal browsing mode
     if (!landingContent) return [];
 
-    if (!activeCategory || activeCategory === 'All') {
+    if (activeCategory === 'All') {
       const allContent: Article[] = [];
       if (landingContent.categories) {
         landingContent.categories.forEach(cat => {
@@ -709,7 +709,6 @@ const Landing: React.FC = () => {
                           alignItems: 'center',
                           px: 2,
                           py: 1,
-                          mx: 1,
                           mb: 2,
                           gap: 1,
                           bgcolor: alpha(theme.palette.primary.main, 0.05),
