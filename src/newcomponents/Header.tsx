@@ -116,7 +116,7 @@ const Header: React.FC<HeaderProps> = ({
     >
 
 
-        <Toolbar sx={{ px: {lg : 3 }, py: 1 }}>
+        <Toolbar sx={{ px: {lg : 2 }, py: 1 }}>
           
           {/* Middle Section: Search Bar */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 2 }, flex: 1 }}>

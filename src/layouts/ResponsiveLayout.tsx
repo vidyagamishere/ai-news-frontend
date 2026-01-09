@@ -40,6 +40,12 @@ export default function ResponsiveLayout() {
     console.log('📑 ResponsiveLayout: Tab changed to:', tab);
     setSelectedTab(tab);
 
+    // If switching to 'news' tab (home), reset category to 'All'
+    if (tab === 'news' && categoryChangeHandler) {
+      console.log('🏠 ResponsiveLayout: Resetting category to All');
+      categoryChangeHandler('All');
+    }
+
     // Close mobile drawer
     if (isMobile) {
       setLeftOpen(false);
@@ -112,25 +118,28 @@ export default function ResponsiveLayout() {
       </Box>
 
       {/* RIGHT SECTION - Show on Landing page */}
-      <Drawer
-        anchor="right"
-        variant={isMobile ? 'temporary' : 'permanent'}
-        open={isMobile ? rightOpen : true}
-        onClose={() => setRightOpen(false)}
-        sx={{
-          width: RIGHT_WIDTH,
-          marginRight: isMobile ? 0 : 2,
-          '& .MuiDrawer-paper': {
+      {isLandingPage && (
+        <Drawer
+          anchor="right"
+          variant={isMobile ? 'temporary' : 'permanent'}
+          open={isMobile ? rightOpen : true}
+          onClose={() => setRightOpen(false)}
+          sx={{
             width: RIGHT_WIDTH,
-            backgroundColor: 'background.default',
-            borderLeft: 'none',
-          },
-        }}
-      >
-        <RightSection
-          onCategoryChange={categoryChangeHandler}
-        />
-      </Drawer>
+            marginRight: isMobile ? 0 : 2,
+            '& .MuiDrawer-paper': {
+              width: RIGHT_WIDTH,
+              backgroundColor: 'background.default',
+              borderLeft: 'none',
+              overflow: 'visible',
+            },
+          }}
+        >
+          <RightSection
+            onCategoryChange={categoryChangeHandler}
+          />
+        </Drawer>
+      )}
     </Box>
   );
 }
