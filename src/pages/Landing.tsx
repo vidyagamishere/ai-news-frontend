@@ -544,7 +544,7 @@ const Landing: React.FC = () => {
     // Normal browsing mode
     if (!landingContent) return [];
 
-    if (activeCategory === 'All') {
+    if (!activeCategory || activeCategory === 'All') {
       const allContent: Article[] = [];
       if (landingContent.categories) {
         landingContent.categories.forEach(cat => {
