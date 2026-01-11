@@ -29,7 +29,7 @@ import {
   Settings,
   Edit
 } from 'lucide-react';
-import { useDashboardContext } from './Dashboard';
+import { useDashboardContext } from '../contexts/DashboardContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import EnhancedSearchBar from '../components/EnhancedSearchBar';
 import { useSearch } from '../contexts/SearchContext';
@@ -169,7 +169,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
     }));
 
     // Sort by count and return top 7
-    return topics.sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 7);
+    return topics.sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 11);
   }, [categories, categoryStats]);
 
   const fallbackRecommendedTopics: Topic[] = [
@@ -376,10 +376,6 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
           </Typography>
         </Stack>
 
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Explore the most popular AI topics and stay updated with the latest trends
-        </Typography>
-
         <Stack spacing={1.5}>
           {displayRecommendedTopics.map((topic) => (
             <Box
@@ -428,22 +424,6 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
             </Box>
           ))}
         </Stack>
-
-        <Box
-          sx={{
-            mt: 2,
-            textAlign: 'center',
-            color: 'primary.main',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            '&:hover': {
-              textDecoration: 'underline'
-            }
-          }}
-        >
-          See all topics
-        </Box>
       </Paper>
 
       {/* Trending Now */}

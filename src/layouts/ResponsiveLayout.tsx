@@ -36,6 +36,9 @@ export default function ResponsiveLayout() {
     setCategoryChangeHandler(() => handler);
   }, []);
 
+  const handleLeftDrawerOpen = () => setLeftOpen(true);
+  const handleRightDrawerOpen = () => setRightOpen(true);
+
   const handleTabChange = (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => {
     console.log('📑 ResponsiveLayout: Tab changed to:', tab);
     setSelectedTab(tab);
@@ -55,9 +58,6 @@ export default function ResponsiveLayout() {
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       <CssBaseline />
-
-      {/* LEFT SIDENAV - Only show on Dashboard, not on Landing */}
-
       <Drawer
         variant={isMobile ? 'temporary' : 'permanent'}
         open={isMobile ? leftOpen : true}
@@ -88,43 +88,29 @@ export default function ResponsiveLayout() {
           px: { md: 0, lg: 2 },
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: 1200 }}>
-          {/* Mobile Header - Show menu button only on Dashboard */}
-          {isMobile && !isLandingPage && (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                mb: 2,
-              }}
-            >
-              <IconButton onClick={() => setLeftOpen(true)}>
-                <MenuIcon />
-              </IconButton>
-              <Typography sx={{ ml: 1 }}>Vidyagam</Typography>
-            </Box>
-          )}
-
+        <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto' }}>
           <Outlet context={{
             dateFilter,
             onDateFilterChange: setDateFilter,
             selectedTab,
             onTabChange: handleTabChange,
             onCategoryChangeHandlerSet: handleSetCategoryHandler,
-            rightOpen,
-            setRightOpen
+            onMenuClick: handleLeftDrawerOpen,
+            onTrendingClick: handleRightDrawerOpen,
           }} />
         </Box>
       </Box>
 
       {/* RIGHT SECTION - Show on Landing page */}
-      {isLandingPage && (
+      
         <Drawer
           anchor="right"
           variant={isMobile ? 'temporary' : 'permanent'}
           open={isMobile ? rightOpen : true}
           onClose={() => setRightOpen(false)}
           sx={{
+            flexGrow: 1,
+            display: 'flex',
             width: RIGHT_WIDTH,
             marginRight: isMobile ? 0 : 2,
             '& .MuiDrawer-paper': {
@@ -139,7 +125,7 @@ export default function ResponsiveLayout() {
             onCategoryChange={categoryChangeHandler}
           />
         </Drawer>
-      )}
+      
     </Box>
   );
 }

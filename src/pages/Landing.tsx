@@ -49,8 +49,8 @@ const Landing: React.FC = () => {
     selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
     onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
     onCategoryChangeHandlerSet?: (handler: (category: string) => void) => void;
-    rightOpen?: boolean;
-    setRightOpen?: (open: boolean) => void;
+    onMenuClick?: () => void;
+    onTrendingClick?: () => void;
   }>();
 
   // Check if caching is enabled via environment variable (disabled by default)
@@ -92,10 +92,6 @@ const Landing: React.FC = () => {
   const hasInitializedRef = useRef(false); // ✅ Prevent duplicate initial loads
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-
-  // Get right drawer state from context
-  const rightOpen = outletContext?.rightOpen ?? false;
-  const setRightOpen = outletContext?.setRightOpen ?? (() => { });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -671,7 +667,11 @@ const Landing: React.FC = () => {
         >
           {/* Header */}
           <Stack sx={{ bgcolor: 'background.default', justifyContent: 'space-between' }}>
-            <Header isAuthenticated={false} />
+            <Header
+              isAuthenticated={false}
+              onMenuClick={outletContext?.onMenuClick}
+              onTrendingClick={outletContext?.onTrendingClick}
+            />
           </Stack>
 
           {/* Main Layout with SideNav */}
@@ -883,8 +883,6 @@ const Landing: React.FC = () => {
                     </Box>
                   )}
                 </Box>
-
-                {/* RightSection moved to ResponsiveLayout.tsx */}
               </Box>
             </Box>
           </Box>

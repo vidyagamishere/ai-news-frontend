@@ -32,24 +32,8 @@ import Header from './Header';
 import { SearchProvider } from '../contexts/SearchContext';
 import RightSection from './RightSection';
 import NewsItemContainer from './cards/NewsItemContainer';
+import { DashboardContext, type DashboardContextType } from '../contexts/DashboardContext';
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
-
-// Context for sharing dashboard state with RightSection
-interface DashboardContextType {
-  content: Article[];
-  selectedCategory: string;
-  selectedTab: string;
-  categories: string[];
-}
-
-const DashboardContext = createContext<DashboardContextType>({
-  content: [],
-  selectedCategory: 'All',
-  selectedTab: 'news',
-  categories: []
-});
-
-export const useDashboardContext = () => useContext(DashboardContext);
 
 const NewDashboard: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -57,11 +41,13 @@ const NewDashboard: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const outletContext = useOutletContext<{ 
-    onTrendingClick?: () => void;
     dateFilter?: 1 | 7 | 30 | 365;
     onDateFilterChange?: (filter: 1 | 7 | 30 | 365) => void;
     selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
     onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
+    onCategoryChangeHandlerSet?: (handler: (category: string) => void) => void;
+    onMenuClick?: () => void;
+    onTrendingClick?: () => void;
   }>();
 
   const [landingContent, setLandingContent] = useState<LandingContent | null>(null);
@@ -341,6 +327,14 @@ const NewDashboard: React.FC = () => {
     }
   }, [user?.preferences]);
 
+  // Sync with parent layout's tab state
+  useEffect(() => {
+    if (outletContext?.selectedTab && outletContext.selectedTab !== selectedTab) {
+      console.log('🔄 Dashboard: Syncing tab from layout:', outletContext.selectedTab);
+      setSelectedTab(outletContext.selectedTab);
+    }
+  }, [outletContext?.selectedTab, selectedTab]);
+
   const getTabContent = () => {
     if (isSearchActive && searchResults) {
       // Return search results
@@ -455,10 +449,10 @@ const NewDashboard: React.FC = () => {
     navigate('/');
   };
 
-  const handleCategoryChange = (categoryName: string) => {
+  const handleCategoryChange = React.useCallback((categoryName: string) => {
     console.log('🔄 Dashboard: Category changed to:', categoryName);
     setActiveCategory(categoryName);
-    
+
     // Clear search if active
     if (isSearchActive) {
       setIsSearchActive(false);
@@ -466,11 +460,15 @@ const NewDashboard: React.FC = () => {
       setSearchCounts(null);
       setSearchQuery('');
     }
-    
     // loadPersonalizedFeed will be called by the useEffect watching activeCategory
-  };
+  }, [isSearchActive]);
 
   // Simplified context value - RightSection now fetches its own categories
+  useEffect(() => {
+    if (outletContext?.onCategoryChangeHandlerSet) {
+      outletContext.onCategoryChangeHandlerSet(handleCategoryChange);
+    }
+  }, [handleCategoryChange, outletContext]);
   const dashboardContextValue: DashboardContextType = useMemo(() => {
     const contextValue = {
       content: getTabContent(),
@@ -514,6 +512,7 @@ const NewDashboard: React.FC = () => {
               dateFilter={dateFilter}
               onDateFilterChange={setDateFilter}
               onPreferencesClick={() => navigate('/preferences')}
+              onMenuClick={outletContext?.onMenuClick}
               onTrendingClick={outletContext?.onTrendingClick}
             />
             

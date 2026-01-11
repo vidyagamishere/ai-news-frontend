@@ -18,7 +18,8 @@ import type { SelectChangeEvent } from '@mui/material';
 import { styled, alpha } from '@mui/material/styles';
 import {
   Search,
-  TrendingUp
+  TrendingUp,
+  Menu as MenuIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import EnhancedSearchBar from '../components/EnhancedSearchBar';
@@ -116,62 +117,98 @@ const Header: React.FC<HeaderProps> = ({
     >
 
 
-        <Toolbar sx={{ px: {lg : 2 }, py: 1 }}>
-          
-          {/* Middle Section: Search Bar */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 2 }, flex: 1 }}>
-            {/* Search Bar - Desktop */}
-            {finalShowSearch && finalOnSearch && !isMobile && (
-              <Box sx={{ width: { md: 300, lg: 400 } }}>
-                <EnhancedSearchBar
-                  onSearch={finalOnSearch}
-                  categoryId={finalCategoryId}
-                  placeholder="Search AI content..."
-                  showSuggestions={true}
-                />
-              </Box>
-            )}
+      <Toolbar sx={{ px: { lg: 2 }, py: 1 }}>
+        {/* Left: Mobile Menu Icon */}
+        {isMobile && onMenuClick && (
+          <IconButton
+            color="inherit"
+            edge="start"
+            onClick={onMenuClick}
+            sx={{ mr: 1 }}
+            title="Open Menu"
+          >
+            <MenuIcon />
+          </IconButton>
+        )}
 
-            {isMobile && (
-              <>
-                <IconButton color="inherit" size="small">
-                  <Search size={20} />
-                </IconButton>
-                {onTrendingClick && (
-                  <IconButton color="inherit" size="small" onClick={onTrendingClick} title="Trending Topics">
-                    <TrendingUp size={20} />
-                  </IconButton>
-                )}
-              </>
-            )}
-          </Box>
-          
-          {/* Right Section: Date Filter */}
-          {dateFilter !== undefined && onDateFilterChange && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <FormControl size="small" sx={{ minWidth: 140 }}>
-                <Select
-                  value={dateFilter}
-                  onChange={(e: SelectChangeEvent<number>) => onDateFilterChange(e.target.value as 1 | 7 | 30 | 365)}
-                  sx={{ 
-                    bgcolor: 'background.paper', 
-                    borderRadius: 2,
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'divider'
-                    }
-                  }}
-                >
-                  <MenuItem value={1}>Last 24h</MenuItem>
-                  <MenuItem value={7}>Last 7 days</MenuItem>
-                  <MenuItem value={30}>Last 30 days</MenuItem>
-                  <MenuItem value={365}>Last year</MenuItem>
-                </Select>
-              </FormControl>
+        {/* Center: Search Bar (Desktop) or Title (Mobile) */}
+        <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' } }}>
+          {/* Mobile Title */}
+          {isMobile && (
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{ fontWeight: 700, position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}
+            >
+              Vidyagam
+            </Typography>
+          )}
+          {!isMobile && finalShowSearch && finalOnSearch && (
+            <Box sx={{ width: { md: 300, lg: 400 } }}>
+              <EnhancedSearchBar
+                onSearch={finalOnSearch}
+                categoryId={finalCategoryId}
+                placeholder="Search AI content..."
+                showSuggestions={true}
+              />
             </Box>
           )}
+        </Box>
 
-          {/* Right Section: Empty for Landing (user actions moved to RightSection) */}
-        </Toolbar>
+        {/* Right: Icons and Filters */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {/* Mobile Trending Icon */}
+          {isMobile && onTrendingClick && (
+            <IconButton color="inherit" size="small" onClick={onTrendingClick} title="Trending Topics">
+              <TrendingUp size={20} />
+            </IconButton>
+          )}
+
+          {/* Date Filter (Desktop only in this row) */}
+          {!isMobile && dateFilter !== undefined && onDateFilterChange && (
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <Select
+                value={dateFilter}
+                onChange={(e: SelectChangeEvent<number>) => onDateFilterChange(e.target.value as 1 | 7 | 30 | 365)}
+                sx={{ bgcolor: 'background.paper', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' } }}
+              >
+                <MenuItem value={1}>Last 24h</MenuItem>
+                <MenuItem value={7}>Last 7 days</MenuItem>
+                <MenuItem value={30}>Last 30 days</MenuItem>
+                <MenuItem value={365}>Last year</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+        </Box>
+      </Toolbar>
+
+      {/* Mobile-only second row for Search and Date Filter */}
+      {isMobile && (
+        <Box sx={{ px: 2, pb: 2, display: 'flex', flexDirection: 'column', gap: 2, borderTop: 1, borderColor: 'divider' }}>
+          {finalShowSearch && finalOnSearch && (
+            <EnhancedSearchBar
+              onSearch={finalOnSearch}
+              categoryId={finalCategoryId}
+              placeholder="Search AI content..."
+              showSuggestions={true}
+            />
+          )}
+          {dateFilter !== undefined && onDateFilterChange && (
+            <FormControl size="small" fullWidth>
+              <Select
+                value={dateFilter}
+                onChange={(e: SelectChangeEvent<number>) => onDateFilterChange(e.target.value as 1 | 7 | 30 | 365)}
+                sx={{ bgcolor: 'background.paper', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' } }}
+              >
+                <MenuItem value={1}>Last 24h</MenuItem>
+                <MenuItem value={7}>Last 7 days</MenuItem>
+                <MenuItem value={30}>Last 30 days</MenuItem>
+                <MenuItem value={365}>Last year</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+        </Box>
+      )}
     </AppBar>
   );
 };
