@@ -49,6 +49,7 @@ const Landing: React.FC = () => {
     selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
     onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
     onCategoryChangeHandlerSet?: (handler: (category: string) => void) => void;
+    onSearchStart?: () => void;
     onMenuClick?: () => void;
     onTrendingClick?: () => void;
   }>();
@@ -349,9 +350,17 @@ const Landing: React.FC = () => {
       setIsSearchActive(true);
       setSearchQuery(query);
       setSearchError(null); // Clear any previous errors
+      
+      // Clear category selection when searching
+      setActiveCategory('All');
+      
+      // Notify ResponsiveLayout to clear category selection in RightSection
+      if (outletContext?.onSearchStart) {
+        outletContext.onSearchStart();
+      }
 
-      // Get category ID if not "All"
-      const categoryId = activeCategory === 'All' ? undefined : getCategoryIdFromName(activeCategory);
+      // Get category ID if not "All" (will be undefined after clearing above)
+      const categoryId = undefined; // Always search across all categories
 
       console.log('🔍 Executing search with filters - Category:', activeCategory, 'Days:', dateFilter);
 

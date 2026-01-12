@@ -46,6 +46,7 @@ const NewDashboard: React.FC = () => {
     selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
     onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
     onCategoryChangeHandlerSet?: (handler: (category: string) => void) => void;
+    onSearchStart?: () => void;
     onMenuClick?: () => void;
     onTrendingClick?: () => void;
   }>();
@@ -391,6 +392,14 @@ const NewDashboard: React.FC = () => {
       setIsSearchActive(true);
       setSearchQuery(query);
       setSearchError(null);
+      
+      // Clear category selection when searching
+      setActiveCategory('All');
+      
+      // Notify ResponsiveLayout to clear category selection in RightSection
+      if (outletContext?.onSearchStart) {
+        outletContext.onSearchStart();
+      }
 
       const categoryId = activeCategory === 'All' 
         ? undefined 

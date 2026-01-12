@@ -46,9 +46,10 @@ interface Topic {
 // Add prop to receive category change handler
 interface RightSectionProps {
   onCategoryChange?: (categoryName: string) => void;
+  selectedCategory?: string;
 }
 
-const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
+const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedCategory: selectedCategoryProp }) => {
   const theme = useTheme();
   const location = useLocation();
   const isDashboard = location.pathname.includes('/dashboard');
@@ -117,10 +118,12 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
   // Use directly fetched categories instead of context
   const categories = availableCategories.map(cat => cat.name);
   const content = isDashboard ? contextContent : [];
-  const selectedCategory = isDashboard ? contextSelectedCategory : 'All';
+  // Use prop first, then context, then default to 'All'
+  const selectedCategory = selectedCategoryProp || (isDashboard ? contextSelectedCategory : 'All');
 
   console.log('📊 RightSection: Using categories:', categories);
   console.log('📍 RightSection: Current page:', isDashboard ? 'Dashboard' : isLanding ? 'Landing' : 'Other');
+  console.log('🎯 RightSection: Selected category:', selectedCategory);
 
   // Extract trending topics from actual content
   const trendingTopics = useMemo(() => {
@@ -169,7 +172,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
     }));
 
     // Sort by count and return top 7
-    return topics.sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 11);
+    return topics.sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 7);
   }, [categories, categoryStats]);
 
   const fallbackRecommendedTopics: Topic[] = [
@@ -232,7 +235,27 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
 
   return (
     <Box 
-      sx={{ p: 2, width: '100%', boxSizing: 'border-box' }}
+      sx={{ 
+        p: 2, 
+        width: '100%', 
+        height: '100%',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        boxSizing: 'border-box',
+        '&::-webkit-scrollbar': {
+          width: '8px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: 'transparent',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: theme.palette.divider,
+          borderRadius: '4px',
+          '&:hover': {
+            background: theme.palette.action.hover,
+          },
+        },
+      }}
       data-rightsection-id={instanceId.current}
     >
       {/* Authentication Section - Only show on Landing page for non-authenticated users */}
@@ -377,52 +400,54 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
         </Stack>
 
         <Stack spacing={1.5}>
-          {displayRecommendedTopics.map((topic) => (
-            <Box
-              key={topic.id}
-              onClick={() => handleCategoryClick(topic.label)}
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                p: 1.5,
-                borderRadius: 1,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                backgroundColor: selectedCategory === topic.label ? alpha(theme.palette.primary.main, 0.12) : 'transparent',
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.08)
-                }
-              }}
-            >
-              <Typography
-                variant="body2"
-                fontWeight={selectedCategory === topic.label ? 600 : 500}
+          {displayRecommendedTopics.map((topic) => {
+            const isSelected = selectedCategory === topic.label;
+            return (
+              <Box
+                key={topic.id}
+                onClick={() => handleCategoryClick(topic.label)}
                 sx={{
-                  flex: 1,
-                  color: selectedCategory === topic.label ? 'primary.main' : 'text.primary',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  p: 1.5,
+                  borderRadius: 1,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  backgroundColor: isSelected ? alpha(theme.palette.primary.main, 0.12) : 'transparent',
                   '&:hover': {
-                    color: 'primary.main'
+                    backgroundColor: isSelected 
+                      ? alpha(theme.palette.primary.main, 0.16) 
+                      : alpha(theme.palette.primary.main, 0.08)
                   }
                 }}
               >
-                {topic.label}
-              </Typography>
-              {topic.count !== undefined && topic.count > 0 && (
-                <Chip
-                  label={topic.count}
-                  size="small"
+                <Typography
+                  variant="body2"
+                  fontWeight={isSelected ? 600 : 500}
                   sx={{
-                    height: 22,
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                    color: 'primary.main'
+                    flex: 1,
+                    color: isSelected ? 'primary.main' : 'text.primary'
                   }}
-                />
-              )}
-            </Box>
-          ))}
+                >
+                  {topic.label}
+                </Typography>
+                {topic.count !== undefined && topic.count > 0 && (
+                  <Chip
+                    label={topic.count}
+                    size="small"
+                    sx={{
+                      height: 22,
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                      color: 'primary.main'
+                    }}
+                  />
+                )}
+              </Box>
+            );
+          })}
         </Stack>
       </Paper>
 
@@ -465,6 +490,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
       </Paper>
 
       {/* Reading List Promo */}
+      {isAuthenticated && (
       <Paper
         elevation={0}
         sx={{
@@ -500,7 +526,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange }) => {
           Get Started
         </Box>
       </Paper>
-
+      )}
       {/* User Profile Menu */}
       <Menu
         anchorEl={anchorEl}

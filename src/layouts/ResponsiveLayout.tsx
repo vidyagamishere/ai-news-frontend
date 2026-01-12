@@ -25,15 +25,25 @@ export default function ResponsiveLayout() {
   const [rightOpen, setRightOpen] = React.useState(false);
   const [dateFilter, setDateFilter] = React.useState<1 | 7 | 30 | 365>(7);
   const [selectedTab, setSelectedTab] = React.useState<'news' | 'audio' | 'video' | 'posts' | 'learning'>('news');
-  const [categoryChangeHandler, setCategoryChangeHandler] = React.useState<((category: string) => void) | undefined>(undefined);
+  const [selectedCategory, setSelectedCategory] = React.useState<string>('All');
+  
+  // Store the original handler in a ref to avoid re-renders
+  const originalHandlerRef = React.useRef<((category: string) => void) | undefined>(undefined);
 
   // Check if we're on Landing page (no SideNav needed)
   const isLandingPage = location.pathname === '/' || location.pathname === '/landing';
 
-  // Wrapper function to properly set the category change handler
-  // React's setState treats functions specially, so we need to wrap it
+  // Wrapper function that updates local state and calls the original handler
+  const wrappedCategoryHandler = React.useCallback((category: string) => {
+    setSelectedCategory(category);
+    if (originalHandlerRef.current) {
+      originalHandlerRef.current(category);
+    }
+  }, []);
+
+  // Function to set the category change handler from child components
   const handleSetCategoryHandler = React.useCallback((handler: (category: string) => void) => {
-    setCategoryChangeHandler(() => handler);
+    originalHandlerRef.current = handler;
   }, []);
 
   const handleLeftDrawerOpen = () => setLeftOpen(true);
@@ -44,9 +54,9 @@ export default function ResponsiveLayout() {
     setSelectedTab(tab);
 
     // If switching to 'news' tab (home), reset category to 'All'
-    if (tab === 'news' && categoryChangeHandler) {
+    if (tab === 'news') {
       console.log('🏠 ResponsiveLayout: Resetting category to All');
-      categoryChangeHandler('All');
+      wrappedCategoryHandler('All');
     }
 
     // Close mobile drawer
@@ -54,6 +64,11 @@ export default function ResponsiveLayout() {
       setLeftOpen(false);
     }
   };
+
+  const handleSearchStart = React.useCallback(() => {
+    console.log('🔍 ResponsiveLayout: Search started, clearing category selection');
+    setSelectedCategory('All');
+  }, []);
 
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
@@ -95,6 +110,7 @@ export default function ResponsiveLayout() {
             selectedTab,
             onTabChange: handleTabChange,
             onCategoryChangeHandlerSet: handleSetCategoryHandler,
+            onSearchStart: handleSearchStart,
             onMenuClick: handleLeftDrawerOpen,
             onTrendingClick: handleRightDrawerOpen,
           }} />
@@ -117,12 +133,13 @@ export default function ResponsiveLayout() {
               width: RIGHT_WIDTH,
               backgroundColor: 'background.default',
               borderLeft: 'none',
-              overflow: 'visible',
+              overflow: 'auto',
             },
           }}
         >
           <RightSection
-            onCategoryChange={categoryChangeHandler}
+            onCategoryChange={wrappedCategoryHandler}
+            selectedCategory={selectedCategory}
           />
         </Drawer>
       
