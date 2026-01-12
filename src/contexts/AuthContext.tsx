@@ -4,9 +4,20 @@ import { authService } from '../services/authService';
 import apiService from '../services/api';
 import DebugLogger from '../utils/debug';
 
+interface AuthResponse {
+  user: User;
+  access_token: string;
+  isUserExist?: boolean;
+}
+
+interface OTPResponse {
+  message: string;
+  otpSent: boolean;
+}
+
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
-  signup: (credentials: SignupCredentials) => Promise<void>;
+  signup: (credentials: SignupCredentials) => Promise<AuthResponse | OTPResponse>;
   googleLogin: (idToken: string) => Promise<void>;
   logout: () => void;
   updatePreferences: (preferences: Partial<User['preferences']>) => Promise<User>;
