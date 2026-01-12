@@ -153,18 +153,41 @@ const Auth: React.FC = () => {
           return;
         }
 
-        await signup({ 
+        const response = await signup({ 
           email: formData.email, 
           password: formData.password, 
           confirmPassword: formData.confirmPassword,
           name: formData.fullName,
           acceptTerms: formData.agreeToTerms
         });
-        setSuccess('Account created! Please check your email to verify your account.');
         
-        setTimeout(() => {
-          navigate('/auth?mode=signin');
-        }, 2000);
+        console.log('📧 Signup response:', response);
+        
+        // Type guard to check if response is OTP response
+        const isOTPResponse = (res: any): res is { message: string; otpSent: boolean } => {
+          return res && typeof res === 'object' && 'message' in res && typeof res.message === 'string';
+        };
+        
+        // Check if response is OTP response (for non-Gmail users)
+        if (isOTPResponse(response) && response.message.includes('OTP')) {
+          console.log('✅ OTP response detected, navigating to verification...');
+          setSuccess('OTP sent! Redirecting to verification...');
+          // Pass all necessary data including password for non-Gmail signup
+          const userData = {
+            name: formData.fullName,
+            password: formData.password
+          };
+          setTimeout(() => {
+            navigate(`/verify-otp?email=${encodeURIComponent(formData.email)}&userData=${encodeURIComponent(JSON.stringify(userData))}&authMode=signup`);
+          }, 1500);
+        } else {
+          console.log('⚠️ Non-OTP response, using fallback flow');
+          // Direct signup success (shouldn't happen with new flow, but keep for safety)
+          setSuccess('Account created! Please check your email to verify your account.');
+          setTimeout(() => {
+            navigate('/auth?mode=signin');
+          }, 2000);
+        }
       } else {
         await login({ email: formData.email, password: formData.password });
         navigate('/dashboard');

@@ -85,8 +85,12 @@ export function validateSignupEmail(email: string): string | null {
   if (!isValidEmailFormat(email)) {
     return 'Please enter a valid email address';
   }
-  
-  // Disposable email check
+    // Gmail check - Gmail users must use Google Sign-In
+  const domain = email.toLowerCase().split('@')[1];
+  if (domain === 'gmail.com' || domain === 'googlemail.com') {
+    return 'Gmail users must use the "Continue with Google" button to sign up.';
+  }
+    // Disposable email check
   if (isDisposableEmail(email)) {
     return 'Temporary/disposable email addresses are not allowed. Please use a permanent email address.';
   }

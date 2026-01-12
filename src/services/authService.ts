@@ -84,24 +84,10 @@ class AuthService {
   }
 
   async signup(credentials: SignupCredentials): Promise<AuthResponse | OTPResponse> {
-    // Check if it's a Gmail domain
-    const isGmail = this.isGmailDomain(credentials.email);
-    
-    if (isGmail) {
-      // Gmail users use OTP-based signup
-      return this.sendOTP(credentials.email, credentials.name);
-    } else {
-      // Non-Gmail users use password-based signup
-      return this.request('/api/v2/auth/signup', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: credentials.email,
-          name: credentials.name,
-          password: credentials.password,
-          confirm_password: credentials.password
-        }),
-      });
-    }
+    // For ALL users (Gmail and non-Gmail), we now use OTP-based signup
+    // Gmail users will use Google Sign-In button, not this signup flow
+    // Non-Gmail users get OTP via email
+    return this.sendOTP(credentials.email, credentials.name, 'signup');
   }
 
   // Helper method to check if email is Gmail domain

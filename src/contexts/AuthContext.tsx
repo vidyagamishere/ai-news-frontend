@@ -224,7 +224,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await authService.signup(credentials);
       
-      // Direct signup success - user is logged in
+      // Check if this is an OTP response (non-Gmail signup)
+      if ('otpSent' in response && response.otpSent) {
+        // OTP flow - don't set auth state, just return the response
+        setAuthState(prev => ({ ...prev, loading: false }));
+        return response;
+      }
+      
+      // Direct signup success - user is logged in (shouldn't happen with new flow)
       if ('user' in response && 'access_token' in response) {
         const { user, access_token: token } = response;
         localStorage.setItem('authToken', token);
@@ -240,6 +247,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           error: null
         });
       }
+      
+      return response;
     } catch (error) {
       setAuthState(prev => ({
         ...prev,

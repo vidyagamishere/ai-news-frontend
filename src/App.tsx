@@ -156,7 +156,7 @@ function AppContent() {
       {/* Authenticated Routes - With Header/SideNav/Footer */}
       <Route element={<ResponsiveLayout />}>
         <Route path="/preferences" element={<ProtectedRoute><Preferences /></ProtectedRoute>} />
-        <Route path="/dashboard" element={<NewDashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/archive" element={<ProtectedRoute><Archive /></ProtectedRoute>} />
         <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
       </Route>
