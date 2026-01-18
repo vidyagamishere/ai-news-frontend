@@ -182,7 +182,16 @@ const SwipeableNewsCard: React.FC<SwipeableNewsCardProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               className="action-btn read-btn"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                // Track view interaction (only for authenticated users)
+                const token = localStorage.getItem('authToken');
+                if (token && article.id) {
+                  apiService.trackInteraction(article.id, 'view').catch(err => {
+                    console.error('Failed to track article view:', err);
+                  });
+                }
+              }}
             >
               <ExternalLink size={18} />
               <span>Read</span>

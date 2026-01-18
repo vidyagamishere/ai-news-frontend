@@ -41,6 +41,8 @@ interface Topic {
   id: string;
   label: string;
   count?: number;
+  categoryId?: number;
+  isPreferred?: boolean;
 }
 
 // Add prop to receive category change handler
@@ -116,16 +118,47 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
   }, []);
 
   // Use directly fetched categories with counts from API
+  // For authenticated users, prioritize their selected categories
   const recommendedTopics: Topic[] = useMemo(() => {
-    const topics = availableCategories.map(category => ({
+    let topics = availableCategories.map(category => ({
       id: category.name.toLowerCase().replace(/\s+/g, '-'),
       label: category.name,
-      count: category.count || 0  // Use count from API response
+      count: category.count || 0,
+      categoryId: category.id,  // Keep actual category ID
+      isPreferred: false  // Will be updated below
     }));
 
-    // Sort by count and return top 11
-    return topics.sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 11);
-  }, [availableCategories]);
+    // If user is authenticated and has category preferences, prioritize those
+    if (isAuthenticated && user?.preferences) {
+      const userCategoryIds = (user.preferences as any)?.category_ids_selected || [];
+      const userCategories = availableCategories.filter(cat => userCategoryIds.includes(cat.id));
+      const otherCategories = availableCategories.filter(cat => !userCategoryIds.includes(cat.id));
+      
+      // Show user's selected categories first, then others sorted by count
+      topics = [
+        ...userCategories.map(cat => ({
+          id: cat.name.toLowerCase().replace(/\s+/g, '-'),
+          label: cat.name,
+          count: cat.count || 0,
+          categoryId: cat.id,
+          isPreferred: true  // Mark as preferred
+        })),
+        ...otherCategories.map(cat => ({
+          id: cat.name.toLowerCase().replace(/\s+/g, '-'),
+          label: cat.name,
+          count: cat.count || 0,
+          categoryId: cat.id,
+          isPreferred: false  // Mark as not preferred
+        })).sort((a, b) => (b.count || 0) - (a.count || 0))
+      ];
+    } else {
+      // For non-authenticated users, sort by count and mark all as preferred
+      topics = topics.map(t => ({ ...t, isPreferred: true }));
+      topics.sort((a, b) => (b.count || 0) - (a.count || 0));
+    }
+
+    return topics.slice(0, 11);
+  }, [availableCategories, isAuthenticated, user]);
 
   // Keep selectedCategory for UI state
   const content = isDashboard ? contextContent : [];
@@ -399,6 +432,9 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
         <Stack spacing={1.5}>
           {displayRecommendedTopics.map((topic) => {
             const isSelected = selectedCategory === topic.label;
+            const isPreferred = topic.isPreferred !== false; // Default to true for landing page
+            const showPreferenceHint = isDashboard && !isPreferred;
+            
             return (
               <Box
                 key={topic.id}
@@ -412,22 +448,30 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                   backgroundColor: isSelected ? alpha(theme.palette.primary.main, 0.12) : 'transparent',
+                  border: showPreferenceHint ? `1px dashed ${alpha(theme.palette.text.secondary, 0.3)}` : 'none',
+                  opacity: showPreferenceHint ? 0.7 : 1,
                   '&:hover': {
                     backgroundColor: isSelected 
                       ? alpha(theme.palette.primary.main, 0.16) 
-                      : alpha(theme.palette.primary.main, 0.08)
+                      : alpha(theme.palette.primary.main, 0.08),
+                    opacity: 1
                   }
                 }}
+                title={showPreferenceHint ? 'Add to your preferences to see content from this category' : ''}
               >
                 <Typography
                   variant="body2"
                   fontWeight={isSelected ? 600 : 500}
                   sx={{
                     flex: 1,
-                    color: isSelected ? 'primary.main' : 'text.primary'
+                    color: isSelected 
+                      ? 'primary.main' 
+                      : showPreferenceHint 
+                        ? 'text.secondary'
+                        : 'text.primary'
                   }}
                 >
-                  {topic.label}
+                  {showPreferenceHint && '+ '}{topic.label}
                 </Typography>
                 {topic.count !== undefined && (
                   <Chip
@@ -440,8 +484,10 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
                       minWidth: '28px',
                       backgroundColor: isSelected 
                         ? alpha(theme.palette.primary.main, 0.2)
-                        : alpha(theme.palette.primary.main, 0.1),
-                      color: 'primary.main'
+                        : showPreferenceHint
+                          ? alpha(theme.palette.text.secondary, 0.1)
+                          : alpha(theme.palette.primary.main, 0.1),
+                      color: showPreferenceHint ? 'text.secondary' : 'primary.main'
                     }}
                   />
                 )}

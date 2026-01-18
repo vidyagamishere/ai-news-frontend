@@ -249,7 +249,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
     
     // Execute the search callback
     onSearch(searchQuery);
-  }, [onSearch, categoryId]);
+  }, [onSearch]);
 
   // Handle form submit
   const handleSubmit = (e: React.FormEvent) => {

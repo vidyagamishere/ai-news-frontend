@@ -29,9 +29,10 @@ import { apiService } from '../services/api';
 interface SideNavProps {
     selectedTab?: string;
     onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
+    onSettingsClick?: () => void;
 }
 
-const SideNav: React.FC<SideNavProps> = ({ selectedTab = 'news', onTabChange }) => {
+const SideNav: React.FC<SideNavProps> = ({ selectedTab = 'news', onTabChange, onSettingsClick }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const theme = useTheme();
@@ -130,9 +131,9 @@ const SideNav: React.FC<SideNavProps> = ({ selectedTab = 'news', onTabChange }) 
     }, []);
 
     const libraryItems = [
-        { id: 'trending', icon: <TrendingUp size={20} />, label: 'Trending', path: '/trending' },
-        { id: 'saved', icon: <Bookmark size={20} />, label: 'Saved Articles', path: '/saved' },
-        { id: 'settings', icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
+        { id: 'trending', icon: <TrendingUp size={20} />, label: 'Trending', path: '/trending', type: 'navigation' },
+        { id: 'saved', icon: <Bookmark size={20} />, label: 'Saved Articles', path: '/saved', type: 'navigation' },
+        { id: 'settings', icon: <Settings size={20} />, label: 'Preferences', type: 'action' },
     ];
 
     const handleContentTypeClick = (type: 'news' | 'audio' | 'video' | 'posts' | 'learning') => {
@@ -268,8 +269,21 @@ const SideNav: React.FC<SideNavProps> = ({ selectedTab = 'news', onTabChange }) 
                         {libraryItems.map((item) => (
                             <ListItemButton
                                 key={item.id}
-                                selected={location.pathname === item.path}
-                                onClick={() => navigate(item.path)}
+                                selected={item.type === 'navigation' && location.pathname === item.path}
+                                onClick={() => {
+                                    if (item.type === 'action' && item.id === 'settings') {
+                                        // Call settings handler for Preferences
+                                        if (onSettingsClick) {
+                                            onSettingsClick();
+                                        } else {
+                                            // Fallback to navigation if handler not provided
+                                            navigate('/preferences');
+                                        }
+                                    } else if (item.path) { 
+                                        // Navigate for other items
+                                        navigate(item.path);
+                                    }
+                                }}
                                 sx={{
                                     mx: 1,
                                     mb: 0.5,

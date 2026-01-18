@@ -88,6 +88,8 @@ const NewDashboard: React.FC = () => {
   const [availableContentTypes, setAvailableContentTypes] = useState<any[]>([]);
   const [availablePublishers, setAvailablePublishers] = useState<any[]>([]);
   const hasInitializedOptions = useRef(false);
+  const [visibleItemsCount, setVisibleItemsCount] = useState(20);
+  const contentContainerRef = useRef<HTMLDivElement>(null);
 
   const [userPreferences, setUserPreferences] = useState({
     experience_level: user?.preferences?.experience_level || 'intermediate',
@@ -172,7 +174,7 @@ const NewDashboard: React.FC = () => {
   }, []);
 
   // Load personalized feed
-  const loadPersonalizedFeed = async () => {
+  const loadPersonalizedFeed = React.useCallback(async () => {
     try {
       setLoading(true);
 
@@ -292,7 +294,7 @@ const NewDashboard: React.FC = () => {
       console.error('Error loading personalized feed:', err);
       setLoading(false);
     }
-  };
+  }, [activeCategory, userPreferences, availableCategories, availablePublishers, selectedTab, dateFilter]);
 
   const updateContentCounts = (content: LandingContent) => {
     let blogsCount = 0;
@@ -382,7 +384,7 @@ const NewDashboard: React.FC = () => {
     return allContent;
   };
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = React.useCallback(async (query: string) => {
     if (!query.trim()) {
       setIsSearchActive(false);
       setSearchResults(null);
@@ -457,7 +459,7 @@ const NewDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeCategory, availableCategories, dateFilter, outletContext, loadPersonalizedFeed]);
 
   const handleLogout = () => {
     logout();
@@ -550,7 +552,33 @@ const NewDashboard: React.FC = () => {
     if (outletContext?.onTrendingHandlerSet) {
       outletContext.onTrendingHandlerSet(handleSearch);
     }
-  }, [outletContext]);
+  }, [outletContext, handleSearch]);
+
+  // Infinite scroll handler
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!contentContainerRef.current) return;
+      
+      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+      const scrollPosition = scrollTop + clientHeight;
+      const threshold = scrollHeight - 500; // Load more when 500px from bottom
+      
+      if (scrollPosition > threshold) {
+        const totalContent = getTabContent().length;
+        if (visibleItemsCount < totalContent) {
+          setVisibleItemsCount(prev => Math.min(prev + 20, totalContent));
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [visibleItemsCount, landingContent, isSearchActive, searchResults, selectedTab, activeCategory]);
+
+  // Reset visible items when tab or category changes
+  useEffect(() => {
+    setVisibleItemsCount(20);
+  }, [selectedTab, activeCategory, isSearchActive]);
   const dashboardContextValue: DashboardContextType = useMemo(() => {
     const contextValue = {
       content: getTabContent(),
@@ -721,43 +749,152 @@ const NewDashboard: React.FC = () => {
                   )}
 
                   {/* Content Section */}
-                  {selectedTab === 'news' && (
-                    <NewsItemContainer
-                      headerTitle="Your Personalized AI News"
-                      headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                      articles={getTabContent().slice(0, 20)}
-                      contentType="blog"
-                      showInteractions={true}
-                      emptyMessage="No articles found. Try adjusting your preferences."
-                      emptyIcon="📰"
-                    />
-                  )}
+                  <Box ref={contentContainerRef}>
+                    {selectedTab === 'news' && (
+                      <>
+                        {getTabContent().length === 0 && activeCategory !== 'All' && (
+                          <Paper
+                            elevation={0}
+                            sx={{
+                              p: 6,
+                              textAlign: 'center',
+                              bgcolor: alpha(theme.palette.warning.main, 0.05),
+                              borderRadius: 3,
+                              border: '2px dashed',
+                              borderColor: alpha(theme.palette.warning.main, 0.3),
+                              mb: 3
+                            }}
+                          >
+                            <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔔</Typography>
+                            <Typography variant="h5" fontWeight={700} gutterBottom>
+                              No content from {activeCategory}
+                            </Typography>
+                            <Typography color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
+                              This category is not in your preferences. Add it to start seeing articles, podcasts, and videos from {activeCategory}.
+                            </Typography>
+                            <Button
+                              variant="contained"
+                              onClick={() => setShowSettingsModal(true)}
+                              startIcon={<Settings size={18} />}
+                            >
+                              Add to Preferences
+                            </Button>
+                          </Paper>
+                        )}
+                        <NewsItemContainer
+                          headerTitle="Your Personalized AI News"
+                          headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                          articles={getTabContent().slice(0, visibleItemsCount)}
+                          contentType="blog"
+                          showInteractions={true}
+                          emptyMessage="No articles found. Try adjusting your preferences."
+                          emptyIcon="📰"
+                        />
+                        {visibleItemsCount < getTabContent().length && (
+                          <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <CircularProgress size={24} />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Loading more articles...</Typography>
+                          </Box>
+                        )}
+                      </>
+                    )}
 
-                  {/* Audio Tab */}
-                  {selectedTab === 'audio' && (
-                    <NewsItemContainer
-                      headerTitle="Your AI Podcasts"
-                      headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                      articles={getTabContent().slice(0, 20)}
-                      contentType="podcast"
-                      showInteractions={true}
-                      emptyMessage="No podcasts available. Try adjusting your preferences."
-                      emptyIcon="🎧"
-                    />
-                  )}
+                    {/* Audio Tab */}
+                    {selectedTab === 'audio' && (
+                      <>                        {getTabContent().length === 0 && activeCategory !== 'All' && (
+                          <Paper
+                            elevation={0}
+                            sx={{
+                              p: 6,
+                              textAlign: 'center',
+                              bgcolor: alpha(theme.palette.warning.main, 0.05),
+                              borderRadius: 3,
+                              border: '2px dashed',
+                              borderColor: alpha(theme.palette.warning.main, 0.3),
+                              mb: 3
+                            }}
+                          >
+                            <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔔</Typography>
+                            <Typography variant="h5" fontWeight={700} gutterBottom>
+                              No podcasts from {activeCategory}
+                            </Typography>
+                            <Typography color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
+                              This category is not in your preferences. Add it to start seeing podcasts from {activeCategory}.
+                            </Typography>
+                            <Button
+                              variant="contained"
+                              onClick={() => setShowSettingsModal(true)}
+                              startIcon={<Settings size={18} />}
+                            >
+                              Add to Preferences
+                            </Button>
+                          </Paper>
+                        )}                        <NewsItemContainer
+                          headerTitle="Your AI Podcasts"
+                          headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                          articles={getTabContent().slice(0, visibleItemsCount)}
+                          contentType="podcast"
+                          showInteractions={true}
+                          emptyMessage="No podcasts available. Try adjusting your preferences."
+                          emptyIcon="🎧"
+                        />
+                        {visibleItemsCount < getTabContent().length && (
+                          <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <CircularProgress size={24} />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Loading more podcasts...</Typography>
+                          </Box>
+                        )}
+                      </>
+                    )}
 
-                  {/* Video Tab */}
-                  {selectedTab === 'video' && (
-                    <NewsItemContainer
-                      headerTitle="Your AI Videos"
-                      headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                      articles={getTabContent().slice(0, 20)}
-                      contentType="video"
-                      showInteractions={true}
-                      emptyMessage="No videos available. Try adjusting your preferences."
-                      emptyIcon="📹"
-                    />
-                  )}
+                    {/* Video Tab */}
+                    {selectedTab === 'video' && (
+                      <>                        {getTabContent().length === 0 && activeCategory !== 'All' && (
+                          <Paper
+                            elevation={0}
+                            sx={{
+                              p: 6,
+                              textAlign: 'center',
+                              bgcolor: alpha(theme.palette.warning.main, 0.05),
+                              borderRadius: 3,
+                              border: '2px dashed',
+                              borderColor: alpha(theme.palette.warning.main, 0.3),
+                              mb: 3
+                            }}
+                          >
+                            <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔔</Typography>
+                            <Typography variant="h5" fontWeight={700} gutterBottom>
+                              No videos from {activeCategory}
+                            </Typography>
+                            <Typography color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
+                              This category is not in your preferences. Add it to start seeing videos from {activeCategory}.
+                            </Typography>
+                            <Button
+                              variant="contained"
+                              onClick={() => setShowSettingsModal(true)}
+                              startIcon={<Settings size={18} />}
+                            >
+                              Add to Preferences
+                            </Button>
+                          </Paper>
+                        )}                        <NewsItemContainer
+                          headerTitle="Your AI Videos"
+                          headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                          articles={getTabContent().slice(0, visibleItemsCount)}
+                          contentType="video"
+                          showInteractions={true}
+                          emptyMessage="No videos available. Try adjusting your preferences."
+                          emptyIcon="📹"
+                        />
+                        {visibleItemsCount < getTabContent().length && (
+                          <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <CircularProgress size={24} />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Loading more videos...</Typography>
+                          </Box>
+                        )}
+                      </>
+                    )}
+                  </Box>
 
                   {/* Posts Tab */}
                   {selectedTab === 'posts' && (

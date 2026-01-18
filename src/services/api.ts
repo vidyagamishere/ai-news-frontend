@@ -1051,7 +1051,7 @@ export class ApiService {
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
     try {
-      await makeModularRequest('interactions', 'POST', {}, {
+      await makeModularRequest('api/v1/interactions/article', 'POST', {}, {
         article_id: articleId,
         interaction_type: interactionType
       }, headers);
@@ -1066,7 +1066,7 @@ export class ApiService {
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
     try {
-      await makeModularRequest('interactions', 'POST', {}, data, headers);
+      await makeModularRequest('api/v1/interactions/article', 'POST', {}, data, headers);
     } catch (error) {
       console.error('Failed to create interaction:', error);
       throw error;

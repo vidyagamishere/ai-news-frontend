@@ -26,11 +26,11 @@ export default function ResponsiveLayout() {
   const [dateFilter, setDateFilter] = React.useState<1 | 7 | 30 | 365>(7);
   const [selectedTab, setSelectedTab] = React.useState<'news' | 'audio' | 'video' | 'posts' | 'learning'>('news');
   const [selectedCategory, setSelectedCategory] = React.useState<string>('All');
-  const [onSettingsClickHandler, setOnSettingsClickHandler] = React.useState<(() => void) | undefined>(undefined);
   
-  // Store the original handler in a ref to avoid re-renders
+  // Store the original handlers in refs to avoid re-renders
   const originalHandlerRef = React.useRef<((category: string) => void) | undefined>(undefined);
   const onTrendingClickHandlerRef = React.useRef<((topic: string) => void) | undefined>(undefined);
+  const onSettingsClickHandlerRef = React.useRef<(() => void) | undefined>(undefined);
 
   // Check if we're on Landing page (no SideNav needed)
   const isLandingPage = location.pathname === '/' || location.pathname === '/landing';
@@ -50,7 +50,7 @@ export default function ResponsiveLayout() {
 
   // Function to set the settings click handler from child components
   const handleSetSettingsHandler = React.useCallback((handler: () => void) => {
-    setOnSettingsClickHandler(() => handler);
+    onSettingsClickHandlerRef.current = handler;
   }, []);
 
   const handleLeftDrawerOpen = () => setLeftOpen(true);
@@ -112,6 +112,11 @@ export default function ResponsiveLayout() {
         <SideNav
           selectedTab={selectedTab}
           onTabChange={handleTabChange}
+          onSettingsClick={() => {
+            if (onSettingsClickHandlerRef.current) {
+              onSettingsClickHandlerRef.current();
+            }
+          }}
         />
       </Drawer>
 
@@ -165,7 +170,7 @@ export default function ResponsiveLayout() {
           <RightSection
             onCategoryChange={wrappedCategoryHandler}
             selectedCategory={selectedCategory}
-            onSettingsClick={onSettingsClickHandler}
+            onSettingsClick={() => onSettingsClickHandlerRef.current?.()}
             onTrendingClick={handleTrendingTopicClick}
           />
         </Drawer>

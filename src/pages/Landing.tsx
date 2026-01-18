@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
   Box,
@@ -20,7 +20,8 @@ import {
   Divider,
   Tabs,
   Tab,
-  Drawer
+  Drawer,
+  CircularProgress
 } from '@mui/material';
 import SEO from '../components/SEO';
 import { LandingSkeleton } from '../components/LoadingSkeleton';
@@ -92,8 +93,80 @@ const Landing: React.FC = () => {
   const [contentTypeCache, setContentTypeCache] = useState<Map<string, any>>(new Map()); // Cache content by category+type
   const dropdownRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false); // ✅ Prevent duplicate initial loads
+  const [visibleItemsCount, setVisibleItemsCount] = useState(20);
+  const contentContainerRef = useRef<HTMLDivElement>(null);
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+
+  // Helper function to get current content based on mode
+  const getCurrentContent = (): Article[] => {
+    // Search mode
+    if (isSearchActive && searchResults) {
+      return [
+        ...searchResults.blogs,
+        ...searchResults.podcasts,
+        ...searchResults.videos
+      ];
+    }
+
+    // Normal browsing mode
+    if (!landingContent) return [];
+
+    if (activeCategory === 'All') {
+      const allContent: Article[] = [];
+      if (landingContent.categories) {
+        landingContent.categories.forEach(cat => {
+          allContent.push(...cat.content.blogs, ...cat.content.podcasts, ...cat.content.videos);
+        });
+      }
+      return allContent;
+    } else {
+      const category = landingContent.categories?.find(cat => cat.name === activeCategory);
+      if (category) {
+        return [...category.content.blogs, ...category.content.podcasts, ...category.content.videos];
+      }
+    }
+    return [];
+  };
+
+  // Memoize filtered content to prevent redundant filtering on each render
+  const tabContent = useMemo(() => {
+    const allContent = getCurrentContent();
+
+    switch (selectedTab) {
+      case 'news':
+        return allContent.filter(item => {
+          const isArticle = item.content_type === 'article' ||
+            item.content_type === 'blog' ||
+            item.content_type === 'blogs' ||
+            item.type === 'blog' ||
+            item.type === 'blogs' ||
+            item.type === 'article';
+          return isArticle;
+        });
+
+      case 'audio':
+        return allContent.filter(item =>
+          item.content_type === 'podcast' ||
+          item.content_type === 'podcasts' ||
+          item.content_type === 'audio' ||
+          item.type === 'audio' ||
+          item.type === 'podcast' ||
+          item.type === 'podcasts'
+        );
+
+      case 'video':
+        return allContent.filter(item =>
+          item.content_type === 'video' ||
+          item.content_type === 'videos' ||
+          item.type === 'video' ||
+          item.type === 'videos'
+        );
+
+      default:
+        return allContent;
+    }
+  }, [landingContent, isSearchActive, searchResults, selectedTab, activeCategory]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -106,6 +179,32 @@ const Landing: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Infinite scroll handler
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!contentContainerRef.current) return;
+      
+      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+      const scrollPosition = scrollTop + clientHeight;
+      const threshold = scrollHeight - 500; // Load more when 500px from bottom
+      
+      if (scrollPosition > threshold) {
+        const totalContent = tabContent.length;
+        if (visibleItemsCount < totalContent) {
+          setVisibleItemsCount(prev => Math.min(prev + 20, totalContent));
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [visibleItemsCount, tabContent]);
+
+  // Reset visible items when tab or category changes
+  useEffect(() => {
+    setVisibleItemsCount(20);
+  }, [selectedTab, activeCategory, isSearchActive]);
 
   // Helper function to get category icon (moved from ArticleCard section)
   const getCategoryIcon = (categoryName: string): string => {
@@ -537,85 +636,6 @@ const Landing: React.FC = () => {
     }
   };
 
-  const getCurrentContent = () => {    // If search is active, use search results
-    if (isSearchActive && searchResults) {
-      // Return all search results (they're already filtered by category and time)
-      return [
-        ...searchResults.blogs,
-        ...searchResults.podcasts,
-        ...searchResults.videos
-      ];
-    }
-
-    // Normal browsing mode
-    if (!landingContent) return [];
-
-    if (activeCategory === 'All') {
-      const allContent: Article[] = [];
-      if (landingContent.categories) {
-        landingContent.categories.forEach(cat => {
-          allContent.push(...cat.content.blogs, ...cat.content.podcasts, ...cat.content.videos);
-        });
-      }
-      return allContent;
-    } else {
-      const category = landingContent.categories?.find(cat => cat.name === activeCategory);
-      if (category) {
-        return [...category.content.blogs, ...category.content.podcasts, ...category.content.videos];
-      }
-    }
-    return [];
-  };
-
-  const getTabContent = () => {
-    const allContent = getCurrentContent();
-
-    console.log('🎯 All Content:', allContent);
-    console.log('📑 Selected Tab:', selectedTab);
-
-    switch (selectedTab) {
-      case 'news':
-        const newsItems = allContent.filter(item => {
-          // ✅ FIXED: Check for both singular and plural forms
-          const isArticle = item.content_type === 'article' ||
-            item.content_type === 'blog' ||
-            item.content_type === 'blogs' ||  // ✅ ADD PLURAL
-            item.type === 'blog' ||
-            item.type === 'blogs' ||  // ✅ ADD PLURAL
-            item.type === 'article';
-          return isArticle;
-        });
-        console.log('📰 News Items Found:', newsItems.length);
-        return newsItems;
-
-      case 'audio':
-        const audioItems = allContent.filter(item =>
-          item.content_type === 'podcast' ||
-          item.content_type === 'podcasts' ||  // ✅ ADD PLURAL
-          item.content_type === 'audio' ||
-          item.type === 'audio' ||
-          item.type === 'podcast' ||
-          item.type === 'podcasts'  // ✅ ADD PLURAL
-        );
-        console.log('🎧 Audio Items Found:', audioItems.length);
-        return audioItems;
-
-      case 'video':
-        const videoItems = allContent.filter(item =>
-          item.content_type === 'video' ||
-          item.content_type === 'videos' ||  // ✅ ADD PLURAL
-          item.type === 'video' ||
-          item.type === 'videos'  // ✅ ADD PLURAL
-        );
-        console.log('📹 Video Items Found:', videoItems.length);
-        return videoItems;
-
-      default:
-        console.log('📋 All Items:', allContent.length);
-        return allContent;
-    }
-  };
-
   const handleSearchQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;
     setSearchQuery(query);
@@ -824,41 +844,66 @@ const Landing: React.FC = () => {
                   )}
 
                   {/* Content Section */}
-                  {selectedTab === 'news' && (
-                    <NewsItemContainer
+                  <Box ref={contentContainerRef}>
+                    {selectedTab === 'news' && (
+                      <>
+                        <NewsItemContainer
+                          headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                          articles={tabContent.slice(0, visibleItemsCount)}
+                          contentType="blog"
+                          showInteractions={false}
+                          emptyMessage="No articles found"
+                          emptyIcon="📰"
+                        />
+                        {visibleItemsCount < tabContent.length && (
+                          <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <CircularProgress size={24} />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Loading more articles...</Typography>
+                          </Box>
+                        )}
+                      </>
+                    )}
 
-                      headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                      articles={getTabContent().slice(0, 20)}
-                      contentType="blog"
-                      showInteractions={false}
-                      emptyMessage="No articles found"
-                      emptyIcon="📰"
-                    />
-                  )}
+                    {/* Audio Tab */}
+                    {selectedTab === 'audio' && (
+                      <>
+                        <NewsItemContainer
+                          headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                          articles={tabContent.slice(0, visibleItemsCount)}
+                          contentType="podcast"
+                          showInteractions={false}
+                          emptyMessage="No podcasts available yet"
+                          emptyIcon="🎧"
+                        />
+                        {visibleItemsCount < tabContent.length && (
+                          <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <CircularProgress size={24} />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Loading more podcasts...</Typography>
+                          </Box>
+                        )}
+                      </>
+                    )}
 
-                  {/* Audio Tab */}
-                  {selectedTab === 'audio' && (
-                    <NewsItemContainer
-                      headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                      articles={getTabContent().slice(0, 20)}
-                      contentType="podcast"
-                      showInteractions={false}
-                      emptyMessage="No podcasts available yet"
-                      emptyIcon="🎧"
-                    />
-                  )}
-
-                  {/* Video Tab */}
-                  {selectedTab === 'video' && (
-                    <NewsItemContainer
-                      headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                      articles={getTabContent().slice(0, 20)}
-                      contentType="video"
-                      showInteractions={false}
-                      emptyMessage="No videos available yet"
-                      emptyIcon="📹"
-                    />
-                  )}
+                    {/* Video Tab */}
+                    {selectedTab === 'video' && (
+                      <>
+                        <NewsItemContainer
+                          headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                          articles={tabContent.slice(0, visibleItemsCount)}
+                          contentType="video"
+                          showInteractions={false}
+                          emptyMessage="No videos available yet"
+                          emptyIcon="📹"
+                        />
+                        {visibleItemsCount < tabContent.length && (
+                          <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <CircularProgress size={24} />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Loading more videos...</Typography>
+                          </Box>
+                        )}
+                      </>
+                    )}
+                  </Box>
 
                   {/* Posts Tab */}
                   {selectedTab === 'posts' && (

@@ -11,6 +11,7 @@ import {
 } from '../../types/article';
 import SmartImage from '../SmartImage';
 import TopicLabels from '../TopicLabels';
+import { apiService } from '../../services/api';
 
 interface ArticleCardProps {
   article: Article;
@@ -36,6 +37,19 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
         return <Headphones className="type-icon" />;
       default:
         return null;
+    }
+  };
+
+  const handleArticleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    // Track view interaction (only for authenticated users)
+    if (article.id) {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        const articleId = typeof article.id === 'string' ? article.id : article.id.toString();
+        apiService.trackInteraction(articleId, 'view').catch(err => {
+          console.error('Failed to track article view:', err);
+        });
+      }
     }
   };
 
@@ -93,6 +107,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
             target="_blank" 
             rel="noopener noreferrer"
             className="article-link"
+            onClick={handleArticleClick}
           >
             {article.title}
             <ExternalLink className="external-icon" />

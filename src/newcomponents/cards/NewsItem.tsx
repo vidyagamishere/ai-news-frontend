@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { Article } from '../../types/article';
 import { formatTimeAgo, getArticleSummary, getArticleSource } from '../../types/article';
+import { apiService } from '../../services/api';
 
 interface NewsItemProps {
   article: Article;
@@ -42,6 +43,14 @@ const NewsItem: React.FC<NewsItemProps> = ({
   const articleImage = article.image || article.imageUrl || article.thumbnail_url;
 
   const handleCardClick = () => {
+    // Track view interaction (works for both authenticated and anonymous users)
+    if (article.id) {
+      const articleId = typeof article.id === 'string' ? article.id : article.id.toString();
+      apiService.trackInteraction(articleId, 'view').catch(err => {
+        console.error('Failed to track article view:', err);
+      });
+    }
+    
     window.open(article.url, '_blank', 'noopener,noreferrer');
   };
 
