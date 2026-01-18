@@ -920,7 +920,7 @@ export class ApiService {
     }
   }
 
-  async getAvailableCategories(): Promise<{ categories: Array<{id: number; name: string; description?: string; priority?: number}>; count: number }> {
+  async getAvailableCategories(): Promise<{ categories: Array<{id: number; name: string; description?: string; priority?: number; count?: number}>; count: number }> {
     console.log('📂 Fetching available categories...');
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};

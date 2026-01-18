@@ -52,6 +52,7 @@ const Landing: React.FC = () => {
     onSearchStart?: () => void;
     onMenuClick?: () => void;
     onTrendingClick?: () => void;
+    onTrendingHandlerSet?: (handler: (topic: string) => void) => void;
   }>();
 
   // Check if caching is enabled via environment variable (disabled by default)
@@ -655,6 +656,13 @@ const Landing: React.FC = () => {
     }
   }, [handleCategoryChange, outletContext]);
 
+  // Register trending topic click handler
+  useEffect(() => {
+    if (outletContext?.onTrendingHandlerSet) {
+      outletContext.onTrendingHandlerSet(handleSearch);
+    }
+  }, [outletContext]);
+
   return (
     <>
       <SEO
@@ -680,6 +688,8 @@ const Landing: React.FC = () => {
               isAuthenticated={false}
               onMenuClick={outletContext?.onMenuClick}
               onTrendingClick={outletContext?.onTrendingClick}
+              dateFilter={dateFilter}
+              onDateFilterChange={setDateFilter}
             />
           </Stack>
 

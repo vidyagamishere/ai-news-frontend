@@ -47,9 +47,11 @@ interface Topic {
 interface RightSectionProps {
   onCategoryChange?: (categoryName: string) => void;
   selectedCategory?: string;
+  onSettingsClick?: () => void;
+  onTrendingClick?: (topic: string) => void;
 }
 
-const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedCategory: selectedCategoryProp }) => {
+const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedCategory: selectedCategoryProp, onSettingsClick, onTrendingClick }) => {
   const theme = useTheme();
   const location = useLocation();
   const isDashboard = location.pathname.includes('/dashboard');
@@ -65,24 +67,21 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
     console.log(`🏠 Is Landing: ${isLanding}`);
   }, [location.pathname, isDashboard, isLanding]);
   
-  // Only use dashboard context if on dashboard page
-  let contextContent: any[] = [];
-  let contextCategories: string[] = [];
-  let contextSelectedCategory = 'All';
+  const { user, isAuthenticated, logout } = useAuth();
   
-  if (isDashboard) {
-    try {
-      const dashboardContext = useDashboardContext();
-      contextContent = dashboardContext.content;
-      contextCategories = dashboardContext.categories;
-      contextSelectedCategory = dashboardContext.selectedCategory;
-    } catch (e) {
-      // Context not available, use defaults
-      console.log('Dashboard context not available');
-    }
+  // ✅ ALWAYS call the hook, but only use values if on dashboard
+  let dashboardContext;
+  try {
+    dashboardContext = useDashboardContext();
+  } catch (e) {
+    // Context not available
+    dashboardContext = { content: [], categories: [], selectedCategory: 'All' };
   }
   
-  const { user, isAuthenticated, logout } = useAuth();
+  // Only use dashboard context values if on dashboard page
+  const contextContent = isDashboard ? dashboardContext.content : [];
+  const contextCategories = isDashboard ? dashboardContext.categories : [];
+  const contextSelectedCategory = isDashboard ? dashboardContext.selectedCategory : 'All';
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
@@ -103,6 +102,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
         
         if (response && Array.isArray(response.categories)) {
           console.log('✅ RightSection: Categories fetched:', response.categories.length);
+          console.log('📊 RightSection: Sample category:', response.categories[0]);
           setAvailableCategories(response.categories);
         }
       } catch (error) {
@@ -115,13 +115,23 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
     fetchCategories();
   }, []);
 
-  // Use directly fetched categories instead of context
-  const categories = availableCategories.map(cat => cat.name);
+  // Use directly fetched categories with counts from API
+  const recommendedTopics: Topic[] = useMemo(() => {
+    const topics = availableCategories.map(category => ({
+      id: category.name.toLowerCase().replace(/\s+/g, '-'),
+      label: category.name,
+      count: category.count || 0  // Use count from API response
+    }));
+
+    // Sort by count and return top 11
+    return topics.sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 11);
+  }, [availableCategories]);
+
+  // Keep selectedCategory for UI state
   const content = isDashboard ? contextContent : [];
-  // Use prop first, then context, then default to 'All'
   const selectedCategory = selectedCategoryProp || (isDashboard ? contextSelectedCategory : 'All');
 
-  console.log('📊 RightSection: Using categories:', categories);
+  console.log('📊 RightSection: Using categories with counts:', availableCategories.length);
   console.log('📍 RightSection: Current page:', isDashboard ? 'Dashboard' : isLanding ? 'Landing' : 'Other');
   console.log('🎯 RightSection: Selected category:', selectedCategory);
 
@@ -130,7 +140,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
     const topicCounts = new Map<string, number>();
 
     content.forEach(article => {
-      article.topics?.forEach((topic: any) => {  // ✅ Add type annotation
+      article.topics?.forEach((topic: any) => {
         const name = topic.name;
         topicCounts.set(name, (topicCounts.get(name) || 0) + 1);
       });
@@ -150,30 +160,6 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
         count
       }));
   }, [content]);
-
-  // Get category-based article counts for recommendations
-  const categoryStats = useMemo(() => {
-    const stats = new Map<string, number>();
-
-    content.forEach(article => {
-      const category = article.category_name || article.category || 'Other';
-      stats.set(category, (stats.get(category) || 0) + 1);
-    });
-
-    return stats;
-  }, [content]);
-
-  const recommendedTopics: Topic[] = useMemo(() => {
-    // Use directly fetched categories with article counts
-    const topics = categories.map(category => ({
-      id: category.toLowerCase().replace(/\s+/g, '-'),
-      label: category,
-      count: categoryStats.get(category) || 0
-    }));
-
-    // Sort by count and return top 7
-    return topics.sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 7);
-  }, [categories, categoryStats]);
 
   const fallbackRecommendedTopics: Topic[] = [
     { id: 'generative-ai', label: 'Generative AI', count: 245 },
@@ -211,6 +197,16 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
   const handleNavigate = (path: string) => {
     navigate(path);
     handleClose();
+  };
+
+  const handleSettingsClick = () => {
+    handleClose();
+    if (onSettingsClick) {
+      onSettingsClick();
+    } else {
+      // Fallback to navigation if handler not provided
+      navigate('/preferences');
+    }
   };
 
   const handleLogout = () => {
@@ -263,8 +259,8 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
         <Paper
           elevation={0}
           sx={{
-            p: 3,
-            mb: 3,
+            p: 2.5,
+            mb: 2,
             border: '1px solid',
             borderColor: 'divider',
             borderRadius: 2,
@@ -314,7 +310,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
           direction="row" 
           spacing={1} 
           justifyContent="center"
-          sx={{ mb: 3 }}
+          sx={{ mb: 2 }}
         >
           <IconButton
             onClick={handleProfileMenuOpen}
@@ -329,9 +325,10 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
               }
             }}
           >
-            <User size={20} />
+           <User size={20} />
           </IconButton>
-          <IconButton
+          {/*}
+            <IconButton
             onClick={() => navigate('/write')}
             size="medium"
             title="Write"
@@ -377,7 +374,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
             }}
           >
             <Settings size={20} />
-          </IconButton>
+          </IconButton> */}
         </Stack>
       )}
 
@@ -385,14 +382,14 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
       <Paper
         elevation={0}
         sx={{
-          p: 3,
-          mb: 3,
+          p: 2.5,
+          mb: 2,
           border: '1px solid',
           borderColor: 'divider',
           borderRadius: 2
         }}
       >
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
           <Sparkles size={20} color={theme.palette.primary.main} />
           <Typography variant="h6" fontWeight={700}>
             Recommended Topics
@@ -410,7 +407,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  p: 1.5,
+                  p: 1.25,
                   borderRadius: 1,
                   cursor: 'pointer',
                   transition: 'all 0.2s',
@@ -432,15 +429,18 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
                 >
                   {topic.label}
                 </Typography>
-                {topic.count !== undefined && topic.count > 0 && (
+                {topic.count !== undefined && (
                   <Chip
                     label={topic.count}
                     size="small"
                     sx={{
-                      height: 22,
-                      fontSize: '0.75rem',
+                      height: 20,
+                      fontSize: '0.7rem',
                       fontWeight: 600,
-                      backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                      minWidth: '28px',
+                      backgroundColor: isSelected 
+                        ? alpha(theme.palette.primary.main, 0.2)
+                        : alpha(theme.palette.primary.main, 0.1),
                       color: 'primary.main'
                     }}
                   />
@@ -455,13 +455,13 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
       <Paper
         elevation={0}
         sx={{
-          p: 3,
+          p: 2.5,
           border: '1px solid',
           borderColor: 'divider',
           borderRadius: 2
         }}
       >
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
           <TrendingUp size={20} color={theme.palette.success.main} />
           <Typography variant="h6" fontWeight={700}>
             Trending Now
@@ -475,9 +475,16 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
               label={topic.count !== undefined && topic.count > 0 ? `${topic.label} (${topic.count})` : topic.label}
               variant="outlined"
               size="medium"
+              onClick={() => {
+                console.log('🔥 Trending topic clicked:', topic.label);
+                if (onTrendingClick) {
+                  onTrendingClick(topic.label);
+                }
+              }}
               sx={{
                 borderRadius: 6,
                 fontWeight: 500,
+                cursor: 'pointer',
                 '&:hover': {
                   backgroundColor: alpha(theme.palette.success.main, 0.1),
                   borderColor: 'success.main',
@@ -494,8 +501,8 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
       <Paper
         elevation={0}
         sx={{
-          p: 3,
-          mt: 3,
+          p: 2.5,
+          mt: 2,
           background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
           border: '1px solid',
           borderColor: 'divider',
@@ -555,9 +562,9 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
           <BookmarkPlus size={18} style={{ marginRight: 12 }} />
           Library
         </MenuItem>
-        <MenuItem onClick={() => handleNavigate('/settings')}>
+        <MenuItem onClick={handleSettingsClick}>
           <Settings size={18} style={{ marginRight: 12 }} />
-          Settings
+          Preferences
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleLogout}>
