@@ -34,9 +34,10 @@ import RightSection from './RightSection';
 import NewsItemContainer from './cards/NewsItemContainer';
 import { DashboardContext, type DashboardContextType } from '../contexts/DashboardContext';
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
+import SettingsFullScreen from '../components/SettingsFullScreen';
 
 const NewDashboard: React.FC = () => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, updatePreferences } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -46,9 +47,11 @@ const NewDashboard: React.FC = () => {
     selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
     onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
     onCategoryChangeHandlerSet?: (handler: (category: string) => void) => void;
+    onSettingsClickHandlerSet?: (handler: () => void) => void;
     onSearchStart?: () => void;
     onMenuClick?: () => void;
     onTrendingClick?: () => void;
+    onTrendingHandlerSet?: (handler: (topic: string) => void) => void;
   }>();
 
   const [landingContent, setLandingContent] = useState<LandingContent | null>(null);
@@ -77,6 +80,9 @@ const NewDashboard: React.FC = () => {
   const dateFilter = outletContext?.dateFilter || 7;
   const setDateFilter = outletContext?.onDateFilterChange || (() => {});
   const [error, setError] = useState<string | null>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [availableContentTypes, setAvailableContentTypes] = useState<any[]>([]);
@@ -472,12 +478,79 @@ const NewDashboard: React.FC = () => {
     // loadPersonalizedFeed will be called by the useEffect watching activeCategory
   }, [isSearchActive]);
 
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const selectedCategoryNames = availableCategories
+        .filter(category => userPreferences.categories_selected.includes(category.id))
+        .map(category => category.name);
+
+      const selectedContentTypeNames = availableContentTypes
+        .filter(contentType => userPreferences.content_types_selected.includes(contentType.id))
+        .map(contentType => contentType.name);
+
+      const cleanedPublisherIds = userPreferences.publishers_selected
+        .filter((id: any) => id !== 'all' && typeof id === 'number') as number[];
+
+      const selectedPublisherNames = availablePublishers
+        .filter(publisher => cleanedPublisherIds.includes(publisher.id))
+        .map(publisher => publisher.name);
+
+      const preferences = {
+        experience_level: userPreferences.experience_level,
+        professional_roles: userPreferences.professional_roles,
+        categories_selected: selectedCategoryNames,
+        content_types_selected: selectedContentTypeNames,
+        publishers_selected: selectedPublisherNames,
+        category_ids_selected: userPreferences.categories_selected,
+        content_type_ids_selected: userPreferences.content_types_selected,
+        publisher_ids_selected: cleanedPublisherIds.length > 0 ? cleanedPublisherIds : [],
+        newsletter_frequency: "weekly" as "weekly" | "12_hours" | "daily" | "monthly",
+        email_notifications: true,
+        breaking_news_alerts: false,
+        onboarding_completed: true
+      };
+
+      await updatePreferences(preferences);
+
+      // Show success dialog
+      setShowSuccessDialog(true);
+
+      // Auto-close dialog and modal after 2 seconds
+      setTimeout(() => {
+        setShowSuccessDialog(false);
+        setShowSettingsModal(false);
+        // Reload feed with new preferences
+        loadPersonalizedFeed();
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      alert('❌ Failed to save settings. Please try again.');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   // Simplified context value - RightSection now fetches its own categories
   useEffect(() => {
     if (outletContext?.onCategoryChangeHandlerSet) {
       outletContext.onCategoryChangeHandlerSet(handleCategoryChange);
     }
   }, [handleCategoryChange, outletContext]);
+
+  // Register settings click handler
+  useEffect(() => {
+    if (outletContext?.onSettingsClickHandlerSet) {
+      outletContext.onSettingsClickHandlerSet(() => setShowSettingsModal(true));
+    }
+  }, [outletContext]);
+
+  // Register trending topic click handler
+  useEffect(() => {
+    if (outletContext?.onTrendingHandlerSet) {
+      outletContext.onTrendingHandlerSet(handleSearch);
+    }
+  }, [outletContext]);
   const dashboardContextValue: DashboardContextType = useMemo(() => {
     const contextValue = {
       content: getTabContent(),
@@ -732,6 +805,122 @@ const NewDashboard: React.FC = () => {
             </Box>
           </>
         )}
+
+        {/* Settings Modal */}
+        {showSettingsModal && (
+          <SettingsFullScreen
+            userPreferences={userPreferences}
+            setUserPreferences={setUserPreferences}
+            availableCategories={availableCategories}
+            availableContentTypes={availableContentTypes}
+            availablePublishers={availablePublishers}
+            onClose={() => setShowSettingsModal(false)}
+            onSave={handleSaveSettings}
+            savingSettings={savingSettings}
+            setSettingsChanged={() => {}}
+          />
+        )}
+
+        {/* Success Dialog */}
+        {showSuccessDialog && (
+          <Box
+            sx={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+              backdropFilter: 'blur(4px)',
+              animation: 'fadeIn 0.2s ease-in-out'
+            }}
+            onClick={() => setShowSuccessDialog(false)}
+          >
+            <Paper
+              elevation={24}
+              sx={{
+                borderRadius: 4,
+                p: 4,
+                maxWidth: 400,
+                width: '90%',
+                animation: 'slideUp 0.3s ease-out',
+                textAlign: 'center'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 1.5rem',
+                  animation: 'scaleIn 0.5s ease-out'
+                }}
+              >
+                <Typography sx={{ fontSize: '2rem' }}>✓</Typography>
+              </Box>
+
+              <Typography variant="h5" fontWeight={700} gutterBottom>
+                Settings Saved!
+              </Typography>
+              <Typography color="text.secondary" sx={{ mb: 3 }}>
+                Your preferences have been updated successfully. Your personalized feed is being refreshed...
+              </Typography>
+
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={() => {
+                  setShowSuccessDialog(false);
+                  setShowSettingsModal(false);
+                }}
+                sx={{ borderRadius: 2.5, py: 1.25, fontWeight: 600 }}
+              >
+                OK
+              </Button>
+            </Paper>
+          </Box>
+        )}
+
+        <style>{`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+
+          @keyframes slideUp {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          @keyframes scaleIn {
+            0% {
+              transform: scale(0);
+              opacity: 0;
+            }
+            50% {
+              transform: scale(1.1);
+            }
+            100% {
+              transform: scale(1);
+              opacity: 1;
+            }
+          }
+        `}</style>
       </DashboardContext.Provider>
     </SearchProvider>
   );

@@ -26,9 +26,11 @@ export default function ResponsiveLayout() {
   const [dateFilter, setDateFilter] = React.useState<1 | 7 | 30 | 365>(7);
   const [selectedTab, setSelectedTab] = React.useState<'news' | 'audio' | 'video' | 'posts' | 'learning'>('news');
   const [selectedCategory, setSelectedCategory] = React.useState<string>('All');
+  const [onSettingsClickHandler, setOnSettingsClickHandler] = React.useState<(() => void) | undefined>(undefined);
   
   // Store the original handler in a ref to avoid re-renders
   const originalHandlerRef = React.useRef<((category: string) => void) | undefined>(undefined);
+  const onTrendingClickHandlerRef = React.useRef<((topic: string) => void) | undefined>(undefined);
 
   // Check if we're on Landing page (no SideNav needed)
   const isLandingPage = location.pathname === '/' || location.pathname === '/landing';
@@ -44,6 +46,11 @@ export default function ResponsiveLayout() {
   // Function to set the category change handler from child components
   const handleSetCategoryHandler = React.useCallback((handler: (category: string) => void) => {
     originalHandlerRef.current = handler;
+  }, []);
+
+  // Function to set the settings click handler from child components
+  const handleSetSettingsHandler = React.useCallback((handler: () => void) => {
+    setOnSettingsClickHandler(() => handler);
   }, []);
 
   const handleLeftDrawerOpen = () => setLeftOpen(true);
@@ -68,6 +75,22 @@ export default function ResponsiveLayout() {
   const handleSearchStart = React.useCallback(() => {
     console.log('🔍 ResponsiveLayout: Search started, clearing category selection');
     setSelectedCategory('All');
+  }, []);
+
+  const handleTrendingTopicClick = React.useCallback((topic: string) => {
+    console.log('🔥 ResponsiveLayout: Trending topic clicked:', topic);
+    // Trigger search through the handler if available
+    if (onTrendingClickHandlerRef.current) {
+      onTrendingClickHandlerRef.current(topic);
+    }
+    // Open the drawer on mobile
+    if (isMobile) {
+      setRightOpen(false);
+    }
+  }, [isMobile]);
+
+  const handleSetTrendingHandler = React.useCallback((handler: (topic: string) => void) => {
+    onTrendingClickHandlerRef.current = handler;
   }, []);
 
   return (
@@ -100,7 +123,7 @@ export default function ResponsiveLayout() {
           flexGrow: 1,
           display: 'flex',
           justifyContent: 'center',
-          px: { md: 0, lg: 2 },
+          px: { xs: 2, md: 0, lg: 2 },
         }}
       >
         <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto' }}>
@@ -110,9 +133,11 @@ export default function ResponsiveLayout() {
             selectedTab,
             onTabChange: handleTabChange,
             onCategoryChangeHandlerSet: handleSetCategoryHandler,
+            onSettingsClickHandlerSet: handleSetSettingsHandler,
             onSearchStart: handleSearchStart,
             onMenuClick: handleLeftDrawerOpen,
             onTrendingClick: handleRightDrawerOpen,
+            onTrendingHandlerSet: handleSetTrendingHandler,
           }} />
         </Box>
       </Box>
@@ -140,6 +165,8 @@ export default function ResponsiveLayout() {
           <RightSection
             onCategoryChange={wrappedCategoryHandler}
             selectedCategory={selectedCategory}
+            onSettingsClick={onSettingsClickHandler}
+            onTrendingClick={handleTrendingTopicClick}
           />
         </Drawer>
       
