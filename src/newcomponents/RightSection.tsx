@@ -27,7 +27,8 @@ import {
   LogOut,
   BookmarkPlus,
   Settings,
-  Edit
+  Edit,
+  Trophy
 } from 'lucide-react';
 import { useDashboardContext } from '../contexts/DashboardContext';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -36,6 +37,7 @@ import { useSearch } from '../contexts/SearchContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
+
 
 interface Topic {
   id: string;
@@ -51,9 +53,10 @@ interface RightSectionProps {
   selectedCategory?: string;
   onSettingsClick?: () => void;
   onTrendingClick?: (topic: string) => void;
+  onStatsClick?: () => void;  // Add this line
 }
 
-const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedCategory: selectedCategoryProp, onSettingsClick, onTrendingClick }) => {
+const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedCategory: selectedCategoryProp, onSettingsClick, onTrendingClick, onStatsClick }) => {
   const theme = useTheme();
   const location = useLocation();
   const isDashboard = location.pathname.includes('/dashboard');
@@ -607,6 +610,22 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
         <MenuItem onClick={() => handleNavigate('/library')}>
           <BookmarkPlus size={18} style={{ marginRight: 12 }} />
           Library
+        </MenuItem>
+        {/* Add before Preferences menu item: */}
+        <MenuItem onClick={() => {
+          setAnchorEl(null);
+          // Navigate to stats or trigger stats modal
+          onStatsClick?.();  // Pass this prop from ResponsiveLayout
+        }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Trophy size={18} />
+            <Box>
+              <Typography variant="body2">Level {user?.level || 1}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {user?.total_points || 0} points
+              </Typography>
+            </Box>
+          </Stack>
         </MenuItem>
         <MenuItem onClick={handleSettingsClick}>
           <Settings size={18} style={{ marginRight: 12 }} />

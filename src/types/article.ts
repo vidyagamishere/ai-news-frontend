@@ -49,6 +49,7 @@ export interface Article {
   bookmarks_count?: number;  // ✅ ADD THIS
   comments_count?: number;  // ✅ ADD THIS
   engagement_score?: number;  // ✅ ADD THIS
+  share_count?: number;
   
   // Media
   image?: string;  // Primary image field (mapped from backend image_url)
@@ -75,6 +76,7 @@ export interface Article {
   is_bookmarked?: boolean;
   is_liked?: boolean;
   is_viewed?: boolean;
+   // Stats (using correct column name)
 }
 
 // Category structure

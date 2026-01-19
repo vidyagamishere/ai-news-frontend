@@ -20,6 +20,16 @@ const api = axios.create({
   },
 });
 
+export const ActionTypeId = {
+  LIKE: 1,
+  COMMENT: 2,
+  BOOKMARK: 3,
+  VIEW: 4,
+  SHARE: 5,
+  FOLLOW: 6,
+  READ: 7
+} as const;
+
 // Create a separate instance for content requests with longer timeout
 const contentApi = axios.create({
   baseURL: API_BASE_URL,
@@ -1047,42 +1057,65 @@ export class ApiService {
   }
 
   async trackInteraction(articleId: string, interactionType: string): Promise<void> {
-    const token = localStorage.getItem('authToken');
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const typeMap: Record<string, number> = {
+      'view': ActionTypeId.VIEW,
+      'read': ActionTypeId.READ, // or READ if you have it
+      'like': ActionTypeId.LIKE,
+      'save': ActionTypeId.BOOKMARK,
+      'share': ActionTypeId.SHARE,
+      'comment': ActionTypeId.COMMENT,
+    };
     
-    try {
-      await makeModularRequest('api/v1/interactions/article', 'POST', {}, {
-        article_id: articleId,
-        interaction_type: interactionType
-      }, headers);
-    } catch (error) {
-      console.error('Failed to track interaction:', error);
-      throw error;
+    const actionTypeId = typeMap[interactionType.toLowerCase()];
+    if (!actionTypeId) {
+      console.warn(`Unknown interaction type: ${interactionType}`);
+      return;
     }
+    
+    await this.createInteraction({
+      article_id: articleId,
+      action_type_id: actionTypeId
+    });
   }
 
-  async createInteraction(data: { article_id: number | string; interaction_type: string }): Promise<void> {
+// ✅ UPDATED: Create interaction method
+  async createInteraction(data: { 
+    article_id: number | string; 
+    action_type_id: number;  // Changed from interaction_type string
+    metadata?: any;
+  }): Promise<void> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
-    try {
-      await makeModularRequest('api/v1/interactions/article', 'POST', {}, data, headers);
-    } catch (error) {
-      console.error('Failed to create interaction:', error);
-      throw error;
-    }
+    await makeModularRequest('api/v1/interactions/article', 'POST', {}, data, headers);
   }
 
-  async removeInteraction(articleId: number | string, interactionType: string): Promise<void> {
+  // ✅ UPDATED: Remove interaction method
+  async removeInteraction(articleId: number | string, actionTypeId: number): Promise<void> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
-    try {
-      await makeModularRequest(`interactions/${articleId}/${interactionType}`, 'DELETE', {}, null, headers);
-    } catch (error) {
-      console.error('Failed to remove interaction:', error);
-      throw error;
+    await makeModularRequest(
+      'api/v1/interactions/article', 
+      'DELETE', 
+      { article_id: articleId, action_type_id: actionTypeId },  // Changed param name
+      null, 
+      headers
+    );
+  }
+
+  // ✅ UPDATED: Track share
+  async trackShare(articleId: number, platform: 'copy_link' | 'email'): Promise<void> {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('Authentication required');
     }
+    
+    await makeModularRequest(
+      'api/v1/interactions/share/track',
+      'POST',
+      {},
+      { article_id: articleId, platform },
+      { 'Authorization': `Bearer ${token}` }
+    );
   }
 
   async getSwipeableFeed(params: {

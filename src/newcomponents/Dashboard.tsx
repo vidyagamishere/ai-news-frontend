@@ -17,7 +17,10 @@ import {
   Tabs,
   CircularProgress,
   Alert,
-  InputLabel
+  InputLabel,
+  Dialog,
+  DialogActions,
+  DialogContent
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import { Settings, LogOut, ChevronRight } from 'lucide-react';
@@ -35,6 +38,9 @@ import NewsItemContainer from './cards/NewsItemContainer';
 import { DashboardContext, type DashboardContextType } from '../contexts/DashboardContext';
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
 import SettingsFullScreen from '../components/SettingsFullScreen';
+import UserStatsPage from '../components/UserStatsPage';
+const [showStatsModal, setShowStatsModal] = useState(false);
+
 
 const NewDashboard: React.FC = () => {
   const { user, isAuthenticated, logout, updatePreferences } = useAuth();
@@ -295,6 +301,30 @@ const NewDashboard: React.FC = () => {
       setLoading(false);
     }
   }, [activeCategory, userPreferences, availableCategories, availablePublishers, selectedTab, dateFilter]);
+
+// Register stats handler with layout
+  useEffect(() => {
+    if (outletContext?.onStatsClickHandlerSet) {
+      outletContext.onStatsClickHandlerSet(() => setShowStatsModal(true));
+    }
+  }, [outletContext]);
+
+  // Add Stats Modal (render at bottom, after Settings Modal)
+  {showStatsModal && (
+    <Dialog 
+      open={showStatsModal} 
+      onClose={() => setShowStatsModal(false)}
+      maxWidth="lg"
+      fullWidth
+    >
+      <DialogContent sx={{ p: 0 }}>
+        <UserStatsPage />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setShowStatsModal(false)}>Close</Button>
+      </DialogActions>
+    </Dialog>
+  )}
 
   const updateContentCounts = (content: LandingContent) => {
     let blogsCount = 0;

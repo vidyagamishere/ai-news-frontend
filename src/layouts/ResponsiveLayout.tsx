@@ -12,6 +12,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import SideNav from '../newcomponents/SideNav';
 import RightSection from '../newcomponents/RightSection';
+import { useRef } from 'react';
 
 const LEFT_WIDTH = 280;
 const RIGHT_WIDTH = 320;
@@ -42,6 +43,11 @@ export default function ResponsiveLayout() {
       originalHandlerRef.current(category);
     }
   }, []);
+
+  // Add refs for handlers
+const onBookmarksClickHandlerRef = useRef<(() => void) | null>(null);
+const onStatsClickHandlerRef = useRef<(() => void) | null>(null);
+
 
   // Function to set the category change handler from child components
   const handleSetCategoryHandler = React.useCallback((handler: (category: string) => void) => {
@@ -112,6 +118,8 @@ export default function ResponsiveLayout() {
         <SideNav
           selectedTab={selectedTab}
           onTabChange={handleTabChange}
+          onBookmarksClick={() => onBookmarksClickHandlerRef.current?.()}
+          onStatsClick={() => onStatsClickHandlerRef.current?.()}
           onSettingsClick={() => {
             if (onSettingsClickHandlerRef.current) {
               onSettingsClickHandlerRef.current();

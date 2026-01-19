@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Typography,
   Box,
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import type { Article } from '../../types/article';
 import { formatTimeAgo, getArticleSummary, getArticleSource } from '../../types/article';
-import { apiService } from '../../services/api';
+import { apiService, ActionTypeId } from '../../services/api';
 
 interface NewsItemProps {
   article: Article;
@@ -46,7 +46,7 @@ const NewsItem: React.FC<NewsItemProps> = ({
     // Track view interaction (works for both authenticated and anonymous users)
     if (article.id) {
       const articleId = typeof article.id === 'string' ? article.id : article.id.toString();
-      apiService.trackInteraction(articleId, 'view').catch(err => {
+      apiService.trackInteraction(articleId, ActionTypeId.View).catch(err => {
         console.error('Failed to track article view:', err);
       });
     }
@@ -62,6 +62,71 @@ const NewsItem: React.FC<NewsItemProps> = ({
       action(id);
     }
   };
+
+  const handleLike = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    try {
+      if (localLiked) {
+        await apiService.removeInteraction(article.id, ActionTypeId.LIKE);  // Use ID
+        setLocalLikesCount(prev => Math.max(0, prev - 1));
+        setLocalLiked(false);
+      } else {
+        await apiService.createInteraction({
+          article_id: article.id,
+          action_type_id: ActionTypeId.LIKE  // Use ID instead of 'like'
+        });
+        setLocalLikesCount(prev => prev + 1);
+        setLocalLiked(true);
+      }
+    } catch (error) {
+      console.error('Like failed:', error);
+    }
+  };
+
+// ✅ UPDATED: Bookmark handler
+  const handleBookmark = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    try {
+      if (localBookmarked) {
+        await apiService.removeInteraction(article.id, ActionTypeId.BOOKMARK);  // Use ID
+        setLocalBookmarked(false);
+      } else {
+        await apiService.createInteraction({
+          article_id: article.id,
+          action_type_id: ActionTypeId.BOOKMARK  // Use ID instead of 'bookmark'
+        });
+        setLocalBookmarked(true);
+      }
+    } catch (error) {
+      console.error('Bookmark failed:', error);
+    }
+  };
+
+// Track view when article card is rendered (optional)
+  useEffect(() => {
+    const trackView = async () => {
+      try {
+        await apiService.createInteraction({
+          article_id: article.id,
+          action_type_id: ActionTypeId.VIEW  // Use ID instead of 'view'
+        });
+      } catch (err) {
+        // Silent fail for view tracking
+      }
+    };
+    
+    // Track after 2 seconds of viewing
+    const timer = setTimeout(trackView, 2000);
+    return () => clearTimeout(timer);
+  }, [article.id, apiService]);  
 
   // Calculate read time (rough estimate: 200 words per minute)
   const getReadTime = () => {
