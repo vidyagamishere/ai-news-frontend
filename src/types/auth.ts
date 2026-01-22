@@ -11,6 +11,9 @@ export interface User {
   emailVerified?: boolean;
   emailVerifiedAt?: string;
   is_admin?: boolean; // Admin flag for admin interface access
+  level?: number; // User level for gamification
+  total_points?: number; // Total points for gamification
+
 }
 
 export interface UserPreferences {
@@ -23,6 +26,10 @@ export interface UserPreferences {
   onboardingCompleted?: boolean;
   onboarding_completed?: boolean;
   user_roles?: string[];  // Array of role IDs (novice, student, professional, executive)
+  category_ids_selected?: number[]; // Array of selected category IDs
+  content_type_ids_selected?: number[]; // Array of selected content type IDs
+  publisher_ids_selected?: number[]; // Array of selected publisher IDs
+  professional_roles?: string[]; // More specific professional roles (developer, researcher, manager, etc.)
   role_type?: string;     // Single role type for backwards compatibility
   experience_level?: string; // AI experience level (beginner, intermediate, advanced, expert)
 }

@@ -45,10 +45,9 @@ export interface Article {
   significance?: number;
   significance_score?: number;
   likes_count?: number;
-  views_count?: number;  // ✅ ADD THIS
-  bookmarks_count?: number;  // ✅ ADD THIS
-  comments_count?: number;  // ✅ ADD THIS
-  engagement_score?: number;  // ✅ ADD THIS
+  views_count?: number;
+  bookmarks_count?: number;
+  comments_count?: number;
   share_count?: number;
   
   // Media
@@ -76,6 +75,14 @@ export interface Article {
   is_bookmarked?: boolean;
   is_liked?: boolean;
   is_viewed?: boolean;
+  
+  // Total interaction counts from article_stats (visible to all users) ✅
+  likes?: number;
+  bookmarks?: number;
+  views?: number;
+  shares?: number;
+  comments?: number;
+  engagement_score?: number;
    // Stats (using correct column name)
 }
 

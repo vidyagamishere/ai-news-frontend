@@ -3,7 +3,6 @@ import {
   Box,
   Paper,
   Typography,
-  Grid,
   LinearProgress,
   Stack,
   Chip,
@@ -11,7 +10,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { Trophy, TrendingUp, Heart, Bookmark, Share2, MessageCircle, Eye } from 'lucide-react';
-import { apiService, UserStats } from '../services/api';
+import { apiService, type UserStats } from '../services/api';
 import { useTheme, alpha } from '@mui/material';
 
 const UserStatsPage: React.FC = () => {
@@ -44,7 +43,7 @@ const UserStatsPage: React.FC = () => {
 
   if (!stats) return null;
 
-  const levelProgress = (stats.points.current_level_points / stats.points.next_level_threshold) * 100;
+  const levelProgress = (stats.total_points / stats.points_to_next_level) * 100;
 
   const actionIcons: Record<string, React.ReactNode> = {
     'view': <Eye size={20} />,
@@ -62,133 +61,115 @@ const UserStatsPage: React.FC = () => {
         <Typography variant="h4" fontWeight={700}>Your Stats</Typography>
       </Stack>
 
-      <Grid container spacing={3}>
+      <Stack spacing={3}>
         {/* Level Card */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Stack spacing={2}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Trophy size={24} color={theme.palette.primary.main} />
-                <Typography variant="h6">Level {stats.points.level}</Typography>
-              </Stack>
-              
-              <Box>
-                <Stack direction="row" justifyContent="space-between" mb={1}>
-                  <Typography variant="body2">{stats.points.current_level_points} / {stats.points.next_level_threshold} pts</Typography>
-                  <Typography variant="body2" color="primary">{Math.round(levelProgress)}%</Typography>
-                </Stack>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={levelProgress} 
-                  sx={{ height: 8, borderRadius: 4 }}
-                />
-              </Box>
-
-              <Divider />
-
-              <Box>
-                <Typography variant="caption" color="text.secondary">Total Points</Typography>
-                <Typography variant="h4" fontWeight={700}>{stats.points.total_points}</Typography>
-              </Box>
+        <Paper sx={{ p: 3 }}>
+          <Stack spacing={2}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Trophy size={24} color={theme.palette.primary.main} />
+              <Typography variant="h6">Level {stats.current_level}</Typography>
+              <Chip label={stats.level_name} size="small" color="primary" />
             </Stack>
-          </Paper>
-        </Grid>
-
-        {/* Streak Card */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Stack spacing={2}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <TrendingUp size={24} color={theme.palette.success.main} />
-                <Typography variant="h6">Reading Streak</Typography>
+            
+            <Box>
+              <Stack direction="row" justifyContent="space-between" mb={1}>
+                <Typography variant="body2">{stats.total_points} / {stats.points_to_next_level} pts</Typography>
+                <Typography variant="body2" color="primary">{Math.round(levelProgress)}%</Typography>
               </Stack>
+              <LinearProgress 
+                variant="determinate" 
+                value={levelProgress} 
+                sx={{ height: 8, borderRadius: 4 }}
+              />
+            </Box>
 
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Current Streak</Typography>
-                    <Typography variant="h3" fontWeight={700} color="success.main">
-                      {stats.streak.current_streak}
-                    </Typography>
-                    <Typography variant="caption">days</Typography>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={6}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Longest Streak</Typography>
-                    <Typography variant="h3" fontWeight={700}>
-                      {stats.streak.longest_streak}
-                    </Typography>
-                    <Typography variant="caption">days</Typography>
-                  </Box>
-                </Grid>
-              </Grid>
+            <Divider />
 
-              <Divider />
-
-              <Box>
-                <Typography variant="caption" color="text.secondary">Total Active Days</Typography>
-                <Typography variant="h5" fontWeight={600}>{stats.streak.total_days_active}</Typography>
-              </Box>
-            </Stack>
-          </Paper>
-        </Grid>
+            <Box>
+              <Typography variant="caption" color="text.secondary">Total Points</Typography>
+              <Typography variant="h4" fontWeight={700}>{stats.total_points}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {stats.points_to_next_level - stats.total_points} points to next level
+              </Typography>
+            </Box>
+          </Stack>
+        </Paper>
 
         {/* Actions Breakdown */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" mb={3}>Activity Breakdown</Typography>
-            
-            <Grid container spacing={2}>
-              {stats.actions_breakdown.map(action => (
-                <Grid item xs={6} md={2.4} key={action.action_type}>
-                  <Paper 
-                    elevation={0}
-                    sx={{ 
-                      p: 2, 
-                      textAlign: 'center',
-                      bgcolor: alpha(theme.palette.primary.main, 0.05),
-                      border: 1,
-                      borderColor: alpha(theme.palette.primary.main, 0.1)
-                    }}
-                  >
-                    <Box mb={1}>
-                      {actionIcons[action.action_type]}
-                    </Box>
-                    <Typography variant="h5" fontWeight={700}>{action.count}</Typography>
-                    <Typography variant="caption" textTransform="capitalize">{action.action_type}s</Typography>
-                    <Chip 
-                      label={`${action.total_points} pts`}
-                      size="small"
-                      color="primary"
-                      sx={{ mt: 1 }}
-                    />
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
-          </Paper>
-        </Grid>
-
-        {/* Points Config Reference */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3, bgcolor: alpha(theme.palette.info.main, 0.05) }}>
-            <Typography variant="subtitle2" mb={2}>How Points Work</Typography>
-            <Stack direction="row" spacing={2} flexWrap="wrap">
-              {Object.entries(stats.points_config).map(([action, points]) => (
-                <Chip
-                  key={action}
-                  icon={actionIcons[action] as any}
-                  label={`${action}: ${points} pts`}
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" mb={3}>Activity Breakdown</Typography>
+          
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'repeat(2, 1fr)',
+                sm: 'repeat(3, 1fr)',
+                md: 'repeat(5, 1fr)'
+              },
+              gap: 2
+            }}
+          >
+            {stats.actions_breakdown.map((action: any) => (
+              <Paper 
+                key={action.action_type}
+                elevation={0}
+                sx={{ 
+                  p: 2, 
+                  textAlign: 'center',
+                  bgcolor: alpha(theme.palette.primary.main, 0.05),
+                  border: 1,
+                  borderColor: alpha(theme.palette.primary.main, 0.1)
+                }}
+              >
+                <Box mb={1}>
+                  {actionIcons[action.action_type] || <TrendingUp size={20} />}
+                </Box>
+                <Typography variant="h5" fontWeight={700}>{action.count}</Typography>
+                <Typography variant="caption" textTransform="capitalize">
+                  {action.action_type}s
+                </Typography>
+                <Chip 
+                  label={`${action.points} pts`}
                   size="small"
-                  variant="outlined"
+                  color="primary"
+                  sx={{ mt: 1 }}
                 />
+              </Paper>
+            ))}
+          </Box>
+        </Paper>
+
+        {/* Recent Activities (if available) */}
+        {stats.recent_activities && stats.recent_activities.length > 0 && (
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" mb={2}>Recent Activity</Typography>
+            <Stack spacing={1}>
+              {stats.recent_activities.slice(0, 5).map((activity: any, index: number) => (
+                <Box
+                  key={index}
+                  sx={{
+                    p: 2,
+                    bgcolor: alpha(theme.palette.background.default, 0.5),
+                    borderRadius: 1,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    {actionIcons[activity.action_type] || <TrendingUp size={16} />}
+                    <Typography variant="body2">
+                      {activity.action_type.charAt(0).toUpperCase() + activity.action_type.slice(1)}
+                    </Typography>
+                  </Stack>
+                  <Chip label={`+${activity.points} pts`} size="small" />
+                </Box>
               ))}
             </Stack>
           </Paper>
-        </Grid>
-      </Grid>
+        )}
+      </Stack>
     </Box>
   );
 };

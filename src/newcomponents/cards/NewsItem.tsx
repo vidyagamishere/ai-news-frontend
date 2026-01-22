@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Typography,
   Box,
@@ -18,6 +18,10 @@ import {
 import type { Article } from '../../types/article';
 import { formatTimeAgo, getArticleSummary, getArticleSource } from '../../types/article';
 import { apiService, ActionTypeId } from '../../services/api';
+import InlineComments from '../../components/InlineComments';
+import ShareDialog from '../../components/ShareDialog';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface NewsItemProps {
   article: Article;
@@ -38,15 +42,25 @@ const NewsItem: React.FC<NewsItemProps> = ({
 }) => {
   const theme = useTheme();
   const [imageError, setImageError] = useState(false);
-  const [liked, setLiked] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
   const articleImage = article.image || article.imageUrl || article.thumbnail_url;
+  const [commentDialogOpen, setCommentDialogOpen] = useState(false);
+  const [commentAnchorEl, setCommentAnchorEl] = useState<HTMLElement | null>(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [localLikesCount, setLocalLikesCount] = useState(article.likes || article.likes_count || 0);
+  const [localBookmarksCount, setLocalBookmarksCount] = useState(article.bookmarks || article.bookmarks_count || 0);
+  const [localCommentsCount, setLocalCommentsCount] = useState(article.comments || article.comments_count || 0);
+  const [localSharesCount, setLocalSharesCount] = useState(article.shares || article.share_count || 0);
+  const [localLiked, setLocalLiked] = useState(article.is_liked || false);
+  const [localBookmarked, setLocalBookmarked] = useState(article.is_bookmarked || false);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   const handleCardClick = () => {
     // Track view interaction (works for both authenticated and anonymous users)
+    if (!article.id) return;
     if (article.id) {
-      const articleId = typeof article.id === 'string' ? article.id : article.id.toString();
-      apiService.trackInteraction(articleId, ActionTypeId.View).catch(err => {
+      const articleId = String(article.id);  // Convert to string
+      apiService.trackInteraction(articleId, 'view').catch(err => {
         console.error('Failed to track article view:', err);
       });
     }
@@ -54,30 +68,24 @@ const NewsItem: React.FC<NewsItemProps> = ({
     window.open(article.url, '_blank', 'noopener,noreferrer');
   };
 
-  const handleInteraction = (e: React.MouseEvent, action?: (id: number) => void, toggleState?: () => void) => {
+// Replace existing handleLike/handleBookmark with these (around line 65-110):
+  const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (toggleState) toggleState();
-    if (action && article.id) {
-      const id = typeof article.id === 'string' ? parseInt(article.id, 10) : article.id;
-      action(id);
-    }
-  };
-
-  const handleLike = async () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/auth');
       return;
     }
     
     try {
+      if (!article.id) return;
       if (localLiked) {
-        await apiService.removeInteraction(article.id, ActionTypeId.LIKE);  // Use ID
+        await apiService.removeInteraction(article.id, ActionTypeId.LIKE);
         setLocalLikesCount(prev => Math.max(0, prev - 1));
         setLocalLiked(false);
       } else {
         await apiService.createInteraction({
-          article_id: article.id,
-          action_type_id: ActionTypeId.LIKE  // Use ID instead of 'like'
+          article_id: article.id!,
+          action_type_id: ActionTypeId.LIKE
         });
         setLocalLikesCount(prev => prev + 1);
         setLocalLiked(true);
@@ -87,22 +95,25 @@ const NewsItem: React.FC<NewsItemProps> = ({
     }
   };
 
-// ✅ UPDATED: Bookmark handler
-  const handleBookmark = async () => {
+  const handleBookmark = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/auth');
       return;
     }
     
     try {
+      if (!article.id) return;
       if (localBookmarked) {
-        await apiService.removeInteraction(article.id, ActionTypeId.BOOKMARK);  // Use ID
+        await apiService.removeInteraction(article.id, ActionTypeId.BOOKMARK);
+        setLocalBookmarksCount(prev => Math.max(0, prev - 1));
         setLocalBookmarked(false);
       } else {
         await apiService.createInteraction({
           article_id: article.id,
-          action_type_id: ActionTypeId.BOOKMARK  // Use ID instead of 'bookmark'
+          action_type_id: ActionTypeId.BOOKMARK
         });
+        setLocalBookmarksCount(prev => prev + 1);
         setLocalBookmarked(true);
       }
     } catch (error) {
@@ -110,12 +121,28 @@ const NewsItem: React.FC<NewsItemProps> = ({
     }
   };
 
+  const handleComment = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      navigate('/auth');
+      return;
+    }
+    setCommentAnchorEl(e.currentTarget);
+    setCommentDialogOpen(true);
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShareDialogOpen(true);
+  };
+
 // Track view when article card is rendered (optional)
   useEffect(() => {
+    if (!article.id) return;  // Add this line
     const trackView = async () => {
       try {
         await apiService.createInteraction({
-          article_id: article.id,
+          article_id: article.id!,
           action_type_id: ActionTypeId.VIEW  // Use ID instead of 'view'
         });
       } catch (err) {
@@ -126,7 +153,7 @@ const NewsItem: React.FC<NewsItemProps> = ({
     // Track after 2 seconds of viewing
     const timer = setTimeout(trackView, 2000);
     return () => clearTimeout(timer);
-  }, [article.id, apiService]);  
+  }, [article.id]);  
 
   // Calculate read time (rough estimate: 200 words per minute)
   const getReadTime = () => {
@@ -137,6 +164,7 @@ const NewsItem: React.FC<NewsItemProps> = ({
   };
 
   return (
+  <>
     <Box
       onClick={handleCardClick}
       sx={{
@@ -214,55 +242,61 @@ const NewsItem: React.FC<NewsItemProps> = ({
             <Stack direction="row" spacing={1} alignItems="center">
               <IconButton
                 size="small"
-                onClick={(e) => handleInteraction(e, onLike, () => setLiked(!liked))}
+                onClick={handleLike}
                 sx={{
-                  color: liked ? 'error.main' : 'text.secondary',
+                  color: localLiked ? 'error.main' : 'text.secondary',
                   '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.1) }
                 }}
               >
-                <Heart size={16} fill={liked ? 'currentColor' : 'none'} />
+                <Heart size={18} fill={localLiked ? 'currentColor' : 'none'} />
+                {localLikesCount > 0 && (
+                  <Typography variant="caption" sx={{ ml: 0.5 }}>
+                    {localLikesCount}
+                  </Typography>
+                )}
               </IconButton>
-              <Typography variant="caption" color="text.secondary">
-                {(article.likes_count || 0) + (liked ? 1 : 0)}
-              </Typography>
 
               <IconButton
                 size="small"
-                onClick={(e) => handleInteraction(e)}
+                onClick={handleComment}
                 sx={{
                   color: 'text.secondary',
-                  ml: 1,
-                  '&:hover': { backgroundColor: 'action.hover' }
-                }}
-              >
-                <MessageCircle size={16} />
-              </IconButton>
-              <Typography variant="caption" color="text.secondary">
-                {article.comments_count || 0}
-              </Typography>
-
-              <IconButton
-                size="small"
-                onClick={(e) => handleInteraction(e, onBookmark, () => setBookmarked(!bookmarked))}
-                sx={{
-                  color: bookmarked ? 'primary.main' : 'text.secondary',
-                  ml: 1,
                   '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) }
                 }}
               >
-                <Bookmark size={16} fill={bookmarked ? 'currentColor' : 'none'} />
+                <MessageCircle size={18} />
+                {localCommentsCount > 0 && (
+                  <Typography variant="caption" sx={{ ml: 0.5 }}>
+                    {localCommentsCount}
+                  </Typography>
+                )}
               </IconButton>
 
               <IconButton
                 size="small"
-                onClick={(e) => handleInteraction(e, onShare)}
+                onClick={handleBookmark}
                 sx={{
-                  color: 'text.secondary',
-                  ml: 1,
-                  '&:hover': { backgroundColor: 'action.hover' }
+                  color: localBookmarked ? 'primary.main' : 'text.secondary',
+                  '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) }
                 }}
               >
-                <Share2 size={16} />
+                <Bookmark size={18} fill={localBookmarked ? 'currentColor' : 'none'} />
+              </IconButton>
+
+              <IconButton
+                size="small"
+                onClick={handleShare}
+                sx={{
+                  color: 'text.secondary',
+                  '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) }
+                }}
+              >
+                <Share2 size={18} />
+                {localSharesCount > 0 && (
+                  <Typography variant="caption" sx={{ ml: 0.5 }}>
+                    {localSharesCount}
+                  </Typography>
+                )}
               </IconButton>
 
               <Box sx={{ mx: 1, color: 'text.disabled' }}>•</Box>
@@ -310,6 +344,29 @@ const NewsItem: React.FC<NewsItemProps> = ({
         />
       )}
     </Box>
+          {/* Add at the end, before closing return */}
+    <InlineComments
+      open={commentDialogOpen}
+      onClose={() => {
+        setCommentDialogOpen(false);
+        setCommentAnchorEl(null);
+      }}
+      articleId={typeof article.id === 'number' ? article.id : parseInt(String(article.id))}
+      onCommentAdded={() => setLocalCommentsCount(prev => prev + 1)}
+      anchorEl={commentAnchorEl}
+    />
+
+    <ShareDialog
+      open={shareDialogOpen}
+      onClose={() => setShareDialogOpen(false)}
+      articleId={typeof article.id === 'number' ? article.id : parseInt(String(article.id))}
+      articleUrl={article.url}
+      articleTitle={article.title}
+      onShareTracked={() => {
+        setLocalSharesCount(prev => prev + 1);
+      }}
+    />
+  </>    
   );
 };
 

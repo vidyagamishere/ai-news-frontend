@@ -371,6 +371,34 @@ export interface AuthVerifyResponse {
 // Re-export types from central location (remove AITopic since it's defined above)
 export type { Article, Category, LandingContent } from '../types/article';
 
+// Comment interface
+export interface Comment {
+  id: number;
+  content: string;
+  user_id: string;
+  article_id: number;
+  parent_comment_id?: number;
+  created_at: string;
+  updated_at?: string;
+  replies?: Comment[];
+  username?: string;
+  user_avatar?: string;
+}
+
+// User Stats interface
+export interface UserStats {
+  total_points: number;
+  current_level: number;
+  level_name: string;
+  points_to_next_level: number;
+  actions_breakdown: {
+    action_type: string;
+    count: number;
+    points: number;
+  }[];
+  recent_activities: any[];
+}
+
 // Complete API service using router pattern
 export class ApiService {
   // ===============================
@@ -1184,6 +1212,76 @@ export class ApiService {
       return { articles: [], has_more: false, total: 0 };
     }
   }
+  // Comment-related methods
+  async getArticleComments(articleId: number): Promise<Comment[]> {
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await api.get(`/api/v1/social/comments/article/${articleId}`, {
+        headers
+      });
+      return response.data.comments || [];
+    } catch (error) {
+      console.error('Failed to fetch comments:', error);
+      return [];
+    }
+  }
+
+  async createComment(articleId: number, content: string, parentCommentId?: number): Promise<Comment> {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await api.post('/api/v1/social/comments', {
+      article_id: articleId,
+      content,
+      parent_comment_id: parentCommentId
+    }, {
+      headers
+    });
+    return response.data;
+  }
+
+  async updateComment(commentId: number, content: string): Promise<Comment> {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await api.put(`/api/v1/social/comments/${commentId}`, {
+      content
+    }, {
+      headers
+    });
+    return response.data;
+  }
+
+  async deleteComment(commentId: number): Promise<void> {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    await api.delete(`/api/v1/social/comments/${commentId}`, {
+      headers
+    });
+  }
+
+  // User stats method
+  async getUserStats(): Promise<UserStats> {
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await api.get('/api/v1/interactions/user/stats', {
+        headers
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch user stats:', error);
+      return {
+        total_points: 0,
+        current_level: 1,
+        level_name: 'Beginner',
+        points_to_next_level: 100,
+        actions_breakdown: [],
+        recent_activities: []
+      };
+    }
+  }
+  
+
 }
 
 export const apiService = new ApiService();

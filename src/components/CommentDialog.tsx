@@ -16,7 +16,7 @@ import {
   Alert
 } from '@mui/material';
 import { MessageCircle, Send, Edit2, Trash2, Reply } from 'lucide-react';
-import { apiService, Comment } from '../services/api';
+import { apiService, type Comment } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 interface CommentDialogProps {
@@ -55,7 +55,7 @@ const CommentDialog: React.FC<CommentDialogProps> = ({
     try {
       const response = await apiService.getArticleComments(articleId);
       // Organize into threaded structure
-      const threaded = organizeThreaded(response.comments);
+      const threaded = organizeThreaded(response);
       setComments(threaded);
     } catch (err) {
       console.error('Failed to load comments:', err);
@@ -150,22 +150,17 @@ const CommentDialog: React.FC<CommentDialogProps> = ({
       >
         <Stack direction="row" spacing={1.5} alignItems="flex-start">
           <Avatar sx={{ width: 32, height: 32 }}>
-            {comment.username[0].toUpperCase()}
+            {comment.username?.[0]?.toUpperCase() || 'A'}
           </Avatar>
 
           <Box sx={{ flex: 1 }}>
             <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
               <Typography variant="subtitle2" fontWeight={600}>
-                {comment.username}
+                {comment.username || 'Anonymous'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {new Date(comment.created_at).toLocaleDateString()}
               </Typography>
-              {comment.is_edited && (
-                <Typography variant="caption" color="text.secondary" fontStyle="italic">
-                  (edited)
-                </Typography>
-              )}
             </Stack>
 
             {isEditing ? (
@@ -230,7 +225,7 @@ const CommentDialog: React.FC<CommentDialogProps> = ({
             {/* Render replies recursively */}
             {comment.replies && comment.replies.length > 0 && (
               <Box mt={2}>
-                {comment.replies.map(reply => renderComment(reply, depth + 1))}
+                {comment.replies.map((reply: Comment) => renderComment(reply, depth + 1))}
               </Box>
             )}
           </Box>

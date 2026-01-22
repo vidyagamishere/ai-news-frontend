@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SwipeableNewsCard from '../cards/SwipeableNewsCard';
 import { Loader2, TrendingUp, Filter, RefreshCw, Sparkles } from 'lucide-react';
-import { apiService } from '../../services/api';
+import { ActionTypeId, apiService } from '../../services/api';
 import type { Article } from '../../types/article';
 import { getArticleSummary, getArticleSource, getArticlePublishedDate } from '../../types/article';
 
@@ -236,13 +236,13 @@ const InfiniteFeed: React.FC<InfiniteFeedProps> = ({
       if (next.has(articleId)) {
         next.delete(articleId);
         // ✅ FIXED: Added ! non-null assertion
-        apiService.removeInteraction(article.id!, 'like').catch(console.error);
-      } else {
+        apiService.removeInteraction(article.id!, ActionTypeId.LIKE).catch(console.error);
+      } else {  
         next.add(articleId);
         // ✅ FIXED: Added ! non-null assertion
         apiService.createInteraction({
           article_id: article.id!,
-          interaction_type: 'like'
+          action_type_id: ActionTypeId.LIKE
         }).catch(console.error);
         onArticleAction?.(articleId, 'like');
       }

@@ -12,10 +12,24 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import SideNav from '../newcomponents/SideNav';
 import RightSection from '../newcomponents/RightSection';
-import { useRef } from 'react';
+import { useCallback, useRef } from 'react';
 
 const LEFT_WIDTH = 280;
 const RIGHT_WIDTH = 320;
+interface OutletContextType {
+  dateFilter?: 1 | 7 | 30 | 365;
+  onDateFilterChange?: (filter: 1 | 7 | 30 | 365) => void;
+  selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
+  onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
+  onCategoryChangeHandlerSet?: (handler: (category: string) => void) => void;
+  onSettingsClickHandlerSet?: (handler: () => void) => void;
+  onBookmarksClickHandlerSet?: (handler: () => void) => void;
+  onStatsClickHandlerSet?: (handler: () => void) => void;
+  onSearchStart?: () => void;
+  onMenuClick?: () => void;
+  onTrendingClick?: () => void;
+  onTrendingHandlerSet?: (handler: (topic: string) => void) => void;
+}
 export default function ResponsiveLayout() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -32,6 +46,8 @@ export default function ResponsiveLayout() {
   const originalHandlerRef = React.useRef<((category: string) => void) | undefined>(undefined);
   const onTrendingClickHandlerRef = React.useRef<((topic: string) => void) | undefined>(undefined);
   const onSettingsClickHandlerRef = React.useRef<(() => void) | undefined>(undefined);
+  const onBookmarksClickHandlerRef = React.useRef<(() => void) | undefined>(undefined);
+  const onStatsClickHandlerRef = React.useRef<(() => void) | undefined>(undefined);
 
   // Check if we're on Landing page (no SideNav needed)
   const isLandingPage = location.pathname === '/' || location.pathname === '/landing';
@@ -44,11 +60,6 @@ export default function ResponsiveLayout() {
     }
   }, []);
 
-  // Add refs for handlers
-const onBookmarksClickHandlerRef = useRef<(() => void) | null>(null);
-const onStatsClickHandlerRef = useRef<(() => void) | null>(null);
-
-
   // Function to set the category change handler from child components
   const handleSetCategoryHandler = React.useCallback((handler: (category: string) => void) => {
     originalHandlerRef.current = handler;
@@ -57,6 +68,19 @@ const onStatsClickHandlerRef = useRef<(() => void) | null>(null);
   // Function to set the settings click handler from child components
   const handleSetSettingsHandler = React.useCallback((handler: () => void) => {
     onSettingsClickHandlerRef.current = handler;
+  }, []);
+
+    // Add handler setters (around line 90):
+  const handleSetBookmarksHandler = useCallback((handler: () => void) => {
+    onBookmarksClickHandlerRef.current = handler;
+  }, []);
+
+  const handleSetStatsHandler = useCallback((handler: () => void) => {
+    onStatsClickHandlerRef.current = handler;
+  }, []);
+
+  const handleSetTrendingHandler = React.useCallback((handler: (topic: string) => void) => {
+    onTrendingClickHandlerRef.current = handler;
   }, []);
 
   const handleLeftDrawerOpen = () => setLeftOpen(true);
@@ -95,9 +119,6 @@ const onStatsClickHandlerRef = useRef<(() => void) | null>(null);
     }
   }, [isMobile]);
 
-  const handleSetTrendingHandler = React.useCallback((handler: (topic: string) => void) => {
-    onTrendingClickHandlerRef.current = handler;
-  }, []);
 
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
@@ -147,11 +168,13 @@ const onStatsClickHandlerRef = useRef<(() => void) | null>(null);
             onTabChange: handleTabChange,
             onCategoryChangeHandlerSet: handleSetCategoryHandler,
             onSettingsClickHandlerSet: handleSetSettingsHandler,
+            onBookmarksClickHandlerSet: handleSetBookmarksHandler,
+            onStatsClickHandlerSet: handleSetStatsHandler,
             onSearchStart: handleSearchStart,
             onMenuClick: handleLeftDrawerOpen,
             onTrendingClick: handleRightDrawerOpen,
             onTrendingHandlerSet: handleSetTrendingHandler,
-          }} />
+          } as OutletContextType} />
         </Box>
       </Box>
 
@@ -180,6 +203,8 @@ const onStatsClickHandlerRef = useRef<(() => void) | null>(null);
             selectedCategory={selectedCategory}
             onSettingsClick={() => onSettingsClickHandlerRef.current?.()}
             onTrendingClick={handleTrendingTopicClick}
+            onStatsClick={() => onStatsClickHandlerRef.current?.()}  // Add this line
+
           />
         </Drawer>
       

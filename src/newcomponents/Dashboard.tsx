@@ -23,7 +23,7 @@ import {
   DialogContent
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
-import { Settings, LogOut, ChevronRight } from 'lucide-react';
+import { Settings, LogOut, ChevronRight, Bookmark } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import type { Article } from '../services/api';
@@ -39,11 +39,11 @@ import { DashboardContext, type DashboardContextType } from '../contexts/Dashboa
 import { cacheService, CACHE_DURATION } from '../utils/cacheService';
 import SettingsFullScreen from '../components/SettingsFullScreen';
 import UserStatsPage from '../components/UserStatsPage';
-const [showStatsModal, setShowStatsModal] = useState(false);
 
 
 const NewDashboard: React.FC = () => {
   const { user, isAuthenticated, logout, updatePreferences } = useAuth();
+  const [showStatsModal, setShowStatsModal] = useState(false);
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -54,6 +54,8 @@ const NewDashboard: React.FC = () => {
     onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
     onCategoryChangeHandlerSet?: (handler: (category: string) => void) => void;
     onSettingsClickHandlerSet?: (handler: () => void) => void;
+    onBookmarksClickHandlerSet?: (handler: () => void) => void;  // ✅ ADD THIS
+    onStatsClickHandlerSet?: (handler: () => void) => void;      // ✅ ADD THIS
     onSearchStart?: () => void;
     onMenuClick?: () => void;
     onTrendingClick?: () => void;
@@ -97,6 +99,8 @@ const NewDashboard: React.FC = () => {
   const [visibleItemsCount, setVisibleItemsCount] = useState(20);
   const contentContainerRef = useRef<HTMLDivElement>(null);
 
+  const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
+
   const [userPreferences, setUserPreferences] = useState({
     experience_level: user?.preferences?.experience_level || 'intermediate',
     professional_roles: (user?.preferences as any)?.professional_roles || ['enthusiast'],
@@ -115,70 +119,7 @@ const NewDashboard: React.FC = () => {
     }
   };
 
-  // Load available options
-  useEffect(() => {
-    if (hasInitializedOptions.current) return;
-    hasInitializedOptions.current = true;
-
-    const loadOptions = async () => {
-      try {
-        console.log('🔄 Loading available options...');
-        
-        const [categoriesRes, contentTypesRes, publishersRes] = await Promise.all([
-          cacheService.get('available_categories', () => apiService.getAvailableCategories(), CACHE_DURATION.LONG),
-          cacheService.get('available_content_types', () => apiService.getAvailableContentTypes(), CACHE_DURATION.LONG),
-          cacheService.get('available_publishers', () => apiService.getAvailablePublishers(), CACHE_DURATION.MEDIUM)
-        ]);
-
-        console.log('📦 Categories response:', categoriesRes);
-        console.log('📦 Content types response:', contentTypesRes);
-        console.log('📦 Publishers response:', publishersRes);
-
-        // Validate and set categories
-        if (categoriesRes && Array.isArray(categoriesRes.categories)) {
-          console.log('✅ Setting categories:', categoriesRes.categories.length, 'items');
-          setAvailableCategories(categoriesRes.categories);
-        } else {
-          console.warn('⚠️ Invalid categories response structure:', categoriesRes);
-          setAvailableCategories([]);
-        }
-
-        // Validate and set content types
-        if (contentTypesRes && Array.isArray(contentTypesRes.content_types)) {
-          console.log('✅ Setting content types:', contentTypesRes.content_types.length, 'items');
-          setAvailableContentTypes(contentTypesRes.content_types);
-        } else {
-          console.warn('⚠️ Invalid content types response structure:', contentTypesRes);
-          setAvailableContentTypes([]);
-        }
-
-        // Validate and set publishers
-        if (publishersRes && Array.isArray(publishersRes.publishers)) {
-          console.log('✅ Setting publishers:', publishersRes.publishers.length, 'items');
-          setAvailablePublishers(publishersRes.publishers);
-        } else {
-          console.warn('⚠️ Invalid publishers response structure:', publishersRes);
-          setAvailablePublishers([]);
-        }
-        
-        // Once options are loaded, fetch personalized content
-        if (categoriesRes.categories && contentTypesRes.content_types && publishersRes.publishers) {
-          console.log('🚀 All options loaded successfully, fetching personalized feed...');
-          loadPersonalizedFeed();
-        } else {
-          console.error('❌ Failed to load all options, cannot fetch personalized feed');
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error('❌ Error loading options:', err);
-        setError('Failed to load filter options. Please refresh the page.');
-        setLoading(false);
-      }
-    };
-
-    loadOptions();
-  }, []);
-
+ 
   // Load personalized feed
   const loadPersonalizedFeed = React.useCallback(async () => {
     try {
@@ -255,7 +196,18 @@ const NewDashboard: React.FC = () => {
             category_name: group.category,
             thumbnail_url: item.thumbnail_url || item.thumbnail || item.image,
             image: item.thumbnail_url || item.thumbnail || item.image,
-            readTime: item.read_time || item.readTime || '5 min'
+            readTime: item.read_time || item.readTime || '5 min',
+            // ✅ Map user interaction states from backend
+            is_liked: item.has_liked || false,
+            is_bookmarked: item.has_bookmarked || false,
+            is_viewed: item.has_viewed || false,
+            // ✅ Map total counts from article_stats (visible to all users)
+            likes: item.total_likes || 0,
+            bookmarks: item.total_bookmarks || 0,
+            views: item.total_views || 0,
+            shares: item.total_shares || 0,
+            comments: item.total_comments || 0,
+            engagement_score: item.engagement_score || 0
           } as Article);
         });
       });
@@ -302,29 +254,81 @@ const NewDashboard: React.FC = () => {
     }
   }, [activeCategory, userPreferences, availableCategories, availablePublishers, selectedTab, dateFilter]);
 
+ // Load available options
+  useEffect(() => {
+    if (hasInitializedOptions.current) return;
+    hasInitializedOptions.current = true;
+
+    const loadOptions = async () => {
+      try {
+        console.log('🔄 Loading available options...');
+        
+        const [categoriesRes, contentTypesRes, publishersRes] = await Promise.all([
+          cacheService.get('available_categories', () => apiService.getAvailableCategories(), CACHE_DURATION.LONG),
+          cacheService.get('available_content_types', () => apiService.getAvailableContentTypes(), CACHE_DURATION.LONG),
+          cacheService.get('available_publishers', () => apiService.getAvailablePublishers(), CACHE_DURATION.MEDIUM)
+        ]);
+
+        console.log('📦 Categories response:', categoriesRes);
+        console.log('📦 Content types response:', contentTypesRes);
+        console.log('📦 Publishers response:', publishersRes);
+
+        // Validate and set categories
+        if (categoriesRes && Array.isArray(categoriesRes.categories)) {
+          console.log('✅ Setting categories:', categoriesRes.categories.length, 'items');
+          setAvailableCategories(categoriesRes.categories);
+        } else {
+          console.warn('⚠️ Invalid categories response structure:', categoriesRes);
+          setAvailableCategories([]);
+        }
+
+        // Validate and set content types
+        if (contentTypesRes && Array.isArray(contentTypesRes.content_types)) {
+          console.log('✅ Setting content types:', contentTypesRes.content_types.length, 'items');
+          setAvailableContentTypes(contentTypesRes.content_types);
+        } else {
+          console.warn('⚠️ Invalid content types response structure:', contentTypesRes);
+          setAvailableContentTypes([]);
+        }
+
+        // Validate and set publishers
+        if (publishersRes && Array.isArray(publishersRes.publishers)) {
+          console.log('✅ Setting publishers:', publishersRes.publishers.length, 'items');
+          setAvailablePublishers(publishersRes.publishers);
+        } else {
+          console.warn('⚠️ Invalid publishers response structure:', publishersRes);
+          setAvailablePublishers([]);
+        }
+        
+        // Once options are loaded, fetch personalized content
+        if (categoriesRes.categories && contentTypesRes.content_types && publishersRes.publishers) {
+          console.log('🚀 All options loaded successfully, fetching personalized feed...');
+          loadPersonalizedFeed();
+        } else {
+          console.error('❌ Failed to load all options, cannot fetch personalized feed');
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('❌ Error loading options:', err);
+        setError('Failed to load filter options. Please refresh the page.');
+        setLoading(false);
+      }
+    };
+
+    loadOptions();
+  }, []);
+
+  useEffect(() => {
+    if (outletContext?.onStatsClickHandlerSet) {
+      outletContext.onStatsClickHandlerSet(handleStatsClick);
+    }
+  }, [outletContext?.onStatsClickHandlerSet]);
 // Register stats handler with layout
   useEffect(() => {
     if (outletContext?.onStatsClickHandlerSet) {
       outletContext.onStatsClickHandlerSet(() => setShowStatsModal(true));
     }
   }, [outletContext]);
-
-  // Add Stats Modal (render at bottom, after Settings Modal)
-  {showStatsModal && (
-    <Dialog 
-      open={showStatsModal} 
-      onClose={() => setShowStatsModal(false)}
-      maxWidth="lg"
-      fullWidth
-    >
-      <DialogContent sx={{ p: 0 }}>
-        <UserStatsPage />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setShowStatsModal(false)}>Close</Button>
-      </DialogActions>
-    </Dialog>
-  )}
 
   const updateContentCounts = (content: LandingContent) => {
     let blogsCount = 0;
@@ -351,7 +355,7 @@ const NewDashboard: React.FC = () => {
     if (availableCategories.length > 0 && availableContentTypes.length > 0 && availablePublishers.length > 0) {
       loadPersonalizedFeed();
     }
-  }, [dateFilter, activeCategory, selectedTab]);
+  }, [dateFilter, activeCategory, selectedTab, showBookmarksOnly]);
 
   // Update preferences when user changes
   useEffect(() => {
@@ -375,43 +379,40 @@ const NewDashboard: React.FC = () => {
   }, [outletContext?.selectedTab, selectedTab]);
 
   const getTabContent = () => {
+    let content: Article[];
+    
     if (isSearchActive && searchResults) {
       // Return search results
       switch (selectedTab) {
-        case 'news':
-          return searchResults.blogs;
-        case 'audio':
-          return searchResults.podcasts;
-        case 'video':
-          return searchResults.videos;
-        default:
-          return [];
+        case 'news': content = searchResults.blogs; break;
+        case 'audio': content = searchResults.podcasts; break;
+        case 'video': content = searchResults.videos; break;
+        default: content = [];
       }
+    } else if (!landingContent?.categories) {
+      content = [];
+    } else {
+      // Get content from all categories or filtered category
+      const relevantCategories = activeCategory === 'All'
+        ? landingContent.categories
+        : landingContent.categories.filter(cat => cat.name === activeCategory);
+
+      let allContent: Article[] = [];
+      relevantCategories.forEach(cat => {
+        switch (selectedTab) {
+          case 'news': allContent = [...allContent, ...(cat.content?.blogs || [])]; break;
+          case 'audio': allContent = [...allContent, ...(cat.content?.podcasts || [])]; break;
+          case 'video': allContent = [...allContent, ...(cat.content?.videos || [])]; break;
+        }
+      });
+      content = allContent;
     }
-
-    if (!landingContent?.categories) return [];
-
-    // Get content from all categories or filtered category
-    const relevantCategories = activeCategory === 'All'
-      ? landingContent.categories
-      : landingContent.categories.filter(cat => cat.name === activeCategory);
-
-    let allContent: Article[] = [];
-    relevantCategories.forEach(cat => {
-      switch (selectedTab) {
-        case 'news':
-          allContent = [...allContent, ...(cat.content?.blogs || [])];
-          break;
-        case 'audio':
-          allContent = [...allContent, ...(cat.content?.podcasts || [])];
-          break;
-        case 'video':
-          allContent = [...allContent, ...(cat.content?.videos || [])];
-          break;
-      }
-    });
-
-    return allContent;
+    
+    // Apply bookmark filter
+    if (showBookmarksOnly) {
+      return content.filter(article => article.is_bookmarked);
+    }
+    return content;
   };
 
   const handleSearch = React.useCallback(async (query: string) => {
@@ -494,6 +495,11 @@ const NewDashboard: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  // Add handler (around line 500):
+  const handleStatsClick = () => {
+    setShowStatsModal(true);
   };
 
   const handleCategoryChange = React.useCallback((categoryName: string) => {
@@ -620,7 +626,7 @@ const NewDashboard: React.FC = () => {
     };
     
     return contextValue;
-  }, [availableCategories, activeCategory, selectedTab, landingContent, isSearchActive, searchResults]);
+  }, [availableCategories, activeCategory, selectedTab, landingContent, isSearchActive, searchResults, showBookmarksOnly]);
 
   // Remove the debug window exposure in production
   useEffect(() => {
@@ -811,6 +817,7 @@ const NewDashboard: React.FC = () => {
                             </Button>
                           </Paper>
                         )}
+
                         <NewsItemContainer
                           headerTitle="Your Personalized AI News"
                           headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
@@ -1056,6 +1063,14 @@ const NewDashboard: React.FC = () => {
             </Paper>
           </Box>
         )}
+        <Dialog
+          open={showStatsModal}
+          onClose={() => setShowStatsModal(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <UserStatsPage/>
+        </Dialog>
 
         <style>{`
           @keyframes fadeIn {

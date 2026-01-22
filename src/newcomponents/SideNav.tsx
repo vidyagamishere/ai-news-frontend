@@ -9,7 +9,9 @@ import {
     Divider,
     useTheme,
     alpha,
-    CircularProgress
+    CircularProgress,
+    Paper,
+    Stack
 } from '@mui/material';
 import {
     Newspaper,
@@ -23,19 +25,29 @@ import {
     Settings
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Psychology } from '@mui/icons-material';
+import { Psychology, EmojiEvents } from '@mui/icons-material';
 import { apiService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SideNavProps {
     selectedTab?: string;
     onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
     onSettingsClick?: () => void;
+    onBookmarksClick?: () => void;
+    onStatsClick?: () => void;
 }
 
-const SideNav: React.FC<SideNavProps> = ({ selectedTab = 'news', onTabChange, onSettingsClick }) => {
+const SideNav: React.FC<SideNavProps> = ({ 
+    selectedTab = 'news', 
+    onTabChange, 
+    onSettingsClick,
+    onBookmarksClick,
+    onStatsClick 
+}) => {
     const navigate = useNavigate();
     const location = useLocation();
     const theme = useTheme();
+    const { user, isAuthenticated } = useAuth();
     
     // ✅ Detect which page we're on (same as RightSection)
     const isDashboard = location.pathname.includes('/dashboard');
@@ -132,8 +144,9 @@ const SideNav: React.FC<SideNavProps> = ({ selectedTab = 'news', onTabChange, on
 
     const libraryItems = [
         { id: 'trending', icon: <TrendingUp size={20} />, label: 'Trending', path: '/trending', type: 'navigation' },
-        { id: 'saved', icon: <Bookmark size={20} />, label: 'Saved Articles', path: '/saved', type: 'navigation' },
-        { id: 'settings', icon: <Settings size={20} />, label: 'Preferences', type: 'action' },
+        { id: 'saved', icon: <Bookmark size={20} />, label: 'Saved Articles', type: 'action', action: onBookmarksClick },
+        { id: 'stats', icon: <EmojiEvents sx={{ fontSize: 20 }} />, label: 'My Stats', type: 'action', action: onStatsClick },
+        { id: 'settings', icon: <Settings size={20} />, label: 'Preferences', type: 'action', action: onSettingsClick },
     ];
 
     const handleContentTypeClick = (type: 'news' | 'audio' | 'video' | 'posts' | 'learning') => {
@@ -154,42 +167,36 @@ const SideNav: React.FC<SideNavProps> = ({ selectedTab = 'news', onTabChange, on
         }
     };
 
+    const handleLibraryItemClick = (item: any) => {
+        if (item.type === 'action' && item.action) {
+            item.action();
+        } else if (item.type === 'navigation' && item.path) {
+            navigate(item.path);
+        }
+    };
+
     return (
-
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', py: 2 }}>
-        {/* Logo/Brand - Above everything display: 'flex', flexDirection: 'column', height: '100%', py: 2  */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: { xs: 2, sm: 3, lg: 5 }, pt: 2, pb: 1 }}>
-            <Psychology sx={{ fontSize: 40, color: 'orange' }} />
-            <Typography
-              variant="h3"
-              fontWeight={800}
-              sx={{
-                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                letterSpacing: '-0.02em',
-                display: { xs: 'none', sm: 'block' }
-              }}
-            >
-              Vidyagam
-            </Typography>
-          </Box>
+            {/* Logo/Brand */}
+            <Box sx={{ px: 2, mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Psychology sx={{ fontSize: 32, color: 'primary.main' }} />
+                    <Typography variant="h6" fontWeight={700}>
+                        Vidyagam
+                    </Typography>
+                </Box>
+            </Box>
 
-            <List sx={{ px: 1 }}>
-                {/* Home */}
+            <List sx={{ flexGrow: 1, px: 1 }}>
+                {/* Home Button */}
                 <ListItemButton
-                    selected={selectedTab === 'news'}
                     onClick={handleHomeClick}
                     sx={{
                         mx: 1,
-                        mb: 1,
+                        mb: 0.5,
                         borderRadius: 2,
-                        '&.Mui-selected': {
-                            bgcolor: alpha(theme.palette.primary.main, 0.12),
-                            '&:hover': {
-                                bgcolor: alpha(theme.palette.primary.main, 0.16),
-                            }
+                        '&:hover': {
+                            bgcolor: alpha(theme.palette.primary.main, 0.08),
                         }
                     }}
                 >
@@ -199,6 +206,9 @@ const SideNav: React.FC<SideNavProps> = ({ selectedTab = 'news', onTabChange, on
                     <ListItemText primary="Home" />
                 </ListItemButton>
 
+                <Divider sx={{ my: 2 }} />
+
+                {/* Content Types Section */}
                 <Typography
                     variant="caption"
                     sx={{
@@ -209,12 +219,11 @@ const SideNav: React.FC<SideNavProps> = ({ selectedTab = 'news', onTabChange, on
                         display: 'block'
                     }}
                 >
-                    CONTENT TYPES
+                    CONTENT
                 </Typography>
 
-                {/* Dynamic Content Types from Backend */}
                 {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
                         <CircularProgress size={24} />
                     </Box>
                 ) : (
@@ -270,20 +279,7 @@ const SideNav: React.FC<SideNavProps> = ({ selectedTab = 'news', onTabChange, on
                             <ListItemButton
                                 key={item.id}
                                 selected={item.type === 'navigation' && location.pathname === item.path}
-                                onClick={() => {
-                                    if (item.type === 'action' && item.id === 'settings') {
-                                        // Call settings handler for Preferences
-                                        if (onSettingsClick) {
-                                            onSettingsClick();
-                                        } else {
-                                            // Fallback to navigation if handler not provided
-                                            navigate('/preferences');
-                                        }
-                                    } else if (item.path) { 
-                                        // Navigate for other items
-                                        navigate(item.path);
-                                    }
-                                }}
+                                onClick={() => handleLibraryItemClick(item)}
                                 sx={{
                                     mx: 1,
                                     mb: 0.5,
@@ -305,6 +301,41 @@ const SideNav: React.FC<SideNavProps> = ({ selectedTab = 'news', onTabChange, on
                     </>
                 )}
             </List>
+
+            {/* Points Widget - Show at bottom for authenticated users */}
+            {isAuthenticated && user && (
+                <Box sx={{ p: 2 }}>
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            p: 2,
+                            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 2,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                                borderColor: 'primary.main',
+                                boxShadow: theme.shadows[2]
+                            }
+                        }}
+                        onClick={() => onStatsClick?.()}
+                    >
+                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                            <EmojiEvents sx={{ fontSize: 24 }} color="primary" />
+                            <Box>
+                                <Typography variant="body2" fontWeight={600}>
+                                    Level {user.level || 1}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {user.total_points || 0} points
+                                </Typography>
+                            </Box>
+                        </Stack>
+                    </Paper>
+                </Box>
+            )}
         </Box>
     );
 };
