@@ -99,32 +99,39 @@ export default function ResponsiveLayout() {
             onTrendingClick: handleRightDrawerOpen,
           }} />
         </Box>
+
+        {/* RIGHT SECTION - Desktop (scrolls with page) */}
+        {isLandingPage && !isMobile && (
+          <Box
+            sx={{
+              width: RIGHT_WIDTH,
+              flexShrink: 0,
+              px: 2
+            }}
+          >
+            <RightSection onCategoryChange={categoryChangeHandler} />
+          </Box>
+        )}
       </Box>
 
-      {/* RIGHT SECTION - Show on Landing page */}
-      
+      {/* RIGHT SECTION - Mobile Drawer */}
+      {isLandingPage && isMobile && (
         <Drawer
           anchor="right"
-          variant={isMobile ? 'temporary' : 'permanent'}
-          open={isMobile ? rightOpen : true}
+          variant="temporary"
+          open={rightOpen}
           onClose={() => setRightOpen(false)}
           sx={{
-            flexGrow: 1,
-            display: 'flex',
-            width: RIGHT_WIDTH,
-            marginRight: isMobile ? 0 : 2,
             '& .MuiDrawer-paper': {
               width: RIGHT_WIDTH,
               backgroundColor: 'background.default',
               borderLeft: 'none',
-              overflow: 'visible',
             },
           }}
         >
-          <RightSection
-            onCategoryChange={categoryChangeHandler}
-          />
+          <RightSection onCategoryChange={categoryChangeHandler} />
         </Drawer>
+      )};
       
     </Box>
   );
