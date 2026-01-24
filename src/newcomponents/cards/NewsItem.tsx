@@ -56,15 +56,20 @@ const NewsItem: React.FC<NewsItemProps> = ({
 
   const handleCardClick = () => {
     // Track view interaction (works for both authenticated and anonymous users)
-    if (!article.id) return;
+    console.log('🖱️ Article clicked:', { id: article.id, url: article.url, title: article.title });
+    // Open URL first (this is the main action)
+    if (article.url && article.url !== '#') {
+      window.open(article.url, '_blank', 'noopener,noreferrer');
+    } else {
+      console.error('❌ No valid URL for article:', article);
+      return;
+    }
     if (article.id) {
       const articleId = String(article.id);  // Convert to string
       apiService.trackInteraction(articleId, 'view').catch(err => {
         console.error('Failed to track article view:', err);
       });
     }
-    
-    window.open(article.url, '_blank', 'noopener,noreferrer');
   };
 
 // Replace existing handleLike/handleBookmark with these (around line 65-110):

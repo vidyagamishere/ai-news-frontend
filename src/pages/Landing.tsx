@@ -353,6 +353,7 @@ const Landing: React.FC = () => {
               blogs: contentTypeId === 1 || !contentTypeId
                 ? (cat.content?.blogs || []).map((item: any) => ({
                   ...item,
+                  url: item.url || item.link || '#', 
                   time: item.published_date || new Date().toISOString(),
                   published_date: item.published_date || null,
                   readTime: '5 min'
@@ -361,6 +362,7 @@ const Landing: React.FC = () => {
               podcasts: contentTypeId === 3 || !contentTypeId
                 ? (cat.content?.podcasts || []).map((item: any) => ({
                   ...item,
+                  url: item.url || item.link || '#', 
                   time: item.published_date || new Date().toISOString(),
                   published_date: item.published_date || null,
                   readTime: '30 min'
@@ -369,6 +371,7 @@ const Landing: React.FC = () => {
               videos: contentTypeId === 2 || !contentTypeId
                 ? (cat.content?.videos || []).map((item: any) => ({
                   ...item,
+                  url: item.url || item.link || '#', 
                   time: item.published_date || new Date().toISOString(),
                   published_date: item.published_date || null,
                   readTime: '15 min'
@@ -485,18 +488,21 @@ const Landing: React.FC = () => {
         setSearchResults({
           blogs: searchResponse.results.blogs.map((item: any) => ({
             ...item,
+            url: item.url || item.link || '#', 
             time: item.published_date || new Date().toISOString(),
             published_date: item.published_date || null,
             readTime: '5 min'
           })),
           podcasts: searchResponse.results.podcasts.map((item: any) => ({
             ...item,
+            url: item.url || item.link || '#', 
             time: item.published_date || new Date().toISOString(),
             published_date: item.published_date || null,
             readTime: '30 min'
           })),
           videos: searchResponse.results.videos.map((item: any) => ({
             ...item,
+            url: item.url || item.link || '#', 
             time: item.published_date || new Date().toISOString(),
             published_date: item.published_date || null,
             readTime: '15 min'

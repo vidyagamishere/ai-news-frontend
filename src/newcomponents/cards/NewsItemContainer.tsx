@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box, Paper, Typography, Stack, useTheme, Container } from '@mui/material';
-import HorizontalArticleCard from './NewsItemContainer';
 import type { Article } from '../../types/article';
 import NewsItem from './NewsItem';
 
