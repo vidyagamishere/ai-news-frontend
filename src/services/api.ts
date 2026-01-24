@@ -4,6 +4,7 @@ import axios from 'axios';
 import DebugLogger from '../utils/debug';
 import type { Article } from '../types/article';
 import { supabaseImageService } from './supabaseImageService';
+type SharePlatform = 'copy_link' | 'email' | 'facebook' | 'twitter' | 'linkedin' | 'whatsapp';
 
 // Modular FastAPI backend URL - Direct endpoints with APIRouter
 const API_BASE_URL = import.meta.env.VITE_API_BASE || 'https://mindful-adventure-production-50fa.up.railway.app';
@@ -1131,7 +1132,7 @@ export class ApiService {
   }
 
   // ✅ UPDATED: Track share
-  async trackShare(articleId: number, platform: 'copy_link' | 'email'): Promise<void> {
+  async trackShare(articleId: number, platform: SharePlatform): Promise<void> {
     const token = localStorage.getItem('authToken');
     if (!token) {
       throw new Error('Authentication required');

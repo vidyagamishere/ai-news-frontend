@@ -16,26 +16,28 @@ export const HorizontalArticleCardSkeleton: React.FC = () => (
       gap: 2
     }}
   >
-    {/* Content on left */}
-    <Box sx={{ flex: 1 }}>
-      {/* Publisher/Source */}
-      <Skeleton variant="text" width="30%" height={16} sx={{ mb: 1 }} />
+    <Container maxWidth="lg">
+      {/* Content on left */}
+      <Box sx={{ flex: 1 }}>
+        {/* Publisher/Source */}
+        <Skeleton variant="text" width="30%" height={16} sx={{ mb: 1 }} />
 
-      {/* Title */}
-      <Skeleton variant="text" width="90%" height={28} sx={{ mb: 0.5 }} />
-      <Skeleton variant="text" width="70%" height={28} sx={{ mb: 1 }} />
+        {/* Title */}
+        <Skeleton variant="text" width="90%" height={28} sx={{ mb: 0.5 }} />
+        <Skeleton variant="text" width="70%" height={28} sx={{ mb: 1 }} />
 
-      {/* Summary */}
-      <Skeleton variant="text" width="100%" height={20} sx={{ mb: 0.5 }} />
-      <Skeleton variant="text" width="85%" height={20} sx={{ mb: 2 }} />
+        {/* Summary */}
+        <Skeleton variant="text" width="100%" height={20} sx={{ mb: 0.5 }} />
+        <Skeleton variant="text" width="85%" height={20} sx={{ mb: 2 }} />
 
-      {/* Metadata */}
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-        <Skeleton variant="text" width={80} height={20} />
-        <Skeleton variant="circular" width={4} height={4} />
-        <Skeleton variant="rounded" width={80} height={24} />
+        {/* Metadata */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Skeleton variant="text" width={80} height={20} />
+          <Skeleton variant="circular" width={4} height={4} />
+          <Skeleton variant="rounded" width={80} height={24} />
+        </Box>
       </Box>
-    </Box>
+    </Container>
 
     {/* Thumbnail on right */}
     <Skeleton
@@ -56,7 +58,7 @@ export const ArticleListSkeleton: React.FC<{ count?: number; showHeader?: boolea
   showHeader = true
 }) => (
   <Box sx={{ mt: 10 }}>
-    <Container maxWidth="lg" disableGutters sx={{marginRight: 60  }}>
+    <Container maxWidth="lg" disableGutters>
       {/* Content with dividers */}
       <Box sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
         <Stack spacing={0} divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}>

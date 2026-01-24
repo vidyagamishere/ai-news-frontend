@@ -300,7 +300,8 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
             border: '1px solid',
             borderColor: 'divider',
             borderRadius: 2,
-            textAlign: 'center'
+            textAlign: 'center',
+            background: 'none'
           }}
         >
           <Typography variant="h6" fontWeight={700} gutterBottom>
@@ -422,7 +423,8 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
           mb: 2,
           border: '1px solid',
           borderColor: 'divider',
-          borderRadius: 2
+          borderRadius: 2,
+          background: 'none'
         }}
       >
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
@@ -507,7 +509,8 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
           p: 2.5,
           border: '1px solid',
           borderColor: 'divider',
-          borderRadius: 2
+          borderRadius: 2,
+          background: 'none'
         }}
       >
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>

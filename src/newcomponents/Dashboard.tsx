@@ -47,7 +47,7 @@ const NewDashboard: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const outletContext = useOutletContext<{ 
+  const outletContext = useOutletContext<{
     dateFilter?: 1 | 7 | 30 | 365;
     onDateFilterChange?: (filter: 1 | 7 | 30 | 365) => void;
     selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
@@ -86,12 +86,12 @@ const NewDashboard: React.FC = () => {
   } | null>(null);
   const [selectedTab, setSelectedTab] = useState<'news' | 'audio' | 'video' | 'posts' | 'learning'>('news');
   const dateFilter = outletContext?.dateFilter || 7;
-  const setDateFilter = outletContext?.onDateFilterChange || (() => {});
+  const setDateFilter = outletContext?.onDateFilterChange || (() => { });
   const [error, setError] = useState<string | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  
+
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [availableContentTypes, setAvailableContentTypes] = useState<any[]>([]);
   const [availablePublishers, setAvailablePublishers] = useState<any[]>([]);
@@ -119,7 +119,7 @@ const NewDashboard: React.FC = () => {
     }
   };
 
- 
+
   // Load personalized feed
   const loadPersonalizedFeed = React.useCallback(async () => {
     try {
@@ -214,16 +214,16 @@ const NewDashboard: React.FC = () => {
 
       // Group articles by category
       const categoriesMap = new Map<string, { blogs: Article[]; podcasts: Article[]; videos: Article[] }>();
-      
+
       articles.forEach(article => {
         const cat = article.category_name || 'General';
         if (!categoriesMap.has(cat)) {
           categoriesMap.set(cat, { blogs: [], podcasts: [], videos: [] });
         }
-        
+
         const content = categoriesMap.get(cat)!;
         const type = article.content_type?.toLowerCase() || '';
-        
+
         if (type.includes('blog') || type.includes('article')) {
           content.blogs.push(article);
         } else if (type.includes('podcast')) {
@@ -254,7 +254,7 @@ const NewDashboard: React.FC = () => {
     }
   }, [activeCategory, userPreferences, availableCategories, availablePublishers, selectedTab, dateFilter]);
 
- // Load available options
+  // Load available options
   useEffect(() => {
     if (hasInitializedOptions.current) return;
     hasInitializedOptions.current = true;
@@ -262,7 +262,7 @@ const NewDashboard: React.FC = () => {
     const loadOptions = async () => {
       try {
         console.log('🔄 Loading available options...');
-        
+
         const [categoriesRes, contentTypesRes, publishersRes] = await Promise.all([
           cacheService.get('available_categories', () => apiService.getAvailableCategories(), CACHE_DURATION.LONG),
           cacheService.get('available_content_types', () => apiService.getAvailableContentTypes(), CACHE_DURATION.LONG),
@@ -299,7 +299,7 @@ const NewDashboard: React.FC = () => {
           console.warn('⚠️ Invalid publishers response structure:', publishersRes);
           setAvailablePublishers([]);
         }
-        
+
         // Once options are loaded, fetch personalized content
         if (categoriesRes.categories && contentTypesRes.content_types && publishersRes.publishers) {
           console.log('🚀 All options loaded successfully, fetching personalized feed...');
@@ -323,7 +323,7 @@ const NewDashboard: React.FC = () => {
       outletContext.onStatsClickHandlerSet(handleStatsClick);
     }
   }, [outletContext?.onStatsClickHandlerSet]);
-// Register stats handler with layout
+  // Register stats handler with layout
   useEffect(() => {
     if (outletContext?.onStatsClickHandlerSet) {
       outletContext.onStatsClickHandlerSet(() => setShowStatsModal(true));
@@ -380,7 +380,7 @@ const NewDashboard: React.FC = () => {
 
   const getTabContent = () => {
     let content: Article[];
-    
+
     if (isSearchActive && searchResults) {
       // Return search results
       switch (selectedTab) {
@@ -407,7 +407,7 @@ const NewDashboard: React.FC = () => {
       });
       content = allContent;
     }
-    
+
     // Apply bookmark filter
     if (showBookmarksOnly) {
       return content.filter(article => article.is_bookmarked);
@@ -431,17 +431,17 @@ const NewDashboard: React.FC = () => {
       setIsSearchActive(true);
       setSearchQuery(query);
       setSearchError(null);
-      
+
       // Clear category selection when searching
       setActiveCategory('All');
-      
+
       // Notify ResponsiveLayout to clear category selection in RightSection
       if (outletContext?.onSearchStart) {
         outletContext.onSearchStart();
       }
 
-      const categoryId = activeCategory === 'All' 
-        ? undefined 
+      const categoryId = activeCategory === 'All'
+        ? undefined
         : availableCategories.find(cat => cat.name === activeCategory)?.id;
 
       const searchResponse = await apiService.searchContent(
@@ -594,11 +594,11 @@ const NewDashboard: React.FC = () => {
   useEffect(() => {
     const handleScroll = () => {
       if (!contentContainerRef.current) return;
-      
+
       const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
       const scrollPosition = scrollTop + clientHeight;
       const threshold = scrollHeight - 500; // Load more when 500px from bottom
-      
+
       if (scrollPosition > threshold) {
         const totalContent = getTabContent().length;
         if (visibleItemsCount < totalContent) {
@@ -620,11 +620,11 @@ const NewDashboard: React.FC = () => {
       content: getTabContent(),
       selectedCategory: activeCategory,
       selectedTab,
-      categories: availableCategories && Array.isArray(availableCategories) 
+      categories: availableCategories && Array.isArray(availableCategories)
         ? availableCategories.map(cat => cat.name).filter(Boolean)
         : []
     };
-    
+
     return contextValue;
   }, [availableCategories, activeCategory, selectedTab, landingContent, isSearchActive, searchResults, showBookmarksOnly]);
 
@@ -652,8 +652,8 @@ const NewDashboard: React.FC = () => {
           <LandingSkeleton />
         ) : (
           <>
-            <Header 
-              isAuthenticated={true} 
+            <Header
+              isAuthenticated={true}
               user={user ? { name: user.email || 'User', email: user.email } : undefined}
               dateFilter={dateFilter}
               onDateFilterChange={setDateFilter}
@@ -661,184 +661,179 @@ const NewDashboard: React.FC = () => {
               onMenuClick={outletContext?.onMenuClick}
               onTrendingClick={outletContext?.onTrendingClick}
             />
-            
+
             {/* Content wrapper - properly aligned */}
-            <Box sx={{ 
+            <Box sx={{
               width: '100%',
               minHeight: '100vh',
               p: 3
             }}>
-              <Box sx={{ 
-                display: 'flex',
-                gap: 3,
-                maxWidth: '1400px',  // ✅ Adjusted max width
-                mx: 'auto',
-                width: '100%'
-              }}>
-                {/* Center Content */}
-                <Box sx={{ 
-                  flex: 1,
-                  minWidth: 0
+              <Container maxWidth="lg">
+                <Box sx={{
+                  display: 'flex',
+                  gap: 3,
+                  maxWidth: '1200px',  // ✅ Adjusted max width
+                  mx: 'auto',
+                  width: '100%'
                 }}>
-                  {/* Breadcrumb showing active filters */}
-                  {!isSearchActive && (
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        px: 2,
-                        py: 1,
-                        mb: 2,
-                        gap: 1,
-                        bgcolor: alpha(theme.palette.primary.main, 0.05),
-                        borderRadius: 2,
-                        border: 1,
-                        borderColor: alpha(theme.palette.primary.main, 0.1)
-                      }}
-                    >
-                      <Typography variant="body2" color="text.secondary">
-                        Your Feed:
-                      </Typography>
-                      <Chip
-                        label={activeCategory}
-                        size="small"
-                        color={activeCategory === 'All' ? 'default' : 'primary'}
-                        sx={{ fontWeight: 600 }}
-                      />
-                      <ChevronRight size={16} color={theme.palette.text.secondary} />
-                      <Chip
-                        label={selectedTab === 'news' ? 'Articles' : selectedTab === 'audio' ? 'Podcasts' : selectedTab === 'video' ? 'Videos' : selectedTab}
-                        size="small"
-                        color="secondary"
-                        sx={{ fontWeight: 600 }}
-                      />
-                      <ChevronRight size={16} color={theme.palette.text.secondary} />
-                      <Chip
-                        label={`Last ${dateFilter === 1 ? '24h' : dateFilter === 7 ? 'Week' : dateFilter === 30 ? 'Month' : 'Year'}`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </Paper>
-                  )}
-
-                  {/* Search Error/No Results Message */}
-                  {isSearchActive && searchError && (
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        p: 6,
-                        textAlign: 'center',
-                        bgcolor: alpha(theme.palette.primary.main, 0.05),
-                        borderRadius: 3,
-                        mb: 3
-                      }}
-                    >
-                      <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔍</Typography>
-                      <Typography variant="h5" fontWeight={700} gutterBottom>
-                        {searchError}
-                      </Typography>
-                      <Typography color="text.secondary" sx={{ mb: 3 }}>
-                        Try adjusting your search terms or filters
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        onClick={() => handleSearch('')}
+                  {/* Center Content */}
+                  <Box sx={{
+                    flex: 1,
+                    minWidth: 0
+                  }}>
+                    {/* Breadcrumb showing active filters */}
+                    {!isSearchActive && (
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          px: 2,
+                          py: 1,
+                          mb: 2,
+                          gap: 1,
+                          background: 'none'
+                        }}
                       >
-                        Clear Search
-                      </Button>
-                    </Paper>
-                  )}
-
-                  {/* Search Active Indicator */}
-                  {isSearchActive && !searchError && searchCounts && (
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        px: 2,
-                        py: 1,
-                        mb: 3,
-                        gap: 2,
-                        bgcolor: alpha(theme.palette.info.main, 0.1),
-                        borderRadius: 2,
-                        border: 1,
-                        borderColor: alpha(theme.palette.info.main, 0.2)
-                      }}
-                    >
-                      <Typography sx={{ flex: 1 }}>
-                        🔍 Showing search results for <strong>"{searchQuery}"</strong>
-                      </Typography>
-                      <Chip
-                        label={`${searchCounts.total} result${searchCounts.total !== 1 ? 's' : ''}`}
-                        color="info"
-                        size="small"
-                      />
-                      <Button
-                        size="small"
-                        onClick={() => handleSearch('')}
-                      >
-                        Clear ✕
-                      </Button>
-                    </Paper>
-                  )}
-
-                  {/* Content Section */}
-                  <Box ref={contentContainerRef}>
-                    {selectedTab === 'news' && (
-                      <>
-                        {getTabContent().length === 0 && activeCategory !== 'All' && (
-                          <Paper
-                            elevation={0}
-                            sx={{
-                              p: 6,
-                              textAlign: 'center',
-                              bgcolor: alpha(theme.palette.warning.main, 0.05),
-                              borderRadius: 3,
-                              border: '2px dashed',
-                              borderColor: alpha(theme.palette.warning.main, 0.3),
-                              mb: 3
-                            }}
-                          >
-                            <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔔</Typography>
-                            <Typography variant="h5" fontWeight={700} gutterBottom>
-                              No content from {activeCategory}
-                            </Typography>
-                            <Typography color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
-                              This category is not in your preferences. Add it to start seeing articles, podcasts, and videos from {activeCategory}.
-                            </Typography>
-                            <Button
-                              variant="contained"
-                              onClick={() => setShowSettingsModal(true)}
-                              startIcon={<Settings size={18} />}
-                            >
-                              Add to Preferences
-                            </Button>
-                          </Paper>
-                        )}
-
-                        <NewsItemContainer
-                          headerTitle="Your Personalized AI News"
-                          headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                          articles={getTabContent().slice(0, visibleItemsCount)}
-                          contentType="blog"
-                          showInteractions={true}
-                          emptyMessage="No articles found. Try adjusting your preferences."
-                          emptyIcon="📰"
+                        <Chip
+                          label={activeCategory}
+                          size="small"
+                          color={activeCategory === 'All' ? 'default' : 'primary'}
+                          sx={{ fontWeight: 600 }}
                         />
-                        {visibleItemsCount < getTabContent().length && (
-                          <Box sx={{ textAlign: 'center', py: 3 }}>
-                            <CircularProgress size={24} />
-                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Loading more articles...</Typography>
-                          </Box>
-                        )}
-                      </>
+                        <ChevronRight size={16} color={theme.palette.text.secondary} />
+                        <Chip
+                          label={selectedTab === 'news' ? 'Articles' : selectedTab === 'audio' ? 'Podcasts' : selectedTab === 'video' ? 'Videos' : selectedTab}
+                          size="small"
+                          color="secondary"
+                          sx={{ fontWeight: 600 }}
+                        />
+                        <ChevronRight size={16} color={theme.palette.text.secondary} />
+                        <Chip
+                          label={`Last ${dateFilter === 1 ? '24h' : dateFilter === 7 ? 'Week' : dateFilter === 30 ? 'Month' : 'Year'}`}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Paper>
                     )}
 
-                    {/* Audio Tab */}
-                    {selectedTab === 'audio' && (
-                      <>                        {getTabContent().length === 0 && activeCategory !== 'All' && (
+                    {/* Search Error/No Results Message */}
+                    {isSearchActive && searchError && (
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 6,
+                          textAlign: 'center',
+                          bgcolor: alpha(theme.palette.primary.main, 0.05),
+                          borderRadius: 3,
+                          mb: 3
+                        }}
+                      >
+                        <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔍</Typography>
+                        <Typography variant="h5" fontWeight={700} gutterBottom>
+                          {searchError}
+                        </Typography>
+                        <Typography color="text.secondary" sx={{ mb: 3 }}>
+                          Try adjusting your search terms or filters
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          onClick={() => handleSearch('')}
+                        >
+                          Clear Search
+                        </Button>
+                      </Paper>
+                    )}
+
+                    {/* Search Active Indicator */}
+                    {isSearchActive && !searchError && searchCounts && (
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          px: 2,
+                          py: 1,
+                          mb: 3,
+                          gap: 2,
+                          bgcolor: alpha(theme.palette.info.main, 0.1),
+                          borderRadius: 2,
+                          border: 1,
+                          borderColor: alpha(theme.palette.info.main, 0.2)
+                        }}
+                      >
+                        <Typography sx={{ flex: 1 }}>
+                          🔍 Showing search results for <strong>"{searchQuery}"</strong>
+                        </Typography>
+                        <Chip
+                          label={`${searchCounts.total} result${searchCounts.total !== 1 ? 's' : ''}`}
+                          color="info"
+                          size="small"
+                        />
+                        <Button
+                          size="small"
+                          onClick={() => handleSearch('')}
+                        >
+                          Clear ✕
+                        </Button>
+                      </Paper>
+                    )}
+
+                    {/* Content Section */}
+                    <Box ref={contentContainerRef}>
+                      {selectedTab === 'news' && (
+                        <>
+                          {getTabContent().length === 0 && activeCategory !== 'All' && (
+                            <Paper
+                              elevation={0}
+                              sx={{
+                                p: 6,
+                                textAlign: 'center',
+                                bgcolor: alpha(theme.palette.warning.main, 0.05),
+                                borderRadius: 3,
+                                border: '2px dashed',
+                                borderColor: alpha(theme.palette.warning.main, 0.3),
+                                mb: 3
+                              }}
+                            >
+                              <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔔</Typography>
+                              <Typography variant="h5" fontWeight={700} gutterBottom>
+                                No content from {activeCategory}
+                              </Typography>
+                              <Typography color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
+                                This category is not in your preferences. Add it to start seeing articles, podcasts, and videos from {activeCategory}.
+                              </Typography>
+                              <Button
+                                variant="contained"
+                                onClick={() => setShowSettingsModal(true)}
+                                startIcon={<Settings size={18} />}
+                              >
+                                Add to Preferences
+                              </Button>
+                            </Paper>
+                          )}
+
+                          <NewsItemContainer
+                            headerTitle="Your Personalized AI News"
+                            headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                            articles={getTabContent().slice(0, visibleItemsCount)}
+                            contentType="blog"
+                            showInteractions={true}
+                            emptyMessage="No articles found. Try adjusting your preferences."
+                            emptyIcon="📰"
+                          />
+                          {visibleItemsCount < getTabContent().length && (
+                            <Box sx={{ textAlign: 'center', py: 3 }}>
+                              <CircularProgress size={24} />
+                              <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Loading more articles...</Typography>
+                            </Box>
+                          )}
+                        </>
+                      )}
+
+                      {/* Audio Tab */}
+                      {selectedTab === 'audio' && (
+                        <>                        {getTabContent().length === 0 && activeCategory !== 'All' && (
                           <Paper
                             elevation={0}
                             sx={{
@@ -867,26 +862,26 @@ const NewDashboard: React.FC = () => {
                             </Button>
                           </Paper>
                         )}                        <NewsItemContainer
-                          headerTitle="Your AI Podcasts"
-                          headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                          articles={getTabContent().slice(0, visibleItemsCount)}
-                          contentType="podcast"
-                          showInteractions={true}
-                          emptyMessage="No podcasts available. Try adjusting your preferences."
-                          emptyIcon="🎧"
-                        />
-                        {visibleItemsCount < getTabContent().length && (
-                          <Box sx={{ textAlign: 'center', py: 3 }}>
-                            <CircularProgress size={24} />
-                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Loading more podcasts...</Typography>
-                          </Box>
-                        )}
-                      </>
-                    )}
+                            headerTitle="Your AI Podcasts"
+                            headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                            articles={getTabContent().slice(0, visibleItemsCount)}
+                            contentType="podcast"
+                            showInteractions={true}
+                            emptyMessage="No podcasts available. Try adjusting your preferences."
+                            emptyIcon="🎧"
+                          />
+                          {visibleItemsCount < getTabContent().length && (
+                            <Box sx={{ textAlign: 'center', py: 3 }}>
+                              <CircularProgress size={24} />
+                              <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Loading more podcasts...</Typography>
+                            </Box>
+                          )}
+                        </>
+                      )}
 
-                    {/* Video Tab */}
-                    {selectedTab === 'video' && (
-                      <>                        {getTabContent().length === 0 && activeCategory !== 'All' && (
+                      {/* Video Tab */}
+                      {selectedTab === 'video' && (
+                        <>                        {getTabContent().length === 0 && activeCategory !== 'All' && (
                           <Paper
                             elevation={0}
                             sx={{
@@ -915,67 +910,68 @@ const NewDashboard: React.FC = () => {
                             </Button>
                           </Paper>
                         )}                        <NewsItemContainer
-                          headerTitle="Your AI Videos"
-                          headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
-                          articles={getTabContent().slice(0, visibleItemsCount)}
-                          contentType="video"
-                          showInteractions={true}
-                          emptyMessage="No videos available. Try adjusting your preferences."
-                          emptyIcon="📹"
-                        />
-                        {visibleItemsCount < getTabContent().length && (
-                          <Box sx={{ textAlign: 'center', py: 3 }}>
-                            <CircularProgress size={24} />
-                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Loading more videos...</Typography>
-                          </Box>
-                        )}
-                      </>
+                            headerTitle="Your AI Videos"
+                            headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
+                            articles={getTabContent().slice(0, visibleItemsCount)}
+                            contentType="video"
+                            showInteractions={true}
+                            emptyMessage="No videos available. Try adjusting your preferences."
+                            emptyIcon="📹"
+                          />
+                          {visibleItemsCount < getTabContent().length && (
+                            <Box sx={{ textAlign: 'center', py: 3 }}>
+                              <CircularProgress size={24} />
+                              <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>Loading more videos...</Typography>
+                            </Box>
+                          )}
+                        </>
+                      )}
+                    </Box>
+
+                    {/* Posts Tab */}
+                    {selectedTab === 'posts' && (
+                      <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
+                        <Typography sx={{ fontSize: '4rem', mb: 2 }}>🗨️</Typography>
+                        <Typography variant="h3" fontWeight={700} gutterBottom>
+                          Community Coming Soon
+                        </Typography>
+                        <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                          Join discussions with AI experts and learners
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          size="large"
+                          onClick={() => navigate('/preferences')}
+                          sx={{ px: 4 }}
+                        >
+                          Manage Preferences
+                        </Button>
+                      </Box>
+                    )}
+
+                    {/* Learning Tab */}
+                    {selectedTab === 'learning' && (
+                      <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
+                        <Typography sx={{ fontSize: '4rem', mb: 2 }}>🎓</Typography>
+                        <Typography variant="h3" fontWeight={700} gutterBottom>
+                          Learning Paths Coming Soon
+                        </Typography>
+                        <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                          Structured courses from beginner to expert
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          size="large"
+                          onClick={() => navigate('/preferences')}
+                          sx={{ px: 4 }}
+                        >
+                          Manage Preferences
+                        </Button>
+                      </Box>
                     )}
                   </Box>
-
-                  {/* Posts Tab */}
-                  {selectedTab === 'posts' && (
-                    <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
-                      <Typography sx={{ fontSize: '4rem', mb: 2 }}>🗨️</Typography>
-                      <Typography variant="h3" fontWeight={700} gutterBottom>
-                        Community Coming Soon
-                      </Typography>
-                      <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-                        Join discussions with AI experts and learners
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        size="large"
-                        onClick={() => navigate('/preferences')}
-                        sx={{ px: 4 }}
-                      >
-                        Manage Preferences
-                      </Button>
-                    </Box>
-                  )}
-
-                  {/* Learning Tab */}
-                  {selectedTab === 'learning' && (
-                    <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
-                      <Typography sx={{ fontSize: '4rem', mb: 2 }}>🎓</Typography>
-                      <Typography variant="h3" fontWeight={700} gutterBottom>
-                        Learning Paths Coming Soon
-                      </Typography>
-                      <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-                        Structured courses from beginner to expert
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        size="large"
-                        onClick={() => navigate('/preferences')}
-                        sx={{ px: 4 }}
-                      >
-                        Manage Preferences
-                      </Button>
-                    </Box>
-                  )}
                 </Box>
-              </Box>
+              </Container>
             </Box>
           </>
         )}
@@ -991,7 +987,7 @@ const NewDashboard: React.FC = () => {
             onClose={() => setShowSettingsModal(false)}
             onSave={handleSaveSettings}
             savingSettings={savingSettings}
-            setSettingsChanged={() => {}}
+            setSettingsChanged={() => { }}
           />
         )}
 
@@ -1069,7 +1065,7 @@ const NewDashboard: React.FC = () => {
           maxWidth="md"
           fullWidth
         >
-          <UserStatsPage/>
+          <UserStatsPage />
         </Dialog>
 
         <style>{`

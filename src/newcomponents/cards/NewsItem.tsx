@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Typography,
   Box,
@@ -44,7 +44,6 @@ const NewsItem: React.FC<NewsItemProps> = ({
   const [imageError, setImageError] = useState(false);
   const articleImage = article.image || article.imageUrl || article.thumbnail_url;
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
-  const [commentAnchorEl, setCommentAnchorEl] = useState<HTMLElement | null>(null);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [localLikesCount, setLocalLikesCount] = useState(article.likes || article.likes_count || 0);
   const [localBookmarksCount, setLocalBookmarksCount] = useState(article.bookmarks || article.bookmarks_count || 0);
@@ -127,7 +126,6 @@ const NewsItem: React.FC<NewsItemProps> = ({
       navigate('/auth');
       return;
     }
-    setCommentAnchorEl(e.currentTarget);
     setCommentDialogOpen(true);
   };
 
@@ -169,6 +167,7 @@ const NewsItem: React.FC<NewsItemProps> = ({
       onClick={handleCardClick}
       sx={{
         display: 'flex',
+        alignItems: 'center',
         mb: 2,
         cursor: 'pointer',
         transition: 'all 0.2s ease',
@@ -300,13 +299,7 @@ const NewsItem: React.FC<NewsItemProps> = ({
               </IconButton>
 
               <Box sx={{ mx: 1, color: 'text.disabled' }}>•</Box>
-              <Chip
-                icon={<Clock size={12} />}
-                label={getReadTime()}
-                size="small"
-                variant="outlined"
-                sx={{ height: 24, fontSize: '0.75rem' }}
-              />
+              <Typography variant="caption" color="text.secondary">{getReadTime()}</Typography>
             </Stack>
           ) : (
             <Stack direction="row" spacing={1} alignItems="center">
@@ -314,13 +307,9 @@ const NewsItem: React.FC<NewsItemProps> = ({
                 {formatTimeAgo(article.published_date || null)}
               </Typography>
               <Box sx={{ color: 'text.disabled' }}>•</Box>
-              <Chip
-                icon={<Clock size={12} />}
-                label={getReadTime()}
-                size="small"
-                variant="outlined"
-                sx={{ height: 24, fontSize: '0.75rem' }}
-              />
+              <Typography variant="caption" color="text.secondary">
+                {getReadTime()}
+              </Typography>
             </Stack>
           )}
         </Box>
@@ -331,8 +320,8 @@ const NewsItem: React.FC<NewsItemProps> = ({
         <Box
           component="img"
           sx={{
-            width: { xs: 60, sm: 100 },
-            height: { xs: 60, sm: 100 },
+            width: { xs: 60, sm: 80 },
+            height: { xs: 60, sm: 80 },
             objectFit: 'cover',
             flexShrink: 0,
             borderRadius: 1
@@ -349,11 +338,9 @@ const NewsItem: React.FC<NewsItemProps> = ({
       open={commentDialogOpen}
       onClose={() => {
         setCommentDialogOpen(false);
-        setCommentAnchorEl(null);
       }}
       articleId={typeof article.id === 'number' ? article.id : parseInt(String(article.id))}
       onCommentAdded={() => setLocalCommentsCount(prev => prev + 1)}
-      anchorEl={commentAnchorEl}
     />
 
     <ShareDialog

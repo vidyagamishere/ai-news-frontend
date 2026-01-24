@@ -24,9 +24,9 @@ const Loading: React.FC<LoadingProps> = ({ message = "Loading AI news..." }) => 
 
   const loadingSteps = [
     { icon: BrainIcon, text: "Initializing AI systems", color: "#3b82f6" },
-    { icon: DatabaseIcon, text: "Fetching latest news", color: "#10b981" },
+    { icon: DatabaseIcon, text: "Fetching latest news", color: "#8b5cf6" },
     { icon: ZapIcon, text: "Processing content", color: "#f59e0b" },
-    { icon: RefreshIcon, text: "Finalizing dashboard", color: "#8b5cf6" }
+    { icon: RefreshIcon, text: "Finalizing dashboard", color: "#10b981" }
   ];
 
   useEffect(() => {
@@ -93,7 +93,7 @@ const Loading: React.FC<LoadingProps> = ({ message = "Loading AI news..." }) => 
           </Box>
 
           {/* Title */}
-          <Typography variant="h5" fontWeight="bold" color="primary">
+          <Typography variant="h5" fontWeight="bold" color={loadingSteps[currentStep].color}>
             Vidyagam AI News
           </Typography>
 

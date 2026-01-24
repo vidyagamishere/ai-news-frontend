@@ -178,7 +178,7 @@ const SideNav: React.FC<SideNavProps> = ({
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', py: 2 }}>
             {/* Logo/Brand */}
-            <Box sx={{ px: 2, mb: 3 }}>
+            <Box sx={{ px: 3, mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Psychology sx={{ fontSize: 32, color: 'primary.main' }} />
                     <Typography variant="h6" fontWeight={700}>

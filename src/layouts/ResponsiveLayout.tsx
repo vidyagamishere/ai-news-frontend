@@ -15,7 +15,7 @@ import RightSection from '../newcomponents/RightSection';
 import { useCallback, useRef } from 'react';
 
 const LEFT_WIDTH = 280;
-const RIGHT_WIDTH = 320;
+const RIGHT_WIDTH = 300;
 interface OutletContextType {
   dateFilter?: 1 | 7 | 30 | 365;
   onDateFilterChange?: (filter: 1 | 7 | 30 | 365) => void;
@@ -188,7 +188,7 @@ export default function ResponsiveLayout() {
           sx={{
             flexGrow: 1,
             display: 'flex',
-            width: RIGHT_WIDTH,
+            maxWidth: RIGHT_WIDTH,
             marginRight: isMobile ? 0 : 2,
             '& .MuiDrawer-paper': {
               width: RIGHT_WIDTH,

@@ -105,7 +105,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   const loadSearchQuestions = async () => {
     try {
       console.log('🔍 Loading search questions for category:', categoryId);
-      
+
       // Use cache with 30-minute TTL
       const cacheKey = `search_questions_${categoryId || 'all'}`;
       const response = await cacheService.get(
@@ -116,7 +116,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
         }),
         CACHE_DURATION.MEDIUM
       );
-      
+
       console.log('✅ Search questions response:', response);
       setSearchQuestions(response.questions || []);
     } catch (error) {
@@ -138,7 +138,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
         }),
         CACHE_DURATION.SHORT
       );
-      
+
       setTrendingSearches(response.trending || []);
     } catch (error) {
       console.error('Failed to load trending searches:', error);
@@ -211,12 +211,12 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
         question_id: questionId.toString(),
         session_id: getSessionId(),
       });
-      
+
       // Add category_context only if categoryId is set
       if (categoryId) {
         params.append('category_context', categoryId.toString());
       }
-      
+
       // Call backend directly (not through router)
       await fetch(`${API_BASE_URL}/search-suggestions/track-question-click?${params.toString()}`, {
         method: 'POST',
@@ -243,10 +243,10 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
     setQuery(searchQuery);
     setShowDropdown(false);
     setIsFocused(false);
-    
+
     // Track the search
     trackSearch(searchQuery);
-    
+
     // Execute the search callback
     onSearch(searchQuery);
   }, [onSearch]);
@@ -298,7 +298,7 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
   };
 
   return (
-    <Box ref={searchRef} >
+    <Box ref={searchRef} sx={{ mt: { xs: 3, md: 0 } }}>
       {/* Search Input */}
       <form onSubmit={handleSubmit}>
         <TextField
@@ -417,40 +417,40 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
             // Filter questions based on current query
             const filteredQuestions = query.length >= 2
               ? searchQuestions.filter(q =>
-                  q.question_text.toLowerCase().includes(query.toLowerCase()) ||
-                  q.keywords.some(k => k.toLowerCase().includes(query.toLowerCase()))
-                )
+                q.question_text.toLowerCase().includes(query.toLowerCase()) ||
+                q.keywords.some(k => k.toLowerCase().includes(query.toLowerCase()))
+              )
               : searchQuestions;
 
             if (filteredQuestions.length === 0) return null;
 
             return (
-            <List sx={{ py: 1 }}>
-              {filteredQuestions.map((question) => (
-                <ListItemButton
-                  key={question.id}
-                  onClick={() => handleQuestionClick(question)}
-                  sx={{
-                    py: 1.5,
-                    '&:hover': {
-                      bgcolor: alpha(theme.palette.action.hover, 0.08)
-                    }
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 36 }}>
-                    <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={question.question_text}
-                    primaryTypographyProps={{
-                      variant: 'body2',
-                      sx: { color: 'text.primary' },
-                      noWrap: true
+              <List sx={{ py: 1 }}>
+                {filteredQuestions.map((question) => (
+                  <ListItemButton
+                    key={question.id}
+                    onClick={() => handleQuestionClick(question)}
+                    sx={{
+                      py: 1.5,
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.action.hover, 0.08)
+                      }
                     }}
-                  />
-                </ListItemButton>
-              ))}
-            </List>
+                  >
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={question.question_text}
+                      primaryTypographyProps={{
+                        variant: 'body2',
+                        sx: { color: 'text.primary' },
+                        noWrap: true
+                      }}
+                    />
+                  </ListItemButton>
+                ))}
+              </List>
             );
           })()}
 
@@ -486,15 +486,15 @@ const EnhancedSearchBar: React.FC<EnhancedSearchBarProps> = ({
 
           {/* Empty State */}
           {autocompleteSuggestions.length === 0 &&
-           searchQuestions.length === 0 &&
-           trendingSearches.length === 0 && (
-            <Box sx={{ p: 6, textAlign: 'center' }}>
-              <SearchIcon sx={{ fontSize: 48, color: 'action.disabled', mb: 2, opacity: 0.2 }} />
-              <Typography variant="body2" color="text.secondary">
-                Start typing to search...
-              </Typography>
-            </Box>
-          )}
+            searchQuestions.length === 0 &&
+            trendingSearches.length === 0 && (
+              <Box sx={{ p: 6, textAlign: 'center' }}>
+                <SearchIcon sx={{ fontSize: 48, color: 'action.disabled', mb: 2, opacity: 0.2 }} />
+                <Typography variant="body2" color="text.secondary">
+                  Start typing to search...
+                </Typography>
+              </Box>
+            )}
         </Paper>
       )}
     </Box>
