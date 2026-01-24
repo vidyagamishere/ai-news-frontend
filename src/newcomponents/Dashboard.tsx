@@ -666,7 +666,7 @@ const NewDashboard: React.FC = () => {
             <Box sx={{
               width: '100%',
               minHeight: '100vh',
-              p: 3
+              p: { xs: 0, lg: 4 }
             }}>
               <Container maxWidth="lg">
                 <Box sx={{
@@ -688,7 +688,7 @@ const NewDashboard: React.FC = () => {
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
-                          px: 2,
+                          px: { xs: 0, lg: 2 },
                           py: 1,
                           mb: 2,
                           gap: 1,
