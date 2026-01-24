@@ -140,20 +140,37 @@ const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Center: Search Bar (Desktop) or Title (Mobile) */}
-          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' } }}>
+          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' }, alignItems: 'center', gap: 2 }}>
             {/* Mobile Title */}
             {isMobile && (
               <Psychology sx={{ fontSize: 32, color: 'primary.main' }} />
             )}
             {!isMobile && finalShowSearch && finalOnSearch && (
-              <Box sx={{ width: { md: 300, lg: 400 } }}>
-                <EnhancedSearchBar
-                  onSearch={finalOnSearch}
-                  categoryId={finalCategoryId}
-                  placeholder="Search AI content..."
-                  showSuggestions={true}
-                />
-              </Box>
+              <>
+                <Box sx={{ width: { md: 300, lg: 400 } }}>
+                  <EnhancedSearchBar
+                    onSearch={finalOnSearch}
+                    categoryId={finalCategoryId}
+                    placeholder="Search AI content..."
+                    showSuggestions={true}
+                  />
+                </Box>
+                {/* Date Filter next to Search Bar (Desktop only) */}
+                {dateFilter !== undefined && onDateFilterChange && (
+                  <FormControl size="small" sx={{ minWidth: 140 }}>
+                    <Select
+                      value={dateFilter}
+                      onChange={(e: SelectChangeEvent<number>) => onDateFilterChange(e.target.value as 1 | 7 | 30 | 365)}
+                      sx={{ bgcolor: 'background.paper', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' } }}
+                    >
+                      <MenuItem value={1}>Last 24h</MenuItem>
+                      <MenuItem value={7}>Last 7 days</MenuItem>
+                      <MenuItem value={30}>Last 30 days</MenuItem>
+                      <MenuItem value={365}>Last year</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              </>
             )}
           </Box>
 
@@ -164,22 +181,6 @@ const Header: React.FC<HeaderProps> = ({
               <IconButton color="inherit" size="small" onClick={onTrendingClick} title="Trending Topics">
                 <TrendingUp size={20} />
               </IconButton>
-            )}
-
-            {/* Date Filter (Desktop only in this row) */}
-            {!isMobile && dateFilter !== undefined && onDateFilterChange && (
-              <FormControl size="small" sx={{ minWidth: 140 }}>
-                <Select
-                  value={dateFilter}
-                  onChange={(e: SelectChangeEvent<number>) => onDateFilterChange(e.target.value as 1 | 7 | 30 | 365)}
-                  sx={{ bgcolor: 'background.paper', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' } }}
-                >
-                  <MenuItem value={1}>Last 24h</MenuItem>
-                  <MenuItem value={7}>Last 7 days</MenuItem>
-                  <MenuItem value={30}>Last 30 days</MenuItem>
-                  <MenuItem value={365}>Last year</MenuItem>
-                </Select>
-              </FormControl>
             )}
           </Box>
         </Toolbar>
