@@ -157,10 +157,13 @@ export default function ResponsiveLayout() {
           flexGrow: 1,
           display: 'flex',
           justifyContent: 'center',
-          px: { xs: 2, md: 0, lg: 2 },
+          px: { xs: 2, md: 2, lg: 3 },
+          overflow: 'auto',
+          // Prevent content from going behind right drawer on desktop
+          marginRight: { xs: 0, md: `${RIGHT_WIDTH}px` },
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto' }}>
+        <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto' }}>
           <Outlet context={{
             dateFilter,
             onDateFilterChange: setDateFilter,
