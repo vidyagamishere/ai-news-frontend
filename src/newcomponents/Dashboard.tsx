@@ -1,44 +1,33 @@
-import React, { useState, useEffect, useRef, createContext, useContext, useMemo } from 'react';
 import {
+  alpha,
   Box,
+  Button,
+  Chip,
+  CircularProgress,
   Container,
+  Dialog,
   Paper,
   Typography,
-  Button,
-  Select,
-  MenuItem,
-  FormControl,
-  useTheme,
   useMediaQuery,
-  alpha,
-  Chip,
-  Stack,
-  Tab,
-  Tabs,
-  CircularProgress,
-  Alert,
-  InputLabel,
-  Dialog,
-  DialogActions,
-  DialogContent
+  useTheme
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material';
-import { Settings, LogOut, ChevronRight, Bookmark } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
-import type { Article } from '../services/api';
-import type { LandingContent } from '../types/article';
-import SEO from '../components/SEO';
+import { ChevronRight, Settings } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { LandingSkeleton } from '../components/LoadingSkeleton';
-import Header from './Header';
-import { SearchProvider } from '../contexts/SearchContext';
-import RightSection from './RightSection';
-import NewsItemContainer from './cards/NewsItemContainer';
-import { DashboardContext, type DashboardContextType } from '../contexts/DashboardContext';
-import { cacheService, CACHE_DURATION } from '../utils/cacheService';
+import SEO from '../components/SEO';
 import SettingsFullScreen from '../components/SettingsFullScreen';
 import UserStatsPage from '../components/UserStatsPage';
+import PostCreate from '../components/posts/post-create';
+import { useAuth } from '../contexts/AuthContext';
+import { DashboardContext, type DashboardContextType } from '../contexts/DashboardContext';
+import { SearchProvider } from '../contexts/SearchContext';
+import type { Article } from '../services/api';
+import { apiService } from '../services/api';
+import type { LandingContent } from '../types/article';
+import { CACHE_DURATION, cacheService } from '../utils/cacheService';
+import Header from './Header';
+import NewsItemContainer from './cards/NewsItemContainer';
 
 
 const NewDashboard: React.FC = () => {
@@ -931,21 +920,7 @@ const NewDashboard: React.FC = () => {
                     {/* Posts Tab */}
                     {selectedTab === 'posts' && (
                       <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
-                        <Typography sx={{ fontSize: '4rem', mb: 2 }}>🗨️</Typography>
-                        <Typography variant="h3" fontWeight={700} gutterBottom>
-                          Community Coming Soon
-                        </Typography>
-                        <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-                          Join discussions with AI experts and learners
-                        </Typography>
-                        <Button
-                          variant="contained"
-                          size="large"
-                          onClick={() => navigate('/preferences')}
-                          sx={{ px: 4 }}
-                        >
-                          Manage Preferences
-                        </Button>
+                        <PostCreate />
                       </Box>
                     )}
 
