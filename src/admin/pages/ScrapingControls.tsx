@@ -10,6 +10,10 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   PlayArrow as PlayIcon,
@@ -25,7 +29,20 @@ export const ScrapingControls: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [triggering, setTriggering] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [selectedModels, setSelectedModels] = useState<Record<string, string>>({
+    blog: 'gemini',
+    podcast: 'gemini',
+    video: 'gemini',
+  });
   const { adminApiKey } = useAdminAuth();
+
+  // LLM model configurations with colors
+  const llmModels = [
+    { value: 'gemini', label: 'Gemini', color: '#4285f4' },
+    { value: 'claude', label: 'Claude', color: '#d97706' },
+    { value: 'ollama', label: 'Ollama', color: '#10b981' },
+    { value: 'huggingface', label: 'HuggingFace', color: '#9333ea' },
+  ];
   
   useEffect(() => {
     fetchJobs();
@@ -60,14 +77,28 @@ export const ScrapingControls: React.FC = () => {
     }
     
     try {
-      await apiService.callEndpoint(
-        'admin/scraping/trigger',
-        'POST',
-        { content_type: contentType },
-        false,
-        { 'X-Admin-API-Key': adminApiKey }
-      );
-      setSnackbar({ open: true, message: `${contentType} scraping triggered`, severity: 'success' });
+      const selectedModel = selectedModels[contentType];
+      
+      // For now, only RSS feeds (blog) are supported via /admin/scrape endpoint
+      if (contentType === 'blog') {
+        // Use the working /admin/scrape endpoint with query parameters
+        await apiService.callEndpoint(
+          `admin/scrape?llm_model=${selectedModel}&scrape_frequency=1`,
+          'POST',
+          {},
+          false,
+          { 'X-Admin-API-Key': adminApiKey }
+        );
+        setSnackbar({ open: true, message: `RSS feed scraping triggered with ${selectedModel}`, severity: 'success' });
+      } else {
+        // Podcast and video scraping coming soon
+        setSnackbar({ 
+          open: true, 
+          message: `${contentType} scraping coming soon - currently in development`, 
+          severity: 'info' 
+        });
+      }
+      
       setTimeout(fetchJobs, 2000); // Refresh after 2 seconds
     } catch (error) {
       console.error('Failed to trigger scraping:', error);
@@ -132,6 +163,33 @@ export const ScrapingControls: React.FC = () => {
                       )}
                     </Box>
                   )}
+
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel>LLM Model</InputLabel>
+                    <Select
+                      value={selectedModels[item.type]}
+                      label="LLM Model"
+                      onChange={(e) => setSelectedModels({ ...selectedModels, [item.type]: e.target.value })}
+                      disabled={triggering === item.type}
+                    >
+                      {llmModels.map((model) => (
+                        <MenuItem key={model.value} value={model.value}>
+                          <Box display="flex" alignItems="center">
+                            <Box
+                              sx={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: '50%',
+                                bgcolor: model.color,
+                                mr: 1,
+                              }}
+                            />
+                            {model.label}
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
 
                   <Button
                     variant="contained"
