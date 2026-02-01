@@ -859,7 +859,176 @@ export class ApiService {
     const headers = { 'X-Admin-Key': adminKey };
     return await makeModularRequest('admin/validation-status', 'GET', {}, null, headers);
   }
+  // ============= ENHANCED ADMIN ENDPOINTS =============
+  
+  async getFilteredArticles(params: {
+    page?: number;
+    page_size?: number;
+    category_id?: number;
+    publisher_id?: number;
+    llm_model?: string;
+    start_date?: string;
+    end_date?: string;
+    search_query?: string;
+  }, adminApiKey: string) {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+    
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      `admin/articles/filtered?${queryParams.toString()}`,
+      'GET',
+      {},
+      null,
+      headers
+    );
+  }
 
+  async deleteArticle(articleId: number, adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      `admin/articles/${articleId}`,
+      'DELETE',
+      {},
+      null,
+      headers
+    );
+  }
+
+  async bulkDeleteArticles(articleIds: number[], adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      'admin/articles/bulk-delete',
+      'POST',
+      {},
+      { article_ids: articleIds },
+      headers
+    );
+  }
+
+  async getSourcesByType(contentType: string, adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      `admin/sources/by-type?content_type=${contentType}`,
+      'GET',
+      {},
+      null,
+      headers
+    );
+  }
+
+  async bulkUpdateSources(updates: Array<{
+    id: number;
+    is_active?: boolean;
+    scraping_frequency_hours?: number;
+    llm_model?: string;
+    priority?: number;
+  }>, adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      'admin/sources/bulk-update',
+      'POST',
+      {},
+      { updates },
+      headers
+    );
+  }
+
+  async bulkDeleteSources(sourceIds: number[], contentType: string, adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      'admin/sources/bulk-delete',
+      'POST',
+      {},
+      { source_ids: sourceIds, content_type: contentType },
+      headers
+    );
+  }
+
+  async getAllCategories(adminApiKey: string) {
+    console.log('🔵 [APIService] getAllCategories() START', { hasAdminApiKey: !!adminApiKey });
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    try {
+      const result = await makeModularRequest(
+        'admin/categories/all',
+        'GET',
+        {},
+        null,
+        headers
+      );
+      console.log('🟢 [APIService] getAllCategories() SUCCESS', {
+        categoriesCount: result?.categories?.length || 0,
+        result
+      });
+      return result;
+    } catch (error) {
+      console.error('🔴 [APIService] getAllCategories() ERROR', error);
+      throw error;
+    }
+  }
+
+  async getActiveScrapingJobs(adminApiKey: string) {
+    console.log('🔵 [APIService] getActiveScrapingJobs() START', { hasAdminApiKey: !!adminApiKey });
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    try {
+      const result = await makeModularRequest(
+        'admin/scraping/active-jobs',
+        'GET',
+        {},
+        null,
+        headers
+      );
+      console.log('🟢 [APIService] getActiveScrapingJobs() SUCCESS', {
+        activeJobsCount: result?.active_jobs?.length || 0,
+        result
+      });
+      return result;
+    } catch (error) {
+      console.error('🔴 [APIService] getActiveScrapingJobs() ERROR', error);
+      throw error;
+    }
+  }
+
+  async searchTavily(params: {
+    query: string;
+    max_results?: number;
+    enrich_with_llm?: boolean;
+    llm_model?: string;
+  }, adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    
+    // Build query string manually since FastAPI expects Query parameters
+    const queryString = new URLSearchParams({
+      query: params.query,
+      max_results: String(params.max_results || 10),
+      enrich_with_llm: String(params.enrich_with_llm || false),
+      llm_model: params.llm_model || 'gemini'
+    }).toString();
+    
+    // POST with empty body but query params in URL
+    return await makeModularRequest(
+      `admin/tavily/search?${queryString}`,
+      'POST',
+      {},  // Empty params
+      {},  // Empty body
+      headers
+    );
+  }
+
+  async getTavilySearchHistory(page: number = 1, pageSize: number = 20, adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      `admin/tavily/searches?page=${page}&page_size=${pageSize}`,
+      'GET',
+      {},
+      null,
+      headers
+    );
+  }
   // ===============================
   // TESTING & DEBUG
   // ===============================
@@ -875,7 +1044,7 @@ export class ApiService {
     requireAuth: boolean = false,
     customHeaders: any = {}
   ) {
-    let headers: any = {};
+    let headers: any = { ...customHeaders };
     
     if (requireAuth) {
       const token = localStorage.getItem('authToken');
@@ -884,8 +1053,6 @@ export class ApiService {
       }
       headers['Authorization'] = `Bearer ${token}`;
     }
-    
-    headers = { ...headers, ...customHeaders };
     
     return await makeModularRequest(endpoint, method, params, null, headers);
   }

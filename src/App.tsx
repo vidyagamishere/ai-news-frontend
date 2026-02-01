@@ -17,7 +17,6 @@ import OTPVerification from './pages/OTPVerification';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import About from './pages/About';
-import Admin from './pages/Admin';
 import AdminLogin from './pages/AdminLogin';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import Loading from './components/Loading';
@@ -29,6 +28,12 @@ import './pages/about.css';
 import NewDashboard from './newcomponents/Dashboard';
 import AuthLayout from './layouts/AuthLayout';
 import ResponsivePublicLayout from './layouts/ResponsiveLayout';
+import { AdminLayout } from './admin/layouts/AdminLayout';
+import { AdminDashboard } from './admin/pages/AdminDashboard';
+import { SourcesManager } from './admin/pages/SourcesManager';
+import { ArticleModeration } from './admin/pages/ArticleModeration';
+import { TavilySearchPanel } from './admin/pages/TavilySearchPanel';
+import { ScrapingControls } from './admin/pages/ScrapingControls';
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -150,7 +155,19 @@ function AppContent() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/about" element={<About />} />
+
         <Route path="/admin/login" element={<AdminLogin />} />
+        
+        <Route path="/admin" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="sources/rss" element={<SourcesManager />} />
+          <Route path="sources/podcasts" element={<SourcesManager />} />
+          <Route path="sources/videos" element={<SourcesManager />} />
+          <Route path="articles" element={<ArticleModeration />} />
+          <Route path="tavily" element={<TavilySearchPanel />} />
+          <Route path="scraping" element={<ScrapingControls />} />
+        </Route>
       </Route>
 
       {/* Authenticated Routes - With Header/SideNav/Footer */}
@@ -160,9 +177,6 @@ function AppContent() {
         <Route path="/archive" element={<ProtectedRoute><Archive /></ProtectedRoute>} />
         <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
       </Route>
-
-      {/* Admin Route - Separate from layouts */}
-      <Route path="/admin" element={<ProtectedAdminRoute><Admin /></ProtectedAdminRoute>} />
 
       {/* Catch-all redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
