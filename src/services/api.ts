@@ -1,8 +1,8 @@
 // UPDATED API service - Modular FastAPI Architecture Integration  
 // All API calls now go to direct FastAPI endpoints with modular routing
 import axios from 'axios';
-import DebugLogger from '../utils/debug';
 import type { Article } from '../types/article';
+import DebugLogger from '../utils/debug';
 import { supabaseImageService } from './supabaseImageService';
 type SharePlatform = 'copy_link' | 'email' | 'facebook' | 'twitter' | 'linkedin' | 'whatsapp';
 
@@ -49,19 +49,19 @@ const cacheTimeout = 10000; // 10 seconds cache for better deduplication
 
 // Direct modular endpoint request function - calls FastAPI endpoints directly
 async function makeModularRequest(
-  endpoint: string, 
-  method: string = 'GET', 
-  params: any = {}, 
+  endpoint: string,
+  method: string = 'GET',
+  params: any = {},
   data: any = null,
   headers: any = {},
   useContentApi: boolean = false
 ) {
   debug.enter('makeModularRequest', { endpoint, method, params, hasData: !!data, headers: Object.keys(headers) });
   const startTime = Date.now();
-  
+
   // Create cache key for GET requests only (POST requests should not be cached)
   const cacheKey = method === 'GET' ? `${method}:${endpoint}:${JSON.stringify(params)}:${JSON.stringify(headers)}` : null;
-  
+
   if (cacheKey) {
     // Check if request is in cache and still valid
     const cached = requestCache.get(cacheKey);
@@ -70,13 +70,13 @@ async function makeModularRequest(
       return cached.promise;
     }
   }
-  
+
   try {
     const apiInstance = useContentApi ? contentApi : api;
-    
+
     debug.step('makeModularRequest', 'sending_request', { endpoint, method });
     console.log(`📡 Modular Request: ${method} /${endpoint}`);
-    
+
     // Build request configuration
     const config: any = {
       method: method.toLowerCase(),
@@ -86,55 +86,55 @@ async function makeModularRequest(
         'Content-Type': 'application/json'
       }
     };
-    
-    // Add query parameters for GET requests
-    if (method === 'GET' && Object.keys(params).length > 0) {
+
+    // Add query parameters for GET and DELETE requests
+    if ((method === 'GET' || method === 'DELETE') && Object.keys(params).length > 0) {
       config.params = params;
     }
-    
+
     // Add request body for POST/PUT requests
     if ((method === 'POST' || method === 'PUT') && (data || Object.keys(params).length > 0)) {
       config.data = data || params;
     }
-    
+
     const response = await apiInstance.request(config);
-    
-    debug.step('makeModularRequest', 'received_response', { 
-      endpoint, 
-      status: response.status, 
-      hasData: !!response.data 
-    });
-    
-    console.log(`✅ Modular Response: /${endpoint} - ${response.status}`);
-    
-    const executionTime = Date.now() - startTime;
-    debug.exit('makeModularRequest', { 
-      status: response.status, 
+
+    debug.step('makeModularRequest', 'received_response', {
       endpoint,
-      dataType: typeof response.data 
+      status: response.status,
+      hasData: !!response.data
+    });
+
+    console.log(`✅ Modular Response: /${endpoint} - ${response.status}`);
+
+    const executionTime = Date.now() - startTime;
+    debug.exit('makeModularRequest', {
+      status: response.status,
+      endpoint,
+      dataType: typeof response.data
     }, executionTime);
-    
+
     return response.data;
   } catch (error: any) {
     const executionTime = Date.now() - startTime;
     debug.error('makeModularRequest', error, executionTime);
-    
+
     console.error(`❌ Modular request failed for /${endpoint}:`, error);
-    
+
     // Handle authentication errors
     if (error.response?.status === 401) {
       throw new Error('Authentication required');
     }
-    
+
     // Handle not found errors
     if (error.response?.status === 404) {
       throw new Error(`Endpoint /${endpoint} not found`);
     }
-    
+
     // Return detailed error info with all backend error data preserved
     const errorData = error.response?.data || {};
     const errorMessage = errorData.detail || errorData.message || error.message;
-    
+
     // Create enhanced error with all backend data preserved
     const enhancedError = new Error(errorMessage);
     (enhancedError as any).error_code = errorData.error_code;
@@ -142,7 +142,7 @@ async function makeModularRequest(
     (enhancedError as any).redirect_to_signin = errorData.redirect_to_signin;
     (enhancedError as any).redirect_to_signup = errorData.redirect_to_signup;
     (enhancedError as any).detailed_instructions = errorData.detailed_instructions;
-    
+
     throw enhancedError;
   }
 }
@@ -150,12 +150,12 @@ async function makeModularRequest(
 // Helper function to assign random Supabase images to articles by category
 const mapArticleImages = async (article: any): Promise<any> => {
   if (!article) return article;
-  
+
   // Use category_label from backend (ai_categories_master.category_label) if available
   // This directly matches Supabase folder names (e.g., "generative_ai", "ai_startups")
   // Otherwise fallback to category name conversion
   const categoryLabel = article.category_label || article.category || article.category_name || article.topic_category || 'General';
-  
+
   // Fetch random image from Supabase for this category
   let supabaseImage: string | null = null;
   if (supabaseImageService.isEnabled()) {
@@ -163,10 +163,10 @@ const mapArticleImages = async (article: any): Promise<any> => {
   } else {
     console.warn('⚠️ Supabase service is disabled');
   }
-  
+
   // Use Supabase image if available, otherwise use placeholder
   const finalImage = supabaseImage || article.image || '/placeholder-article.jpg';
-  
+
   return {
     ...article,
     image: finalImage,  // Primary field with Supabase image
@@ -192,7 +192,7 @@ const mapArticleImagesAsync = async (articles: any[]): Promise<any[]> => {
   if (!supabaseImageService.isEnabled()) {
     return mapArticleImagesSync(articles);
   }
-  
+
   // Map all articles with images in parallel
   return Promise.all(articles.map(article => mapArticleImages(article)));
 };
@@ -206,10 +206,10 @@ const DAILY_CACHE_KEY = 'daily_cache_timestamp';
 const shouldClearDailyCache = (): boolean => {
   const lastClear = localStorage.getItem(DAILY_CACHE_KEY);
   if (!lastClear) return true;
-  
+
   const timeSinceLastClear = Date.now() - parseInt(lastClear);
   const oneDayMs = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-  
+
   return timeSinceLastClear > oneDayMs;
 };
 
@@ -411,10 +411,10 @@ export class ApiService {
     if (shouldClearDailyCache()) {
       clearDailyCache();
     }
-    
+
     const params = refresh ? { refresh: '1' } : {};
     const cacheKey = getCacheKey('digest', params);
-    
+
     if (!refresh) {
       const cached = getCachedData(cacheKey);
       if (cached) {
@@ -422,10 +422,10 @@ export class ApiService {
         return cached;
       }
     }
-    
+
     console.log('📡 Fetching digest via modular endpoint...');
     const data = await makeModularRequest('digest', 'GET', params, null, {}, true);
-    
+
     // Map Supabase images for all articles in the digest
     if (data.topStories) {
       data.topStories = await mapArticleImagesAsync(data.topStories);
@@ -437,7 +437,7 @@ export class ApiService {
         }
       }
     }
-    
+
     setCachedData(cacheKey, data);
     return data;
   }
@@ -472,12 +472,12 @@ export class ApiService {
   }> {
     console.log('🚨 Fetching breaking news alerts for landing page...');
     const data = await makeModularRequest('breaking-news', 'GET', { limit });
-    
+
     // Map Supabase images for articles
     if (data.articles && Array.isArray(data.articles)) {
       data.articles = await mapArticleImagesAsync(data.articles);
     }
-    
+
     return data;
   }
 
@@ -497,12 +497,12 @@ export class ApiService {
   }> {
     console.log('🤖 Fetching Generative AI stories for landing page...');
     const data = await makeModularRequest('generative-ai-content', 'GET', { limit });
-    
+
     // Map Supabase images for articles
     if (data.articles && Array.isArray(data.articles)) {
       data.articles = await mapArticleImagesAsync(data.articles);
     }
-    
+
     return data;
   }
 
@@ -522,12 +522,12 @@ export class ApiService {
   }> {
     console.log('🏢 Fetching AI Applications stories for landing page...');
     const data = await makeModularRequest('ai-applications-content', 'GET', { limit });
-    
+
     // Map Supabase images for articles
     if (data.articles && Array.isArray(data.articles)) {
       data.articles = await mapArticleImagesAsync(data.articles);
     }
-    
+
     return data;
   }
 
@@ -547,12 +547,12 @@ export class ApiService {
   }> {
     console.log('🚀 Fetching AI Startups stories for landing page...');
     const data = await makeModularRequest('ai-startups-content', 'GET', { limit });
-    
+
     // Map Supabase images for articles
     if (data.articles && Array.isArray(data.articles)) {
       data.articles = await mapArticleImagesAsync(data.articles);
     }
-    
+
     return data;
   }
 
@@ -606,7 +606,7 @@ export class ApiService {
     if (contentTypeId !== undefined) params.content_type_id = contentTypeId;
     console.log('📤 API Request params:', params);
     const data = await makeModularRequest('landing-content', 'GET', params);
-    
+
     // Map Supabase images for all content in all categories
     if (data.categories && Array.isArray(data.categories)) {
       for (const category of data.categories) {
@@ -621,7 +621,7 @@ export class ApiService {
         }
       }
     }
-    
+
     return data;
   }
 
@@ -655,16 +655,16 @@ export class ApiService {
     };
   }> {
     console.log('🔍 Searching content - Query:', query, 'Category ID:', categoryId, 'Days:', daysFilter);
-    const params: any = { 
-      query, 
+    const params: any = {
+      query,
       days_filter: daysFilter,
-      limit_per_type: limitPerType 
+      limit_per_type: limitPerType
     };
     if (categoryId !== undefined) params.category_id = categoryId;
-    
+
     console.log('📤 Search API Request params:', params);
     const data = await makeModularRequest('search-content', 'GET', params);
-    
+
     // Map Supabase images for all search results
     if (data.results?.blogs) {
       data.results.blogs = await mapArticleImagesAsync(data.results.blogs);
@@ -675,7 +675,7 @@ export class ApiService {
     if (data.results?.videos) {
       data.results.videos = await mapArticleImagesAsync(data.results.videos);
     }
-    
+
     console.log('✅ Search complete - Total results:', data.counts.total);
     return data;
   }
@@ -685,17 +685,17 @@ export class ApiService {
     if (!token) {
       throw new Error('Authentication required for personalized content');
     }
-    
+
     if (shouldClearDailyCache()) {
       clearDailyCache();
     }
-    
+
     const params = refresh ? { refresh: '1' } : {};
     const headers = {
       'Authorization': `Bearer ${token}`
     };
     const cacheKey = getCacheKey('personalized-digest', params);
-    
+
     if (!refresh) {
       const cached = getCachedData(cacheKey);
       if (cached) {
@@ -703,10 +703,10 @@ export class ApiService {
         return cached;
       }
     }
-    
+
     console.log('📡 Fetching personalized digest via modular endpoint...');
     const data = await makeModularRequest('digest', 'GET', params, null, headers, true);
-    
+
     // Map Supabase images for all articles in the personalized digest
     if (data.topStories) {
       data.topStories = await mapArticleImagesAsync(data.topStories);
@@ -718,7 +718,7 @@ export class ApiService {
         }
       }
     }
-    
+
     setCachedData(cacheKey, data);
     return data;
   }
@@ -751,12 +751,12 @@ export class ApiService {
   async getContentByType(contentType: string, refresh?: boolean): Promise<any> {
     const params = refresh ? { refresh: 'true', content_type: contentType } : { content_type: contentType };
     const data = await makeModularRequest(`content/${contentType}`, 'GET', params, null, {}, true);
-    
+
     // Map Supabase images if response contains articles array
     if (data.articles && Array.isArray(data.articles)) {
       data.articles = await mapArticleImagesAsync(data.articles);
     }
-    
+
     return data;
   }
 
@@ -765,7 +765,7 @@ export class ApiService {
     if (!token) {
       throw new Error('Authentication required for user preferences');
     }
-    
+
     const headers = {
       'Authorization': `Bearer ${token}`
     };
@@ -778,11 +778,11 @@ export class ApiService {
 
   async authenticateWithGoogle(idToken: string): Promise<AuthResponse> {
     console.log('🔐 Authenticating with Google via modular endpoint...');
-    
+
     const data = {
       credential: idToken
     };
-    
+
     return await makeModularRequest('api/v2/auth/google', 'POST', {}, data);
   }
 
@@ -791,11 +791,11 @@ export class ApiService {
     if (!token) {
       return { valid: false, error: 'no_token' };
     }
-    
+
     const headers = {
       'Authorization': `Bearer ${token}`
     };
-    
+
     try {
       const result = await makeModularRequest('auth/profile', 'GET', {}, null, headers);
       return { valid: true, user: result };
@@ -808,7 +808,7 @@ export class ApiService {
   async logout(): Promise<{ success: boolean; message: string }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     try {
       const result = await makeModularRequest('api/v2/auth/logout', 'POST', {}, {}, headers);
       localStorage.removeItem('authToken');
@@ -860,7 +860,7 @@ export class ApiService {
     return await makeModularRequest('admin/validation-status', 'GET', {}, null, headers);
   }
   // ============= ENHANCED ADMIN ENDPOINTS =============
-  
+
   async getFilteredArticles(params: {
     page?: number;
     page_size?: number;
@@ -877,7 +877,7 @@ export class ApiService {
         queryParams.append(key, String(value));
       }
     });
-    
+
     const headers = { 'X-Admin-API-Key': adminApiKey };
     return await makeModularRequest(
       `admin/articles/filtered?${queryParams.toString()}`,
@@ -1000,7 +1000,7 @@ export class ApiService {
     llm_model?: string;
   }, adminApiKey: string) {
     const headers = { 'X-Admin-API-Key': adminApiKey };
-    
+
     // Build query string manually since FastAPI expects Query parameters
     const queryString = new URLSearchParams({
       query: params.query,
@@ -1008,7 +1008,7 @@ export class ApiService {
       enrich_with_llm: String(params.enrich_with_llm || false),
       llm_model: params.llm_model || 'gemini'
     }).toString();
-    
+
     // POST with empty body but query params in URL
     return await makeModularRequest(
       `admin/tavily/search?${queryString}`,
@@ -1038,14 +1038,14 @@ export class ApiService {
   }
 
   async callEndpoint(
-    endpoint: string, 
-    method: string = 'GET', 
-    params: any = {}, 
+    endpoint: string,
+    method: string = 'GET',
+    params: any = {},
     requireAuth: boolean = false,
     customHeaders: any = {}
   ) {
     let headers: any = { ...customHeaders };
-    
+
     if (requireAuth) {
       const token = localStorage.getItem('authToken');
       if (!token) {
@@ -1053,7 +1053,7 @@ export class ApiService {
       }
       headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
     return await makeModularRequest(endpoint, method, params, null, headers);
   }
 
@@ -1085,7 +1085,7 @@ export class ApiService {
       search_query: filterRequest.search_query || '',
       limit: filterRequest.limit || 50
     }, headers, true);
-    
+
     // Map Supabase images for articles in grouped content
     if (data.grouped_content && Array.isArray(data.grouped_content)) {
       for (const group of data.grouped_content) {
@@ -1094,7 +1094,7 @@ export class ApiService {
         }
       }
     }
-    
+
     return data;
   }
 
@@ -1104,7 +1104,7 @@ export class ApiService {
     return await makeModularRequest('ai-topics', 'GET', {}, null, headers);
   }
 
-  async getAvailablePublishers(): Promise<{ publishers: Array<{id: number; name: string; category_id?: number; priority?: number}>; count: number }> {
+  async getAvailablePublishers(): Promise<{ publishers: Array<{ id: number; name: string; category_id?: number; priority?: number }>; count: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
@@ -1115,7 +1115,7 @@ export class ApiService {
     }
   }
 
-  async getAvailableContentTypes(): Promise<{ content_types: Array<{id: number; name: string; display_name: string; description?: string}>; count: number }> {
+  async getAvailableContentTypes(): Promise<{ content_types: Array<{ id: number; name: string; display_name: string; description?: string }>; count: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
@@ -1126,20 +1126,20 @@ export class ApiService {
     }
   }
 
-  async getAvailableCategories(): Promise<{ categories: Array<{id: number; name: string; description?: string; priority?: number; count?: number}>; count: number }> {
+  async getAvailableCategories(): Promise<{ categories: Array<{ id: number; name: string; description?: string; priority?: number; count?: number }>; count: number }> {
     console.log('📂 Fetching available categories...');
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
       const response = await makeModularRequest('api/v1/available-categories', 'GET', {}, null, headers);
       console.log('✅ Categories fetched successfully:', response);
-      
+
       // Ensure response has expected structure
       if (!response.categories || !Array.isArray(response.categories)) {
         console.warn('⚠️ Invalid categories response structure:', response);
         return { categories: [], count: 0 };
       }
-      
+
       return {
         categories: response.categories,
         count: response.count || response.categories.length
@@ -1150,7 +1150,7 @@ export class ApiService {
     }
   }
 
-  async getPublishersByCategory(categoryId?: number): Promise<{ publishers: Array<{id: number; name: string; category_id?: number; priority?: number}>; count: number }> {
+  async getPublishersByCategory(categoryId?: number): Promise<{ publishers: Array<{ id: number; name: string; category_id?: number; priority?: number }>; count: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
@@ -1167,17 +1167,17 @@ export class ApiService {
     if (!token) {
       throw new Error('Authentication required for updating preferences');
     }
-    
+
     const headers = {
       'Authorization': `Bearer ${token}`
     };
-    
+
     return await makeModularRequest('api/v2/auth/preferences', 'PUT', {}, preferences, headers);
   }
 
   async getContentCounts(categoryId: string = 'all', timeFilter: string = 'all'): Promise<any> {
     debug.enter('getContentCounts', { categoryId, timeFilter });
-    
+
     const params: any = {};
     if (categoryId && categoryId !== 'all') {
       params.category_id = categoryId;
@@ -1185,13 +1185,13 @@ export class ApiService {
     if (timeFilter) {
       params.time_filter = timeFilter;
     }
-    
+
     try {
       const response = await makeModularRequest('content-counts', 'GET', params, null, {}, true);
-      debug.exit('getContentCounts', { 
-        totalArticles: response.total_blogs || 0, 
-        totalPodcasts: response.total_podcasts || 0, 
-        totalVideos: response.total_videos || 0 
+      debug.exit('getContentCounts', {
+        totalArticles: response.total_blogs || 0,
+        totalPodcasts: response.total_podcasts || 0,
+        totalVideos: response.total_videos || 0
       });
       return response;
     } catch (error) {
@@ -1212,15 +1212,15 @@ export class ApiService {
   async getBookmarks(): Promise<{ articles: Article[] }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     try {
-      const response = await makeModularRequest('bookmarks', 'GET', {}, null, headers);
-      
+      const response = await makeModularRequest('api/v1/interactions/bookmarks', 'GET', {}, null, headers);
+
       // Map Supabase images for bookmarked articles
       if (response.articles && Array.isArray(response.articles)) {
         response.articles = await mapArticleImagesAsync(response.articles);
       }
-      
+
       return response;
     } catch (error) {
       console.error('Failed to fetch bookmarks:', error);
@@ -1231,7 +1231,7 @@ export class ApiService {
   async bookmarkArticle(articleId: string): Promise<void> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     try {
       await makeModularRequest(`bookmarks/${articleId}`, 'POST', {}, null, headers);
     } catch (error) {
@@ -1243,7 +1243,7 @@ export class ApiService {
   async removeBookmark(articleId: string): Promise<void> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     try {
       await makeModularRequest(`bookmarks/${articleId}`, 'DELETE', {}, null, headers);
     } catch (error) {
@@ -1261,22 +1261,22 @@ export class ApiService {
       'share': ActionTypeId.SHARE,
       'comment': ActionTypeId.COMMENT,
     };
-    
+
     const actionTypeId = typeMap[interactionType.toLowerCase()];
     if (!actionTypeId) {
       console.warn(`Unknown interaction type: ${interactionType}`);
       return;
     }
-    
+
     await this.createInteraction({
       article_id: articleId,
       action_type_id: actionTypeId
     });
   }
 
-// ✅ UPDATED: Create interaction method
-  async createInteraction(data: { 
-    article_id: number | string; 
+  // ✅ UPDATED: Create interaction method
+  async createInteraction(data: {
+    article_id: number | string;
     action_type_id: number;  // Changed from interaction_type string
     metadata?: any;
   }): Promise<void> {
@@ -1290,10 +1290,10 @@ export class ApiService {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     await makeModularRequest(
-      'api/v1/interactions/article', 
-      'DELETE', 
+      'api/v1/interactions/article',
+      'DELETE',
       { article_id: articleId, action_type_id: actionTypeId },  // Changed param name
-      null, 
+      null,
       headers
     );
   }
@@ -1304,7 +1304,7 @@ export class ApiService {
     if (!token) {
       throw new Error('Authentication required');
     }
-    
+
     await makeModularRequest(
       'api/v1/interactions/share/track',
       'POST',
@@ -1326,15 +1326,15 @@ export class ApiService {
   }): Promise<{ articles: Article[]; has_more: boolean; total: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     try {
       const response = await makeModularRequest('feed/swipeable', 'GET', params, null, headers, true);
-      
+
       // Map Supabase images for articles
       if (response.articles && Array.isArray(response.articles)) {
         response.articles = await mapArticleImagesAsync(response.articles);
       }
-      
+
       return response;
     } catch (error) {
       console.error('Failed to fetch swipeable feed:', error);
@@ -1352,20 +1352,20 @@ export class ApiService {
     page_size?: number;  // ✅ ADD THIS
     sort_by?: string;  // ✅ ADD THIS
     sort_order?: string;  // ✅ ADD THIS
-  }): Promise<{ 
+  }): Promise<{
     success?: boolean;  // ✅ ADD THIS
-    articles: Article[]; 
+    articles: Article[];
     items?: Article[];  // ✅ ADD THIS
     meta?: any;  // ✅ ADD THIS
-    has_more: boolean; 
+    has_more: boolean;
     total: number;
   }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     try {
       const response = await makeModularRequest('content/paginated', 'GET', params, null, headers, true);
-      
+
       // Map Supabase images for articles
       if (response.articles && Array.isArray(response.articles)) {
         response.articles = await mapArticleImagesAsync(response.articles);
@@ -1373,7 +1373,7 @@ export class ApiService {
       if (response.items && Array.isArray(response.items)) {
         response.items = await mapArticleImagesAsync(response.items);
       }
-      
+
       return response;
     } catch (error) {
       console.error('Failed to fetch paginated content:', error);
@@ -1427,6 +1427,25 @@ export class ApiService {
     });
   }
 
+  // Reading stats
+  async getUserReadingStats(): Promise<{
+    total_articles_read: number;
+    total_minutes_read: number;
+    avg_articles_per_active_day: number;
+    active_days_last_30: number;
+    daily_stats: Array<{ date: string; day_label: string; articles_read: number; minutes_read: number }>;
+    weekly_stats: Array<{ week_start: string; week_label: string; articles_read: number; minutes_read: number }>;
+  }> {
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await api.get('/api/v1/interactions/user/reading-stats', { headers });
+      return response.data;
+    } catch {
+      return { total_articles_read: 0, total_minutes_read: 0, avg_articles_per_active_day: 0, active_days_last_30: 0, daily_stats: [], weekly_stats: [] };
+    }
+  }
+
   // User stats method
   async getUserStats(): Promise<UserStats> {
     try {
@@ -1435,7 +1454,25 @@ export class ApiService {
       const response = await api.get('/api/v1/interactions/user/stats', {
         headers
       });
-      return response.data;
+      const d = response.data;
+      // Backend returns nested { points: {...}, streak: {...}, actions_breakdown: [...] }
+      // Normalize to flat UserStats shape
+      const points = d.points || {};
+      const totalPoints = points.total_points ?? d.total_points ?? 0;
+      const level = points.level ?? d.current_level ?? 1;
+      const nextThreshold = points.next_level_threshold ?? d.points_to_next_level ?? 100;
+      return {
+        total_points: totalPoints,
+        current_level: level,
+        level_name: d.level_name ?? `Level ${level}`,
+        points_to_next_level: nextThreshold,
+        actions_breakdown: (d.actions_breakdown || []).map((a: any) => ({
+          action_type: a.action_type,
+          count: a.count ?? 0,
+          points: a.total_points ?? a.points ?? 0,
+        })),
+        recent_activities: d.recent_activities || [],
+      };
     } catch (error) {
       console.error('Failed to fetch user stats:', error);
       return {
@@ -1448,7 +1485,7 @@ export class ApiService {
       };
     }
   }
-  
+
 
 }
 
