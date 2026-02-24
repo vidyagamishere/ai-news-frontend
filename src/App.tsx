@@ -34,6 +34,8 @@ import { SourcesManager } from './admin/pages/SourcesManager';
 import { ArticleModeration } from './admin/pages/ArticleModeration';
 import { TavilySearchPanel } from './admin/pages/TavilySearchPanel';
 import { ScrapingControls } from './admin/pages/ScrapingControls';
+import { NewsletterPanel } from './admin/pages/NewsletterPanel';
+
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -167,6 +169,7 @@ function AppContent() {
           <Route path="articles" element={<ArticleModeration />} />
           <Route path="tavily" element={<TavilySearchPanel />} />
           <Route path="scraping" element={<ScrapingControls />} />
+          <Route path="newsletter" element={<NewsletterPanel />} />
         </Route>
       </Route>
 

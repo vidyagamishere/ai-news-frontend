@@ -28,6 +28,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Psychology, EmojiEvents } from '@mui/icons-material';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import SocialIcons from './SocialIcons';
 
 interface SideNavProps {
     selectedTab?: string;
@@ -301,6 +302,23 @@ const SideNav: React.FC<SideNavProps> = ({
                     </>
                 )}
             </List>
+
+            {/* Social Media Links */}
+            <Box sx={{ px: 2, py: 1.5, borderTop: 1, borderColor: 'divider' }}>
+                <Typography
+                    variant="caption"
+                    sx={{
+                        mb: 1,
+                        color: 'text.secondary',
+                        fontWeight: 600,
+                        display: 'block',
+                        textAlign: 'center',
+                    }}
+                >
+                    FOLLOW US
+                </Typography>
+                <SocialIcons size="small" iconSize={16} spacing={0.25} />
+            </Box>
 
             {/* Points Widget - Show at bottom for authenticated users */}
             {isAuthenticated && user && (

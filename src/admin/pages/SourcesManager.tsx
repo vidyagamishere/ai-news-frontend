@@ -219,10 +219,10 @@ export const SourcesManager: React.FC = () => {
       field: 'scraping_frequency_hours', 
       headerName: 'Frequency (hrs)', 
       width: 130,
-      valueGetter: (params) => {
+      valueGetter: (value: any, row: any) => {
         // Handle both hours and days
-        const hours = params.row.scraping_frequency_hours;
-        const days = params.row.scrape_frequency_days;
+        const hours = row.scraping_frequency_hours;
+        const days = row.scrape_frequency_days;
         return hours || (days ? days * 24 : 24);
       }
     },

@@ -64,6 +64,10 @@ interface SettingsFullScreenProps {
 		categories_selected: number[];
 		content_types_selected: number[];
 		publishers_selected: number[];
+		newsletter_subscribed?: boolean;
+        newsletter_frequency?: string;
+        email_notifications?: boolean;
+        breaking_news_alerts?: boolean;
 	};
 	setUserPreferences: React.Dispatch<React.SetStateAction<any>>;
 	availableCategories: any[];
@@ -568,17 +572,6 @@ const SettingsFullScreen: React.FC<SettingsFullScreenProps> = ({
 											>
 												{category.name}
 											</div>
-											{category.description && (
-												<div
-													style={{
-														fontSize: '11px',
-														color: '#6b7280',
-														marginTop: '2px',
-													}}
-												>
-													{category.description}
-												</div>
-											)}
 										</div>
 									</label>
 								))}
@@ -998,6 +991,276 @@ const SettingsFullScreen: React.FC<SettingsFullScreenProps> = ({
 								);
 							})()}
 						</div>
+					{/* Email & Newsletter Preferences */}
+                        <div style={{ marginBottom: '48px' }}>
+                            <h3
+                                style={{
+                                    fontSize: '16px',
+                                    fontWeight: '600',
+                                    color: '#111827',
+                                    marginBottom: '8px',
+                                }}
+                            >
+                                📧 Email & Newsletter Preferences
+                            </h3>
+                            <p
+                                style={{
+                                    fontSize: '12px',
+                                    color: '#6b7280',
+                                    marginBottom: '16px',
+                                }}
+                            >
+                                Stay informed with curated AI news delivered to your inbox
+                            </p>
+
+                            {/* Newsletter Subscribe Toggle */}
+                            <div
+                                style={{
+                                    padding: '20px',
+                                    border: `2px solid ${userPreferences.newsletter_subscribed !== false ? '#3b82f6' : '#e5e7eb'}`,
+                                    borderRadius: '12px',
+                                    backgroundColor: userPreferences.newsletter_subscribed !== false ? '#eff6ff' : '#ffffff',
+                                    marginBottom: '16px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                }}
+                                onClick={() => {
+                                    setUserPreferences((prev: any) => ({
+                                        ...prev,
+                                        newsletter_subscribed: !(prev.newsletter_subscribed !== false),
+                                    }));
+                                    setSettingsChanged(true);
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ fontSize: '20px' }}>📬</span>
+                                        <div>
+                                            <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>
+                                                Subscribe to Newsletter
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                                                Receive curated AI news digests with top stories and breaking news
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div
+                                        style={{
+                                            width: '44px',
+                                            height: '24px',
+                                            borderRadius: '12px',
+                                            backgroundColor: userPreferences.newsletter_subscribed !== false ? '#3b82f6' : '#d1d5db',
+                                            position: 'relative',
+                                            transition: 'background-color 0.2s',
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                width: '20px',
+                                                height: '20px',
+                                                borderRadius: '50%',
+                                                backgroundColor: '#ffffff',
+                                                position: 'absolute',
+                                                top: '2px',
+                                                left: userPreferences.newsletter_subscribed !== false ? '22px' : '2px',
+                                                transition: 'left 0.2s',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Frequency Selection - only show if subscribed */}
+                            {userPreferences.newsletter_subscribed !== false && (
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '10px' }}>
+                                        Newsletter Frequency
+                                    </div>
+                                    <div
+                                        style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                                            gap: '10px',
+                                        }}
+                                    >
+                                        {[
+                                            { id: 'daily', name: 'Daily Digest', description: 'Every morning', icon: '📰' },
+                                            { id: 'weekly', name: 'Weekly Roundup', description: 'Every Monday', icon: '📊' },
+                                            { id: 'monthly', name: 'Monthly Summary', description: 'First of month', icon: '📅' },
+                                        ].map((freq) => (
+                                            <button
+                                                key={freq.id}
+                                                onClick={() => {
+                                                    setUserPreferences((prev: any) => ({
+                                                        ...prev,
+                                                        newsletter_frequency: freq.id,
+                                                    }));
+                                                    setSettingsChanged(true);
+                                                }}
+                                                style={{
+                                                    padding: '14px',
+                                                    border:
+                                                        (userPreferences.newsletter_frequency || 'weekly') === freq.id
+                                                            ? '2px solid #3b82f6'
+                                                            : '1px solid #e5e7eb',
+                                                    borderRadius: '10px',
+                                                    backgroundColor:
+                                                        (userPreferences.newsletter_frequency || 'weekly') === freq.id
+                                                            ? '#eff6ff'
+                                                            : '#ffffff',
+                                                    cursor: 'pointer',
+                                                    textAlign: 'left' as const,
+                                                    transition: 'all 0.2s',
+                                                    position: 'relative' as const,
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if ((userPreferences.newsletter_frequency || 'weekly') !== freq.id) {
+                                                        e.currentTarget.style.borderColor = '#9ca3af';
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if ((userPreferences.newsletter_frequency || 'weekly') !== freq.id) {
+                                                        e.currentTarget.style.borderColor = '#e5e7eb';
+                                                    }
+                                                }}
+                                            >
+                                                {(userPreferences.newsletter_frequency || 'weekly') === freq.id && (
+                                                    <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
+                                                        <svg style={{ width: '16px', height: '16px', color: '#3b82f6' }} fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+                                                <div style={{ fontSize: '18px', marginBottom: '6px' }}>{freq.icon}</div>
+                                                <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{freq.name}</div>
+                                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>{freq.description}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Additional Email Preferences */}
+                            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '12px' }}>
+                                {/* Email Notifications Toggle */}
+                                <div
+                                    style={{
+                                        padding: '16px',
+                                        border: `1px solid ${userPreferences.email_notifications !== false ? '#d1d5db' : '#e5e7eb'}`,
+                                        borderRadius: '10px',
+                                        backgroundColor: '#ffffff',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                    }}
+                                    onClick={() => {
+                                        setUserPreferences((prev: any) => ({
+                                            ...prev,
+                                            email_notifications: !(prev.email_notifications !== false),
+                                        }));
+                                        setSettingsChanged(true);
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <span style={{ fontSize: '18px' }}>🔔</span>
+                                            <div>
+                                                <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                                                    Email Notifications
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                                                    Get notified about comments, follows, and interactions
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            style={{
+                                                width: '40px',
+                                                height: '22px',
+                                                borderRadius: '11px',
+                                                backgroundColor: userPreferences.email_notifications !== false ? '#3b82f6' : '#d1d5db',
+                                                position: 'relative',
+                                                transition: 'background-color 0.2s',
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            <div
+                                                style={{
+                                                    width: '18px',
+                                                    height: '18px',
+                                                    borderRadius: '50%',
+                                                    backgroundColor: '#ffffff',
+                                                    position: 'absolute',
+                                                    top: '2px',
+                                                    left: userPreferences.email_notifications !== false ? '20px' : '2px',
+                                                    transition: 'left 0.2s',
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Breaking News Alerts Toggle */}
+                                <div
+                                    style={{
+                                        padding: '16px',
+                                        border: `1px solid ${userPreferences.breaking_news_alerts ? '#fecaca' : '#e5e7eb'}`,
+                                        borderRadius: '10px',
+                                        backgroundColor: '#ffffff',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                    }}
+                                    onClick={() => {
+                                        setUserPreferences((prev: any) => ({
+                                            ...prev,
+                                            breaking_news_alerts: !prev.breaking_news_alerts,
+                                        }));
+                                        setSettingsChanged(true);
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <span style={{ fontSize: '18px' }}>🚨</span>
+                                            <div>
+                                                <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                                                    Breaking News Alerts
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                                                    Instant alerts for high-impact AI developments (score ≥ 8/10)
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            style={{
+                                                width: '40px',
+                                                height: '22px',
+                                                borderRadius: '11px',
+                                                backgroundColor: userPreferences.breaking_news_alerts ? '#ef4444' : '#d1d5db',
+                                                position: 'relative',
+                                                transition: 'background-color 0.2s',
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            <div
+                                                style={{
+                                                    width: '18px',
+                                                    height: '18px',
+                                                    borderRadius: '50%',
+                                                    backgroundColor: '#ffffff',
+                                                    position: 'absolute',
+                                                    top: '2px',
+                                                    left: userPreferences.breaking_news_alerts ? '20px' : '2px',
+                                                    transition: 'left 0.2s',
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>	
 					</div>
 				)}
 			</div>

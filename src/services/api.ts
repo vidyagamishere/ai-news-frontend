@@ -40,6 +40,15 @@ const contentApi = axios.create({
   },
 });
 
+// Create a separate instance for admin operations with very long timeout
+const adminApi = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 600000, // 10 minutes for scraping and other long-running admin operations
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
 // Initialize debug logger for API service
 const debug = new DebugLogger('APIService');
 
@@ -54,7 +63,8 @@ async function makeModularRequest(
   params: any = {}, 
   data: any = null,
   headers: any = {},
-  useContentApi: boolean = false
+  useContentApi: boolean = false,
+  apiType: 'default' | 'content' | 'admin' = 'default'
 ) {
   debug.enter('makeModularRequest', { endpoint, method, params, hasData: !!data, headers: Object.keys(headers) });
   const startTime = Date.now();
@@ -72,7 +82,13 @@ async function makeModularRequest(
   }
   
   try {
-    const apiInstance = useContentApi ? contentApi : api;
+    // Select API instance based on apiType (with backwards compatibility for useContentApi)
+    let apiInstance = api;
+    if (apiType === 'admin') {
+      apiInstance = adminApi;
+    } else if (apiType === 'content' || useContentApi) {
+      apiInstance = contentApi;
+    }
     
     debug.step('makeModularRequest', 'sending_request', { endpoint, method });
     console.log(`📡 Modular Request: ${method} /${endpoint}`);
@@ -1054,7 +1070,10 @@ export class ApiService {
       headers['Authorization'] = `Bearer ${token}`;
     }
     
-    return await makeModularRequest(endpoint, method, params, null, headers);
+    // Use admin API instance for scraping operations (long timeout)
+    const apiType = endpoint.includes('admin/scrape') || endpoint.includes('admin/tavily') ? 'admin' : 'default';
+    
+    return await makeModularRequest(endpoint, method, params, null, headers, false, apiType);
   }
 
   async get(endpoint: string, params?: any): Promise<any> {

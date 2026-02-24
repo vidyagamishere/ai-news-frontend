@@ -28,11 +28,16 @@ export const ScrapingControls: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [triggering, setTriggering] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' | 'warning' });
   const [selectedModels, setSelectedModels] = useState<Record<string, string>>({
     blog: 'gemini',
     podcast: 'gemini',
     video: 'gemini',
+  });
+  const [selectedFrequencies, setSelectedFrequencies] = useState<Record<string, number>>({
+    blog: 1,
+    podcast: 1,
+    video: 1,
   });
   const { adminApiKey } = useAdminAuth();
 
@@ -42,6 +47,13 @@ export const ScrapingControls: React.FC = () => {
     { value: 'claude', label: 'Claude', color: '#d97706' },
     { value: 'ollama', label: 'Ollama', color: '#10b981' },
     { value: 'huggingface', label: 'HuggingFace', color: '#9333ea' },
+  ];
+
+  // Scraping frequency options
+  const frequencyOptions = [
+    { value: 1, label: 'Daily (1 day)' },
+    { value: 7, label: 'Weekly (7 days)' },
+    { value: 30, label: 'Monthly (30 days)' },
   ];
   
   useEffect(() => {
@@ -78,18 +90,103 @@ export const ScrapingControls: React.FC = () => {
     
     try {
       const selectedModel = selectedModels[contentType];
+      const selectedFrequency = selectedFrequencies[contentType];
+      const frequencyLabel = frequencyOptions.find(f => f.value === selectedFrequency)?.label || 'custom';
       
       // For now, only RSS feeds (blog) are supported via /admin/scrape endpoint
       if (contentType === 'blog') {
-        // Use the working /admin/scrape endpoint with query parameters
-        await apiService.callEndpoint(
-          `admin/scrape?llm_model=${selectedModel}&scrape_frequency=1`,
+        // Show in-progress message
+        setSnackbar({ 
+          open: true, 
+          message: `Starting scraping job with ${selectedModel} (${frequencyLabel})...`, 
+          severity: 'info' 
+        });
+        
+        console.log('🚀 Starting background scraping job...');
+        const startTime = Date.now();
+        
+        // Start background job (returns immediately with job_id)
+        const jobResponse = await apiService.callEndpoint(
+          `admin/scrape?llm_model=${selectedModel}&scrape_frequency=${selectedFrequency}`,
           'POST',
           {},
           false,
           { 'X-Admin-API-Key': adminApiKey }
         );
-        setSnackbar({ open: true, message: `RSS feed scraping triggered with ${selectedModel}`, severity: 'success' });
+        
+        const jobId = jobResponse.job_id;
+        console.log(`✅ Job started with ID: ${jobId}`);
+        
+        // Show job started message
+        setSnackbar({ 
+          open: true, 
+          message: `Scraping job started! Checking progress... (Job ID: ${jobId.substring(0, 8)})`, 
+          severity: 'info' 
+        });
+        
+        // Poll for job status every 3 seconds
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusResponse = await apiService.callEndpoint(
+              `admin/scrape-status/${jobId}`,
+              'GET',
+              {},
+              false,
+              { 'X-Admin-API-Key': adminApiKey }
+            );
+            
+            console.log('📊 Job status:', statusResponse.status, '-', statusResponse.progress);
+            
+            if (statusResponse.status === 'completed') {
+              clearInterval(pollInterval);
+              const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+              const articlesInserted = statusResponse.articles_inserted || 0;
+              const articlesFound = statusResponse.articles_found || 0;
+              const sourcesScraped = statusResponse.sources_scraped || 0;
+              
+              setSnackbar({ 
+                open: true, 
+                message: `✅ Scraping completed in ${duration}s! Found ${articlesFound} articles from ${sourcesScraped} sources, inserted ${articlesInserted} new articles`, 
+                severity: 'success' 
+              });
+              
+              setTimeout(fetchJobs, 2000);
+            } else if (statusResponse.status === 'failed') {
+              clearInterval(pollInterval);
+              setSnackbar({ 
+                open: true, 
+                message: `❌ Scraping failed: ${statusResponse.error || 'Unknown error'}`, 
+                severity: 'error' 
+              });
+            } else {
+              // Update progress message
+              setSnackbar({ 
+                open: true, 
+                message: `Scraping in progress: ${statusResponse.progress}`, 
+                severity: 'info' 
+              });
+            }
+          } catch (pollError) {
+            console.error('Failed to poll job status:', pollError);
+            clearInterval(pollInterval);
+            setSnackbar({ 
+              open: true, 
+              message: 'Failed to check scraping status', 
+              severity: 'error' 
+            });
+          }
+        }, 3000); // Poll every 3 seconds
+        
+        // Set timeout to stop polling after 15 minutes
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          setSnackbar({ 
+            open: true, 
+            message: 'Scraping is taking longer than expected. Check the jobs list for status.', 
+            severity: 'warning' 
+          });
+        }, 15 * 60 * 1000); // 15 minutes
+        
       } else {
         // Podcast and video scraping coming soon
         setSnackbar({ 
@@ -98,11 +195,10 @@ export const ScrapingControls: React.FC = () => {
           severity: 'info' 
         });
       }
-      
-      setTimeout(fetchJobs, 2000); // Refresh after 2 seconds
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to trigger scraping:', error);
-      setSnackbar({ open: true, message: 'Failed to trigger scraping', severity: 'error' });
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to trigger scraping';
+      setSnackbar({ open: true, message: `Scraping failed: ${errorMessage}`, severity: 'error' });
     } finally {
       setTriggering(null);
     }
@@ -186,6 +282,22 @@ export const ScrapingControls: React.FC = () => {
                             />
                             {model.label}
                           </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel>Scrape Frequency</InputLabel>
+                    <Select
+                      value={selectedFrequencies[item.type]}
+                      label="Scrape Frequency"
+                      onChange={(e) => setSelectedFrequencies({ ...selectedFrequencies, [item.type]: e.target.value as number })}
+                      disabled={triggering === item.type}
+                    >
+                      {frequencyOptions.map((freq) => (
+                        <MenuItem key={freq.value} value={freq.value}>
+                          {freq.label}
                         </MenuItem>
                       ))}
                     </Select>

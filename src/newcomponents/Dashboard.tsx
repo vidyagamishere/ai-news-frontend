@@ -106,7 +106,12 @@ const NewDashboard: React.FC = () => {
     professional_roles: (user?.preferences as any)?.professional_roles || ['enthusiast'],
     categories_selected: (user?.preferences as any)?.category_ids_selected || [],
     content_types_selected: (user?.preferences as any)?.content_type_ids_selected || [],
-    publishers_selected: (user?.preferences as any)?.publisher_ids_selected || []
+    publishers_selected: (user?.preferences as any)?.publisher_ids_selected || [],
+    // Email & Newsletter preferences (read from saved user preferences)
+    newsletter_subscribed: (user?.preferences as any)?.newsletter_subscribed ?? true,
+    newsletter_frequency: (user?.preferences as any)?.newsletter_frequency || 'weekly',
+    email_notifications: (user?.preferences as any)?.email_notifications ?? true,
+    breaking_news_alerts: (user?.preferences as any)?.breaking_news_alerts ?? false,
   });
 
   const getTimeFilterString = (days: number): 'Last 24 Hours' | 'Last Week' | 'Last Month' | 'This Year' => {
@@ -365,7 +370,11 @@ const NewDashboard: React.FC = () => {
         professional_roles: (user.preferences as any).professional_roles || ['enthusiast'],
         categories_selected: (user.preferences as any).category_ids_selected || [],
         content_types_selected: (user.preferences as any).content_type_ids_selected || [],
-        publishers_selected: (user.preferences as any).publisher_ids_selected || []
+        publishers_selected: (user.preferences as any).publisher_ids_selected || [],
+        newsletter_subscribed: (user.preferences as any)?.newsletter_subscribed ?? true,
+        newsletter_frequency: (user.preferences as any)?.newsletter_frequency || 'weekly',
+        email_notifications: (user.preferences as any)?.email_notifications ?? true,
+        breaking_news_alerts: (user.preferences as any)?.breaking_news_alerts ?? false,
       });
     }
   }, [user?.preferences]);
@@ -543,9 +552,10 @@ const NewDashboard: React.FC = () => {
         category_ids_selected: userPreferences.categories_selected,
         content_type_ids_selected: userPreferences.content_types_selected,
         publisher_ids_selected: cleanedPublisherIds.length > 0 ? cleanedPublisherIds : [],
-        newsletter_frequency: "weekly" as "weekly" | "12_hours" | "daily" | "monthly",
-        email_notifications: true,
-        breaking_news_alerts: false,
+        newsletter_subscribed: userPreferences.newsletter_subscribed,
+        newsletter_frequency: userPreferences.newsletter_frequency as "weekly" | "12_hours" | "daily" | "monthly",
+        email_notifications: userPreferences.email_notifications,
+        breaking_news_alerts: userPreferences.breaking_news_alerts,
         onboarding_completed: true
       };
 

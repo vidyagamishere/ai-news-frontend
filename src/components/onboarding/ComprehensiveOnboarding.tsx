@@ -72,7 +72,11 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
   // Step 4: Publisher Preferences (auto-selected based on categories)
   const [availablePublishers, setAvailablePublishers] = useState<any[]>([]);
   const [selectedPublisherIds, setSelectedPublisherIds] = useState<number[]>([]);
-  
+ // Email & Newsletter Preferences
+  const [newsletterSubscribed, setNewsletterSubscribed] = useState<boolean>(true);
+  const [newsletterFrequency, setNewsletterFrequency] = useState<string>('weekly');
+  const [emailNotifications, setEmailNotifications] = useState<boolean>(true);
+  const [breakingNewsAlerts, setBreakingNewsAlerts] = useState<boolean>(false);
   // Filtered publishers based on selected categories
   const filteredPublishers = availablePublishers.filter(pub => 
     selectedCategoryIds.length === 0 || 
@@ -273,10 +277,12 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
         content_type_ids_selected: selectedContentTypeIds,
         publisher_ids_selected: selectedPublisherIds,
         
-        // Additional preference fields
-        newsletter_frequency: "weekly" as "weekly" | "12_hours" | "daily" | "monthly",
-        email_notifications: true,
-        breaking_news_alerts: false,
+        
+        // Email & Newsletter preferences (from user selection)
+        newsletter_subscribed: newsletterSubscribed,
+        newsletter_frequency: newsletterFrequency as "weekly" | "12_hours" | "daily" | "monthly",
+        email_notifications: emailNotifications,
+        breaking_news_alerts: breakingNewsAlerts,
         onboarding_completed: true
       };
 
@@ -451,11 +457,6 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
                 <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
                   {category.name}
                 </div>
-                {category.description && (
-                  <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
-                    {category.description}
-                  </div>
-                )}
               </div>
             </label>
           ))}
@@ -714,6 +715,215 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ onCom
           );
         })()}
       </div>
+    <div style={{ marginBottom: '48px' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+          📧 Email & Newsletter Preferences
+        </h3>
+        <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '16px' }}>
+          Stay informed with curated AI news delivered to your inbox
+        </p>
+
+        {/* Newsletter Subscribe Toggle */}
+        <div style={{
+          padding: '20px',
+          border: `2px solid ${newsletterSubscribed ? '#3b82f6' : '#e5e7eb'}`,
+          borderRadius: '12px',
+          backgroundColor: newsletterSubscribed ? '#eff6ff' : '#ffffff',
+          marginBottom: '16px',
+          cursor: 'pointer',
+          transition: 'all 0.2s'
+        }}
+          onClick={() => setNewsletterSubscribed(!newsletterSubscribed)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Mail size={20} color={newsletterSubscribed ? '#3b82f6' : '#9ca3af'} />
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>
+                  Subscribe to Newsletter
+                </div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                  Receive curated AI news digests with top stories and breaking news
+                </div>
+              </div>
+            </div>
+            <div style={{
+              width: '44px',
+              height: '24px',
+              borderRadius: '12px',
+              backgroundColor: newsletterSubscribed ? '#3b82f6' : '#d1d5db',
+              position: 'relative',
+              transition: 'background-color 0.2s',
+              flexShrink: 0
+            }}>
+              <div style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: '#ffffff',
+                position: 'absolute',
+                top: '2px',
+                left: newsletterSubscribed ? '22px' : '2px',
+                transition: 'left 0.2s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+              }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Frequency Selection - only show if subscribed */}
+        {newsletterSubscribed && (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '10px' }}>
+              Newsletter Frequency
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              gap: '10px'
+            }}>
+              {[
+                { id: 'daily', name: 'Daily Digest', description: 'Every morning', icon: '📰' },
+                { id: 'weekly', name: 'Weekly Roundup', description: 'Every Monday', icon: '📊' },
+                { id: 'monthly', name: 'Monthly Summary', description: 'First of month', icon: '📅' },
+              ].map(freq => (
+                <button
+                  key={freq.id}
+                  onClick={() => setNewsletterFrequency(freq.id)}
+                  style={{
+                    padding: '14px',
+                    border: newsletterFrequency === freq.id ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                    borderRadius: '10px',
+                    backgroundColor: newsletterFrequency === freq.id ? '#eff6ff' : '#ffffff',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (newsletterFrequency !== freq.id) {
+                      e.currentTarget.style.borderColor = '#9ca3af';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (newsletterFrequency !== freq.id) {
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                    }
+                  }}
+                >
+                  {newsletterFrequency === freq.id && (
+                    <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
+                      <Check size={16} color="#3b82f6" />
+                    </div>
+                  )}
+                  <div style={{ fontSize: '18px', marginBottom: '6px' }}>{freq.icon}</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{freq.name}</div>
+                  <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>{freq.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Additional Email Preferences */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Email Notifications Toggle */}
+          <div
+            style={{
+              padding: '16px',
+              border: `1px solid ${emailNotifications ? '#d1d5db' : '#e5e7eb'}`,
+              borderRadius: '10px',
+              backgroundColor: '#ffffff',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onClick={() => setEmailNotifications(!emailNotifications)}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Bell size={18} color={emailNotifications ? '#3b82f6' : '#9ca3af'} />
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    Email Notifications
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                    Get notified about comments, follows, and interactions
+                  </div>
+                </div>
+              </div>
+              <div style={{
+                width: '40px',
+                height: '22px',
+                borderRadius: '11px',
+                backgroundColor: emailNotifications ? '#3b82f6' : '#d1d5db',
+                position: 'relative',
+                transition: 'background-color 0.2s',
+                flexShrink: 0
+              }}>
+                <div style={{
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  position: 'absolute',
+                  top: '2px',
+                  left: emailNotifications ? '20px' : '2px',
+                  transition: 'left 0.2s',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Breaking News Alerts Toggle */}
+          <div
+            style={{
+              padding: '16px',
+              border: `1px solid ${breakingNewsAlerts ? '#d1d5db' : '#e5e7eb'}`,
+              borderRadius: '10px',
+              backgroundColor: '#ffffff',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onClick={() => setBreakingNewsAlerts(!breakingNewsAlerts)}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <TrendingUp size={18} color={breakingNewsAlerts ? '#ef4444' : '#9ca3af'} />
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    Breaking News Alerts
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                    Instant alerts for high-impact AI developments (score ≥ 8/10)
+                  </div>
+                </div>
+              </div>
+              <div style={{
+                width: '40px',
+                height: '22px',
+                borderRadius: '11px',
+                backgroundColor: breakingNewsAlerts ? '#ef4444' : '#d1d5db',
+                position: 'relative',
+                transition: 'background-color 0.2s',
+                flexShrink: 0
+              }}>
+                <div style={{
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  position: 'absolute',
+                  top: '2px',
+                  left: breakingNewsAlerts ? '20px' : '2px',
+                  transition: 'left 0.2s',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>  
     </div>
   );
 

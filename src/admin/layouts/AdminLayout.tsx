@@ -28,6 +28,7 @@ import {
   ExpandLess,
   ExpandMore,
   Logout as LogoutIcon,
+  Email as EmailIcon,
 } from '@mui/icons-material';
 import { Link, Outlet, useLocation,useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
@@ -82,6 +83,7 @@ export const AdminLayout: React.FC = () => {
     { text: 'Article Moderation', icon: <ArticleIcon />, path: '/admin/articles' },
     { text: 'Tavily Search', icon: <SearchIcon />, path: '/admin/tavily' },
     { text: 'Scraping Jobs', icon: <SettingsIcon />, path: '/admin/scraping' },
+    { text: 'Newsletter', icon: <EmailIcon />, path: '/admin/newsletter' },
   ];
 
   const drawer = (
