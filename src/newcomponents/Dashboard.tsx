@@ -1,44 +1,31 @@
-import React, { useState, useEffect, useRef, createContext, useContext, useMemo } from 'react';
 import {
+  alpha,
   Box,
+  Button,
+  Chip,
+  CircularProgress,
   Container,
   Paper,
   Typography,
-  Button,
-  Select,
-  MenuItem,
-  FormControl,
-  useTheme,
   useMediaQuery,
-  alpha,
-  Chip,
-  Stack,
-  Tab,
-  Tabs,
-  CircularProgress,
-  Alert,
-  InputLabel,
-  Dialog,
-  DialogActions,
-  DialogContent
+  useTheme
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material';
-import { Settings, LogOut, ChevronRight, Bookmark } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
-import type { Article } from '../services/api';
-import type { LandingContent } from '../types/article';
-import SEO from '../components/SEO';
+import { Bookmark, ChevronRight, Settings } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { LandingSkeleton } from '../components/LoadingSkeleton';
-import Header from './Header';
-import { SearchProvider } from '../contexts/SearchContext';
-import RightSection from './RightSection';
-import NewsItemContainer from './cards/NewsItemContainer';
-import { DashboardContext, type DashboardContextType } from '../contexts/DashboardContext';
-import { cacheService, CACHE_DURATION } from '../utils/cacheService';
+import SEO from '../components/SEO';
 import SettingsFullScreen from '../components/SettingsFullScreen';
 import UserStatsPage from '../components/UserStatsPage';
+import { useAuth } from '../contexts/AuthContext';
+import { DashboardContext, type DashboardContextType } from '../contexts/DashboardContext';
+import { SearchProvider } from '../contexts/SearchContext';
+import type { Article } from '../services/api';
+import { apiService } from '../services/api';
+import type { LandingContent } from '../types/article';
+import { CACHE_DURATION, cacheService } from '../utils/cacheService';
+import Header from './Header';
+import NewsItemContainer from './cards/NewsItemContainer';
 
 
 const NewDashboard: React.FC = () => {
@@ -100,6 +87,8 @@ const NewDashboard: React.FC = () => {
   const contentContainerRef = useRef<HTMLDivElement>(null);
 
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
+  const [savedArticles, setSavedArticles] = useState<Article[] | null>(null);
+  const [loadingSaved, setLoadingSaved] = useState(false);
 
   const [userPreferences, setUserPreferences] = useState({
     experience_level: user?.preferences?.experience_level || 'intermediate',
@@ -331,7 +320,10 @@ const NewDashboard: React.FC = () => {
   // Register stats handler with layout
   useEffect(() => {
     if (outletContext?.onStatsClickHandlerSet) {
-      outletContext.onStatsClickHandlerSet(() => setShowStatsModal(true));
+      outletContext.onStatsClickHandlerSet(() => {
+        setShowBookmarksOnly(false);
+        setShowStatsModal(true);
+      });
     }
   }, [outletContext]);
 
@@ -360,7 +352,7 @@ const NewDashboard: React.FC = () => {
     if (availableCategories.length > 0 && availableContentTypes.length > 0 && availablePublishers.length > 0) {
       loadPersonalizedFeed();
     }
-  }, [dateFilter, activeCategory, selectedTab, showBookmarksOnly]);
+  }, [dateFilter, activeCategory, selectedTab]);
 
   // Update preferences when user changes
   useEffect(() => {
@@ -388,6 +380,11 @@ const NewDashboard: React.FC = () => {
   }, [outletContext?.selectedTab, selectedTab]);
 
   const getTabContent = () => {
+    // Bookmarks mode: return articles fetched from backend
+    if (showBookmarksOnly) {
+      return savedArticles || [];
+    }
+
     let content: Article[];
 
     if (isSearchActive && searchResults) {
@@ -417,10 +414,6 @@ const NewDashboard: React.FC = () => {
       content = allContent;
     }
 
-    // Apply bookmark filter
-    if (showBookmarksOnly) {
-      return content.filter(article => article.is_bookmarked);
-    }
     return content;
   };
 
@@ -440,6 +433,7 @@ const NewDashboard: React.FC = () => {
       setIsSearchActive(true);
       setSearchQuery(query);
       setSearchError(null);
+      setShowBookmarksOnly(false);
 
       // Clear category selection when searching
       setActiveCategory('All');
@@ -508,12 +502,15 @@ const NewDashboard: React.FC = () => {
 
   // Add handler (around line 500):
   const handleStatsClick = () => {
+    setShowBookmarksOnly(false);
     setShowStatsModal(true);
   };
 
   const handleCategoryChange = React.useCallback((categoryName: string) => {
     console.log('🔄 Dashboard: Category changed to:', categoryName);
     setActiveCategory(categoryName);
+    setShowBookmarksOnly(false);
+    setShowStatsModal(false);
 
     // Clear search if active
     if (isSearchActive) {
@@ -592,6 +589,55 @@ const NewDashboard: React.FC = () => {
       outletContext.onSettingsClickHandlerSet(() => setShowSettingsModal(true));
     }
   }, [outletContext]);
+
+  // Register bookmarks click handler
+  useEffect(() => {
+    if (outletContext?.onBookmarksClickHandlerSet) {
+      outletContext.onBookmarksClickHandlerSet(() => {
+        setShowStatsModal(false);
+        setShowBookmarksOnly(true);
+      });
+    }
+  }, [outletContext]);
+
+  // Fetch real bookmarks from backend when entering bookmarks mode
+  useEffect(() => {
+    if (!showBookmarksOnly) {
+      setSavedArticles(null);
+      return;
+    }
+    setLoadingSaved(true);
+    apiService.getBookmarks()
+      .then(res => {
+        const articles = (res.articles || []).map((item: any) => ({
+          id: item.id?.toString() || '',
+          title: item.title || 'Untitled',
+          url: item.url || '#',
+          source: item.source || 'Unknown',
+          source_name: item.source || 'Unknown',
+          time: item.published_date || new Date().toISOString(),
+          published_date: item.published_date,
+          summary: item.summary || '',
+          type: item.content_type || 'blog',
+          content_type: item.content_type_label || item.content_type || 'blog',
+          category_name: item.category_name,
+          thumbnail_url: item.thumbnail_url,
+          image: item.thumbnail_url,
+          is_bookmarked: true,
+          likes: item.likes_count || 0,
+          bookmarks: item.bookmarks_count || 0,
+          views: item.views_count || 0,
+          shares: item.shares_count || 0,
+          comments: item.comments_count || 0,
+        } as Article));
+        setSavedArticles(articles);
+      })
+      .catch(err => {
+        console.error('Failed to load saved articles:', err);
+        setSavedArticles([]);
+      })
+      .finally(() => setLoadingSaved(false));
+  }, [showBookmarksOnly]);
 
   // Register trending topic click handler
   useEffect(() => {
@@ -789,11 +835,92 @@ const NewDashboard: React.FC = () => {
                       </Paper>
                     )}
 
+                    {/* Stats mode indicator */}
+                    {showStatsModal && (
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          px: 2,
+                          py: 1,
+                          mb: 3,
+                          gap: 2,
+                          bgcolor: alpha(theme.palette.primary.main, 0.08),
+                          borderRadius: 2,
+                          border: 1,
+                          borderColor: alpha(theme.palette.primary.main, 0.2)
+                        }}
+                      >
+                        <Typography sx={{ flex: 1, fontWeight: 600 }}>Reading Stats</Typography>
+                        <Button size="small" onClick={() => setShowStatsModal(false)}>Close ✕</Button>
+                      </Paper>
+                    )}
+
+                    {/* Bookmarks-only mode indicator */}
+                    {showBookmarksOnly && (
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          px: 2,
+                          py: 1,
+                          mb: 3,
+                          gap: 2,
+                          bgcolor: alpha(theme.palette.warning.main, 0.1),
+                          borderRadius: 2,
+                          border: 1,
+                          borderColor: alpha(theme.palette.warning.main, 0.3)
+                        }}
+                      >
+                        <Bookmark size={18} color={theme.palette.warning.main} fill={theme.palette.warning.main} />
+                        <Typography sx={{ flex: 1, fontWeight: 600 }}>
+                          Showing saved articles only
+                          {loadingSaved && <CircularProgress size={14} sx={{ ml: 1, verticalAlign: 'middle' }} />}
+                        </Typography>
+                        <Button
+                          size="small"
+                          onClick={() => setShowBookmarksOnly(false)}
+                        >
+                          Clear ✕
+                        </Button>
+                      </Paper>
+                    )}
+
                     {/* Content Section */}
                     <Box ref={contentContainerRef}>
-                      {selectedTab === 'news' && (
+                      {/* Stats inline view */}
+                      {showStatsModal && <UserStatsPage />}
+
+                      {!showStatsModal && selectedTab === 'news' && (
                         <>
-                          {getTabContent().length === 0 && activeCategory !== 'All' && (
+                          {getTabContent().length === 0 && showBookmarksOnly && !loadingSaved && (
+                            <Paper
+                              elevation={0}
+                              sx={{
+                                p: 6,
+                                textAlign: 'center',
+                                bgcolor: alpha(theme.palette.warning.main, 0.05),
+                                borderRadius: 3,
+                                border: '2px dashed',
+                                borderColor: alpha(theme.palette.warning.main, 0.3),
+                                mb: 3
+                              }}
+                            >
+                              <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔖</Typography>
+                              <Typography variant="h5" fontWeight={700} gutterBottom>
+                                No saved articles yet
+                              </Typography>
+                              <Typography color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
+                                Bookmark articles you want to read later and they'll appear here.
+                              </Typography>
+                              <Button variant="contained" onClick={() => setShowBookmarksOnly(false)}>
+                                Back to Feed
+                              </Button>
+                            </Paper>
+                          )}
+                          {getTabContent().length === 0 && !showBookmarksOnly && activeCategory !== 'All' && (
                             <Paper
                               elevation={0}
                               sx={{
@@ -842,7 +969,7 @@ const NewDashboard: React.FC = () => {
                       )}
 
                       {/* Audio Tab */}
-                      {selectedTab === 'audio' && (
+                      {!showStatsModal && selectedTab === 'audio' && (
                         <>                        {getTabContent().length === 0 && activeCategory !== 'All' && (
                           <Paper
                             elevation={0}
@@ -890,7 +1017,7 @@ const NewDashboard: React.FC = () => {
                       )}
 
                       {/* Video Tab */}
-                      {selectedTab === 'video' && (
+                      {!showStatsModal && selectedTab === 'video' && (
                         <>                        {getTabContent().length === 0 && activeCategory !== 'All' && (
                           <Paper
                             elevation={0}
@@ -939,7 +1066,7 @@ const NewDashboard: React.FC = () => {
                     </Box>
 
                     {/* Posts Tab */}
-                    {selectedTab === 'posts' && (
+                    {!showStatsModal && selectedTab === 'posts' && (
                       <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
                         <Typography sx={{ fontSize: '4rem', mb: 2 }}>🗨️</Typography>
                         <Typography variant="h3" fontWeight={700} gutterBottom>
@@ -960,7 +1087,7 @@ const NewDashboard: React.FC = () => {
                     )}
 
                     {/* Learning Tab */}
-                    {selectedTab === 'learning' && (
+                    {!showStatsModal && selectedTab === 'learning' && (
                       <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
                         <Typography sx={{ fontSize: '4rem', mb: 2 }}>🎓</Typography>
                         <Typography variant="h3" fontWeight={700} gutterBottom>
@@ -1069,15 +1196,6 @@ const NewDashboard: React.FC = () => {
             </Paper>
           </Box>
         )}
-        <Dialog
-          open={showStatsModal}
-          onClose={() => setShowStatsModal(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <UserStatsPage />
-        </Dialog>
-
         <style>{`
           @keyframes fadeIn {
             from { opacity: 0; }
