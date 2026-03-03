@@ -95,6 +95,10 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ NEW: Add state for trending keywords
+  const [trendingKeywords, setTrendingKeywords] = useState<Topic[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(true);
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -118,6 +122,52 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
     };
 
     fetchCategories();
+  }, []);
+
+  // ✅ IMPROVED: Fetch trending keywords with better error handling
+  useEffect(() => {
+    const fetchTrendingKeywords = async () => {
+      try {
+        setTrendingLoading(true);
+        console.log('🔥 RightSection: Fetching trending keywords from API...');
+        
+        const response = await cacheService.get(
+          'trending_keywords', 
+          () => apiService.getTrendingKeywords(1, 10),  // Last 1 day, max 10 keywords
+          CACHE_DURATION.TRENDING  // 10 minutes cache
+        );
+        
+        // ✅ Validate response structure
+        if (response && response.trending_keywords && Array.isArray(response.trending_keywords)) {
+          console.log('✅ RightSection: Trending keywords fetched:', response.trending_keywords.length);
+          console.log('📊 Sample keyword:', response.trending_keywords[0]);
+          
+          // Transform to Topic format if needed
+          const transformedKeywords = response.trending_keywords.map(kw => ({
+            id: kw.id || kw.label.toLowerCase().replace(/\s+/g, '-'),
+            label: kw.label,
+            count: kw.count || 0
+          }));
+          
+          setTrendingKeywords(transformedKeywords);
+        } else {
+          console.warn('⚠️ RightSection: Invalid or empty trending keywords response');
+          console.warn('Response structure:', response);
+          setTrendingKeywords([]);
+        }
+      } catch (error) {
+        console.error('❌ RightSection: Failed to fetch trending keywords:', error);
+        setTrendingKeywords([]);
+      } finally {
+        setTrendingLoading(false);
+      }
+    };
+
+    fetchTrendingKeywords();
+    
+    // Refresh trending keywords every 10 minutes
+    const interval = setInterval(fetchTrendingKeywords, 10 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   // Use directly fetched categories with counts from API
@@ -208,14 +258,29 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
   ];
 
   const displayRecommendedTopics = recommendedTopics.length > 0 ? recommendedTopics : fallbackRecommendedTopics;
-  const displayTrendingTopics = trendingTopics.length > 0 ? trendingTopics : [
-    { id: 'gpt-4', label: 'GPT-4', count: 0 },
-    { id: 'dalle', label: 'DALL-E', count: 0 },
-    { id: 'claude', label: 'Claude AI', count: 0 },
-    { id: 'midjourney', label: 'Midjourney', count: 0 },
-    { id: 'llm', label: 'Large Language Models', count: 0 }
-  ];
-
+  const displayTrendingTopics = useMemo(() => {
+    // Priority 1: Use real trending keywords from API (if available and loaded)
+    if (!trendingLoading && trendingKeywords.length > 0) {
+      console.log('✅ Displaying API trending keywords:', trendingKeywords.length);
+      return trendingKeywords;
+    }
+    
+    // Priority 2: Extract from actual content (existing logic)
+    if (trendingTopics.length > 0) {
+      console.log('✅ Displaying content-based trending:', trendingTopics.length);
+      return trendingTopics;
+    }
+    
+    // Priority 3: Fallback to generic AI topics
+    console.log('⚠️ Using fallback trending topics');
+    return [
+      { id: 'generative-ai', label: 'Generative AI', count: 0 },
+      { id: 'machine-learning', label: 'Machine Learning', count: 0 },
+      { id: 'ai-applications', label: 'AI Applications', count: 0 },
+      { id: 'llm', label: 'Large Language Models', count: 0 },
+      { id: 'computer-vision', label: 'Computer Vision', count: 0 }
+    ];
+  }, [trendingKeywords, trendingTopics, trendingLoading]);
 
   const handleNotificationOpen = (event: React.MouseEvent<HTMLElement>) => {
     setNotificationAnchor(event.currentTarget);
@@ -518,6 +583,16 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
           <Typography variant="h6" fontWeight={700}>
             Trending Now
           </Typography>
+          {trendingLoading && (
+            <Typography variant="caption" color="text.secondary">
+              (loading...)
+            </Typography>
+          )}
+          {!trendingLoading && trendingKeywords.length > 0 && (
+            <Typography variant="caption" color="success.main">
+              ({trendingKeywords.length} live)
+            </Typography>
+          )}
         </Stack>
 
         <Stack spacing={1} direction="row" flexWrap="wrap" useFlexGap>
@@ -528,7 +603,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
               variant="outlined"
               size="medium"
               onClick={() => {
-                console.log('🔥 Trending topic clicked:', topic.label);
+                console.log('🔥 Trending topic clicked:', topic.label, 'count:', topic.count);
                 if (onTrendingClick) {
                   onTrendingClick(topic.label);
                 }
@@ -537,6 +612,8 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
                 borderRadius: 6,
                 fontWeight: 500,
                 cursor: 'pointer',
+                borderColor: topic.count > 0 ? 'success.main' : 'divider',
+                color: topic.count > 0 ? 'success.main' : 'text.primary',
                 '&:hover': {
                   backgroundColor: alpha(theme.palette.success.main, 0.1),
                   borderColor: 'success.main',

@@ -13,6 +13,7 @@ const CACHE_DURATION = {
   SHORT: 5 * 60 * 1000,      // 5 minutes - for frequently changing data
   MEDIUM: 30 * 60 * 1000,    // 30 minutes - for semi-static data
   LONG: 24 * 60 * 60 * 1000, // 24 hours - for static data
+  TRENDING: 10 * 60 * 1000,  // 10 minutes for trending data (frequently updated)
 };
 
 class CacheService {

@@ -1045,6 +1045,66 @@ export class ApiService {
       headers
     );
   }
+
+  // ✅ FIXED: Correct endpoint path and better error handling
+  async getTrendingKeywords(days: number = 1, limit: number = 10): Promise<{
+    trending_keywords: Array<{
+      id: string;
+      label: string;
+      count: number;
+    }>;
+    timestamp: string;
+    days: number;
+    limit: number;
+    count: number;
+  }> {
+    console.log(`🔥 Fetching trending keywords (last ${days} day(s), limit: ${limit})`);
+    
+    try {
+      const response = await makeModularRequest(
+        'api/v1/trending-keywords',  // ✅ FIXED: Correct endpoint path
+        'GET',
+        { days, limit },
+        null,
+        {},
+        false,
+        'default'
+      );
+      
+      console.log(`✅ Trending keywords fetched: ${response.trending_keywords?.length || 0} keywords`);
+      
+      // ✅ Validate response structure
+      if (!response.trending_keywords || !Array.isArray(response.trending_keywords)) {
+        console.warn('⚠️ Invalid response structure from trending keywords API');
+        return {
+          trending_keywords: [],
+          timestamp: new Date().toISOString(),
+          days,
+          limit,
+          count: 0
+        };
+      }
+      
+      return {
+        trending_keywords: response.trending_keywords,
+        timestamp: response.timestamp || new Date().toISOString(),
+        days: response.days || days,
+        limit: response.limit || limit,
+        count: response.count || response.trending_keywords.length
+      };
+    } catch (error) {
+      console.error('❌ Failed to fetch trending keywords:', error);
+      // Return empty array on error instead of throwing
+      return {
+        trending_keywords: [],
+        timestamp: new Date().toISOString(),
+        days,
+        limit,
+        count: 0
+      };
+    }
+  }
+
   // ===============================
   // TESTING & DEBUG
   // ===============================
