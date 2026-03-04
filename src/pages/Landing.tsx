@@ -1,37 +1,29 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
-  Box,
-  Container,
-  Grid,
-  Paper,
-  Typography,
-  Button,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  IconButton,
-  useTheme,
-  useMediaQuery,
   alpha,
+  Box,
+  Button,
   Chip,
+  CircularProgress,
+  Container,
+  MenuItem,
+  Paper,
   Stack,
-  Divider,
-  Tabs,
-  Tab,
-  Drawer,
-  CircularProgress
+  Typography,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
-import SEO from '../components/SEO';
-import { LandingSkeleton } from '../components/LoadingSkeleton';
-import Header from '../newcomponents/Header';
-import { SearchProvider } from '../contexts/SearchContext';
-import { apiService } from '../services/api';
-import type { Article, Category, LandingContent } from '../types/article';
-import { cacheService, CACHE_DURATION } from '../utils/cacheService';
-import NewsItemContainer from '../newcomponents/cards/NewsItemContainer';
 import { ChevronRight } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { LandingSkeleton } from '../components/LoadingSkeleton';
+import SEO from '../components/SEO';
+import { SearchProvider } from '../contexts/SearchContext';
+import NewsItemContainer from '../newcomponents/cards/NewsItemContainer';
+import Header from '../newcomponents/Header';
+import PostsTab from '../newcomponents/PostsTab';
+import { apiService } from '../services/api';
+import type { Article, LandingContent } from '../types/article';
+import { CACHE_DURATION, cacheService } from '../utils/cacheService';
 
 interface MenuItem {
   id: string;
@@ -184,11 +176,11 @@ const Landing: React.FC = () => {
   useEffect(() => {
     const handleScroll = () => {
       if (!contentContainerRef.current) return;
-      
+
       const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
       const scrollPosition = scrollTop + clientHeight;
       const threshold = scrollHeight - 500; // Load more when 500px from bottom
-      
+
       if (scrollPosition > threshold) {
         const totalContent = tabContent.length;
         if (visibleItemsCount < totalContent) {
@@ -353,7 +345,7 @@ const Landing: React.FC = () => {
               blogs: contentTypeId === 1 || !contentTypeId
                 ? (cat.content?.blogs || []).map((item: any) => ({
                   ...item,
-                  url: item.url || item.link || '#', 
+                  url: item.url || item.link || '#',
                   time: item.published_date || new Date().toISOString(),
                   published_date: item.published_date || null,
                   readTime: '5 min'
@@ -362,7 +354,7 @@ const Landing: React.FC = () => {
               podcasts: contentTypeId === 3 || !contentTypeId
                 ? (cat.content?.podcasts || []).map((item: any) => ({
                   ...item,
-                  url: item.url || item.link || '#', 
+                  url: item.url || item.link || '#',
                   time: item.published_date || new Date().toISOString(),
                   published_date: item.published_date || null,
                   readTime: '30 min'
@@ -371,7 +363,7 @@ const Landing: React.FC = () => {
               videos: contentTypeId === 2 || !contentTypeId
                 ? (cat.content?.videos || []).map((item: any) => ({
                   ...item,
-                  url: item.url || item.link || '#', 
+                  url: item.url || item.link || '#',
                   time: item.published_date || new Date().toISOString(),
                   published_date: item.published_date || null,
                   readTime: '15 min'
@@ -453,10 +445,10 @@ const Landing: React.FC = () => {
       setIsSearchActive(true);
       setSearchQuery(query);
       setSearchError(null); // Clear any previous errors
-      
+
       // Clear category selection when searching
       setActiveCategory('All');
-      
+
       // Notify ResponsiveLayout to clear category selection in RightSection
       if (outletContext?.onSearchStart) {
         outletContext.onSearchStart();
@@ -488,21 +480,21 @@ const Landing: React.FC = () => {
         setSearchResults({
           blogs: searchResponse.results.blogs.map((item: any) => ({
             ...item,
-            url: item.url || item.link || '#', 
+            url: item.url || item.link || '#',
             time: item.published_date || new Date().toISOString(),
             published_date: item.published_date || null,
             readTime: '5 min'
           })),
           podcasts: searchResponse.results.podcasts.map((item: any) => ({
             ...item,
-            url: item.url || item.link || '#', 
+            url: item.url || item.link || '#',
             time: item.published_date || new Date().toISOString(),
             published_date: item.published_date || null,
             readTime: '30 min'
           })),
           videos: searchResponse.results.videos.map((item: any) => ({
             ...item,
-            url: item.url || item.link || '#', 
+            url: item.url || item.link || '#',
             time: item.published_date || new Date().toISOString(),
             published_date: item.published_date || null,
             readTime: '15 min'
@@ -904,23 +896,7 @@ const Landing: React.FC = () => {
 
                     {/* Posts Tab */}
                     {selectedTab === 'posts' && (
-                      <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
-                        <Typography sx={{ fontSize: '4rem', mb: 2 }}>🗨️</Typography>
-                        <Typography variant="h3" fontWeight={700} gutterBottom>
-                          Community Coming Soon
-                        </Typography>
-                        <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-                          Join discussions with AI experts and learners
-                        </Typography>
-                        <Button
-                          variant="contained"
-                          size="large"
-                          onClick={() => navigate('/auth')}
-                          sx={{ px: 4 }}
-                        >
-                          Join Waitlist
-                        </Button>
-                      </Box>
+                      <PostsTab />
                     )}
 
                     {/* Learning Tab */}

@@ -28,6 +28,7 @@ interface NewsItemProps {
   onBookmark?: (articleId: number) => void;
   onShare?: (articleId: number) => void;
   showInteractions?: boolean;
+  onCardClick?: () => void;
 }
 
 const NewsItem: React.FC<NewsItemProps> = ({
@@ -36,7 +37,8 @@ const NewsItem: React.FC<NewsItemProps> = ({
   onLike,
   onBookmark,
   onShare,
-  showInteractions = false
+  showInteractions = false,
+  onCardClick,
 }) => {
   const theme = useTheme();
   const [imageError, setImageError] = useState(false);
@@ -53,6 +55,11 @@ const NewsItem: React.FC<NewsItemProps> = ({
   const navigate = useNavigate();
 
   const handleCardClick = () => {
+    // If a custom click handler is provided (e.g. for posts), use it instead
+    if (onCardClick) {
+      onCardClick();
+      return;
+    }
     // Track view interaction (works for both authenticated and anonymous users)
     console.log('🖱️ Article clicked:', { id: article.id, url: article.url, title: article.title });
     // Open URL first (this is the main action)

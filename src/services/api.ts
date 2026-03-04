@@ -89,7 +89,7 @@ async function makeModularRequest(
     } else if (apiType === 'content' || useContentApi) {
       apiInstance = contentApi;
     }
-    
+
     debug.step('makeModularRequest', 'sending_request', { endpoint, method });
     console.log(`📡 Modular Request: ${method} /${endpoint}`);
 
@@ -641,6 +641,66 @@ export class ApiService {
     return data;
   }
 
+  async getPosts(limit: number = 50, categoryId?: number, daysFilter: number = 3650): Promise<{
+    posts: Array<{
+      id: number;
+      title: string;
+      summary: string;
+      url: string;
+      source: string;
+      significance_score: number;
+      published_date: string | null;
+      author: string;
+      keywords: string;
+      category: string;
+      category_label: string;
+      content_type: string;
+    }>;
+    count: number;
+  }> {
+    const params: any = { limit, days_filter: daysFilter };
+    if (categoryId !== undefined) params.category_id = categoryId;
+    return makeModularRequest('posts', 'GET', params);
+  }
+
+  async createPost(
+    data: {
+      title: string;
+      html_content: string;
+      author?: string;
+      category_id?: number;
+      significance_score?: number;
+      url?: string;
+      source?: string;
+      keywords?: string;
+    }
+  ): Promise<{ success: boolean; id: number; title: string; message: string }> {
+    const token = localStorage.getItem('authToken');
+    return makeModularRequest('posts', 'POST', {}, data, token ? { 'Authorization': `Bearer ${token}` } : {});
+  }
+
+  async updatePost(
+    id: number,
+    data: {
+      title: string;
+      html_content: string;
+      author?: string;
+      category_id?: number;
+      significance_score?: number;
+      url?: string;
+      source?: string;
+      keywords?: string;
+    }
+  ): Promise<{ success: boolean; id: number; message: string }> {
+    const token = localStorage.getItem('authToken');
+    return makeModularRequest(`posts/${id}`, 'PUT', {}, data, token ? { 'Authorization': `Bearer ${token}` } : {});
+  }
+
+  async deletePost(id: number): Promise<{ success: boolean; message: string }> {
+    const token = localStorage.getItem('authToken');
+    return makeModularRequest(`posts/${id}`, 'DELETE', {}, undefined, token ? { 'Authorization': `Bearer ${token}` } : {});
+  }
+
   async searchContent(
     query: string,
     categoryId?: number,
@@ -1059,7 +1119,7 @@ export class ApiService {
     count: number;
   }> {
     console.log(`🔥 Fetching trending keywords (last ${days} day(s), limit: ${limit})`);
-    
+
     try {
       const response = await makeModularRequest(
         'api/v1/trending-keywords',  // ✅ FIXED: Correct endpoint path
@@ -1070,9 +1130,9 @@ export class ApiService {
         false,
         'default'
       );
-      
+
       console.log(`✅ Trending keywords fetched: ${response.trending_keywords?.length || 0} keywords`);
-      
+
       // ✅ Validate response structure
       if (!response.trending_keywords || !Array.isArray(response.trending_keywords)) {
         console.warn('⚠️ Invalid response structure from trending keywords API');
@@ -1084,7 +1144,7 @@ export class ApiService {
           count: 0
         };
       }
-      
+
       return {
         trending_keywords: response.trending_keywords,
         timestamp: response.timestamp || new Date().toISOString(),
@@ -1132,7 +1192,7 @@ export class ApiService {
 
     // Use admin API instance for scraping operations (long timeout)
     const apiType = endpoint.includes('admin/scrape') || endpoint.includes('admin/tavily') ? 'admin' : 'default';
-    
+
     return await makeModularRequest(endpoint, method, params, null, headers, false, apiType);
   }
 

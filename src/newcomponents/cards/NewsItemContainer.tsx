@@ -1,5 +1,5 @@
+import { Box, Stack, Typography, useTheme } from '@mui/material';
 import React from 'react';
-import { Box, Paper, Typography, Stack, useTheme, Container } from '@mui/material';
 import type { Article } from '../../types/article';
 import NewsItem from './NewsItem';
 
@@ -15,6 +15,7 @@ interface NewsItemContainerProps {
   showInteractions?: boolean;
   emptyMessage?: string;
   emptyIcon?: string;
+  onItemClick?: (article: Article) => void;
 }
 
 const NewsItemContainer: React.FC<NewsItemContainerProps> = ({
@@ -28,15 +29,14 @@ const NewsItemContainer: React.FC<NewsItemContainerProps> = ({
   onShare,
   showInteractions = false,
   emptyMessage = 'No articles available',
-  emptyIcon
+  emptyIcon,
+  onItemClick,
 }) => {
   const theme = useTheme();
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       width: '100%',
-      px: { xs: 0, md: 2 },  // ✅ Add horizontal padding
-      py: { xs: 1, md: 2 }   // ✅ Add vertical padding
     }}>
       {/* Large Header Section */}
       {headerTitle && (
@@ -81,6 +81,7 @@ const NewsItemContainer: React.FC<NewsItemContainerProps> = ({
               onBookmark={onBookmark}
               onShare={onShare}
               showInteractions={showInteractions}
+              onCardClick={onItemClick ? () => onItemClick(article) : undefined}
             />
           ))}
         </Stack>
