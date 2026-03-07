@@ -21,7 +21,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { DashboardContext, type DashboardContextType } from '../contexts/DashboardContext';
 import { SearchProvider } from '../contexts/SearchContext';
 import type { Article } from '../services/api';
-import { apiService } from '../services/api';
+import { apiService, mapArticleImagesAsync } from '../services/api';
 import type { LandingContent } from '../types/article';
 import { CACHE_DURATION, cacheService } from '../utils/cacheService';
 import Header from './Header';
@@ -38,8 +38,8 @@ const NewDashboard: React.FC = () => {
   const outletContext = useOutletContext<{
     dateFilter?: 1 | 7 | 30 | 365;
     onDateFilterChange?: (filter: 1 | 7 | 30 | 365) => void;
-    selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
-    onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
+    selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'courses' | 'jobs' | 'events';
+    onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'courses' | 'jobs' | 'events') => void;
     onCategoryChangeHandlerSet?: (handler: (category: string) => void) => void;
     onSettingsClickHandlerSet?: (handler: () => void) => void;
     onBookmarksClickHandlerSet?: (handler: () => void) => void;  // ✅ ADD THIS
@@ -60,19 +60,31 @@ const NewDashboard: React.FC = () => {
     blogs: Article[];
     podcasts: Article[];
     videos: Article[];
+    courses: Article[];
+    posts: Article[];
+    jobs: Article[];
+    events: Article[];
   } | null>(null);
   const [searchCounts, setSearchCounts] = useState<{
     blogs: number;
     podcasts: number;
     videos: number;
+    courses: number;
+    posts: number;
+    jobs: number;
+    events: number;
     total: number;
   } | null>(null);
   const [contentCounts, setContentCounts] = useState<{
     blogs: number;
     podcasts: number;
     videos: number;
+    courses: number;
+    posts: number;
+    jobs: number;
+    events: number;
   } | null>(null);
-  const [selectedTab, setSelectedTab] = useState<'news' | 'audio' | 'video' | 'posts' | 'learning'>('news');
+  const [selectedTab, setSelectedTab] = useState<'news' | 'audio' | 'video' | 'posts' | 'courses' | 'jobs' | 'events'>('news');
   const dateFilter = outletContext?.dateFilter || 7;
   const setDateFilter = outletContext?.onDateFilterChange || (() => { });
   const [error, setError] = useState<string | null>(null);
@@ -134,16 +146,30 @@ const NewDashboard: React.FC = () => {
 
       let contentTypeNames: string[];
       const tabToContentTypeMap: Record<string, string> = {
-        'news': 'blog',
-        'audio': 'podcast',
-        'video': 'video'
+        'news': 'blogs',
+        'audio': 'podcasts',
+        'video': 'videos',
+        'courses': 'courses',
+        'jobs': 'jobs',
+        'events': 'events'
+      };
+      // ID-based mapping matches DB content_types table
+      const tabToContentTypeIdMap: Record<string, number> = {
+        'news': 1,
+        'video': 2,
+        'audio': 3,
+        'posts': 4,
+        'courses': 5,
+        'jobs': 6,
+        'events': 7
       };
 
       const selectedContentType = tabToContentTypeMap[selectedTab];
+      const selectedContentTypeId = tabToContentTypeIdMap[selectedTab];
       if (selectedContentType) {
         contentTypeNames = [selectedContentType];
       } else {
-        contentTypeNames = ['blog', 'video', 'podcast'];
+        contentTypeNames = ['blogs', 'videos', 'podcasts', 'courses'];
       }
 
       let publisherNames: string[];
@@ -163,6 +189,7 @@ const NewDashboard: React.FC = () => {
       const filterRequest = {
         interests: categoryNames,
         content_types: contentTypeNames,
+        content_type_ids: selectedContentTypeId ? [selectedContentTypeId] : [],
         publishers: publisherNames,
         time_filter: getTimeFilterString(dateFilter),
         search_query: '',
@@ -170,6 +197,17 @@ const NewDashboard: React.FC = () => {
       };
 
       const response = await apiService.getPersonalizedFeed(filterRequest);
+
+      // 🔍 DEBUG: Print raw backend response
+      console.group('🔍 [Dashboard] Personalized feed raw response');
+      console.log('filterRequest sent:', filterRequest);
+      console.log('total_items:', response.total_items);
+      console.log('grouped_content groups:', response.grouped_content?.length);
+      response.grouped_content?.forEach((group: any) => {
+        const sample = group.items?.[0];
+        console.log(`  📂 ${group.category} (${group.items?.length} items) | sample content_type_label:`, sample?.content_type_label, '| content_type_id:', sample?.content_type_id);
+      });
+      console.groupEnd();
 
       // Transform personalized feed into LandingContent structure
       const articles: Article[] = [];
@@ -207,26 +245,60 @@ const NewDashboard: React.FC = () => {
         });
       });
 
-      // Group articles by category
-      const categoriesMap = new Map<string, { blogs: Article[]; podcasts: Article[]; videos: Article[] }>();
+      // Map Supabase category images (blog articles have no thumbnail_url in DB;
+      // podcasts/videos already carry platform thumbnails so this is a no-op for them)
+      const articlesWithImages = await mapArticleImagesAsync(articles);
 
-      articles.forEach(article => {
+      // 🔍 DEBUG: Print transformed articles sample
+      console.group('🔍 [Dashboard] Transformed articles');
+      console.log('Total articles:', articlesWithImages.length);
+      const typeCounts: Record<string, number> = {};
+      articlesWithImages.forEach(a => { const t = a.content_type || 'undefined'; typeCounts[t] = (typeCounts[t] || 0) + 1; });
+      console.log('content_type breakdown:', typeCounts);
+      console.groupEnd();
+
+      // Group articles by category
+      const categoriesMap = new Map<string, { blogs: Article[]; podcasts: Article[]; videos: Article[]; courses: Article[]; posts: Article[]; jobs: Article[]; events: Article[] }>();
+
+      articlesWithImages.forEach((article, articleIndex) => {
         const cat = article.category_name || 'General';
         if (!categoriesMap.has(cat)) {
-          categoriesMap.set(cat, { blogs: [], podcasts: [], videos: [] });
+          categoriesMap.set(cat, { blogs: [], podcasts: [], videos: [], courses: [], posts: [], jobs: [], events: [] });
         }
 
         const content = categoriesMap.get(cat)!;
         const type = article.content_type?.toLowerCase() || '';
 
-        if (type.includes('blog') || type.includes('article')) {
+        if (articleIndex < 3) {
+          console.log(`🔬 [GroupDebug] article[${articleIndex}] content_type="${article.content_type}" → type="${type}" | includes news=${type.includes('news')}`);
+        }
+
+        if (type.includes('blog') || type.includes('article') || type.includes('news')) {
           content.blogs.push(article);
         } else if (type.includes('podcast')) {
           content.podcasts.push(article);
         } else if (type.includes('video')) {
           content.videos.push(article);
+        } else if (type.includes('course')) {
+          content.courses.push(article);
+        } else if (type.includes('job')) {
+          content.jobs.push(article);
+        } else if (type.includes('event')) {
+          content.events.push(article);
+        } else if (type.includes('post')) {
+          content.posts.push(article);
+        } else {
+          console.warn('⚠️ [Dashboard] Unclassified article content_type:', article.content_type, '| title:', article.title?.slice(0, 40));
         }
       });
+
+      // 🔍 DEBUG: Print grouped breakdown
+      console.group('🔍 [Dashboard] After grouping');
+      categoriesMap.forEach((content, cat) => {
+        console.log(`  📂 ${cat}: blogs=${content.blogs.length} podcasts=${content.podcasts.length} videos=${content.videos.length} courses=${content.courses.length} jobs=${content.jobs.length} events=${content.events.length} posts=${content.posts.length}`);
+      });
+      console.log('selectedTab:', selectedTab, '| getTabContent will use: blogs bucket');
+      console.groupEnd();
 
       // Convert to LandingContent structure
       const transformedContent: LandingContent = {
@@ -235,12 +307,13 @@ const NewDashboard: React.FC = () => {
           name,
           priority: index + 1,
           description: '',
-          content
+          content: { ...content }
         })),
         total_categories: categoriesMap.size
       };
 
       setLandingContent(transformedContent);
+      console.log('🔍 [Dashboard] setLandingContent called — categories:', transformedContent.categories.length, '| first cat blogs:', transformedContent.categories[0]?.content?.blogs?.length ?? 'N/A');
       updateContentCounts(transformedContent);
       setLoading(false);
     } catch (err) {
@@ -332,19 +405,31 @@ const NewDashboard: React.FC = () => {
     let blogsCount = 0;
     let podcastsCount = 0;
     let videosCount = 0;
+    let postsCount = 0;      
+    let coursesCount = 0;
+    let jobsCount = 0;
+    let eventsCount = 0;
 
     if (content && content.categories) {
       content.categories.forEach(cat => {
         blogsCount += (cat.content?.blogs || []).length;
         podcastsCount += (cat.content?.podcasts || []).length;
         videosCount += (cat.content?.videos || []).length;
+        postsCount += (cat.content?.posts || []).length;
+        coursesCount += (cat.content?.courses || []).length;
+        jobsCount += (cat.content?.jobs || []).length;
+        eventsCount += (cat.content?.events || []).length;
       });
     }
 
     setContentCounts({
       blogs: blogsCount,
       podcasts: podcastsCount,
-      videos: videosCount
+      videos: videosCount,
+      posts: postsCount,
+      courses: coursesCount,
+      jobs: jobsCount,
+      events: eventsCount,
     });
   };
 
@@ -394,6 +479,10 @@ const NewDashboard: React.FC = () => {
         case 'news': content = searchResults.blogs; break;
         case 'audio': content = searchResults.podcasts; break;
         case 'video': content = searchResults.videos; break;
+        case 'courses': content = searchResults.courses; break;
+        case 'posts': content = searchResults.posts; break;
+        case 'jobs': content = searchResults.jobs || []; break;
+        case 'events': content = searchResults.events || []; break;
         default: content = [];
       }
     } else if (!landingContent?.categories) {
@@ -410,6 +499,10 @@ const NewDashboard: React.FC = () => {
           case 'news': allContent = [...allContent, ...(cat.content?.blogs || [])]; break;
           case 'audio': allContent = [...allContent, ...(cat.content?.podcasts || [])]; break;
           case 'video': allContent = [...allContent, ...(cat.content?.videos || [])]; break;
+          case 'courses': allContent = [...allContent, ...(cat.content?.courses || [])]; break;
+          case 'posts': allContent = [...allContent, ...(cat.content?.posts || [])]; break;
+          case 'jobs': allContent = [...allContent, ...(cat.content?.jobs || [])]; break;
+          case 'events': allContent = [...allContent, ...(cat.content?.events || [])]; break;
         }
       });
       content = allContent;
@@ -458,8 +551,8 @@ const NewDashboard: React.FC = () => {
       const totalResults = searchResponse.counts.total;
       if (totalResults === 0) {
         setSearchError(`No results found for "${query}"`);
-        setSearchResults({ blogs: [], podcasts: [], videos: [] });
-        setSearchCounts({ blogs: 0, podcasts: 0, videos: 0, total: 0 });
+        setSearchResults({ blogs: [], podcasts: [], videos: [], courses: [], posts: [], jobs: [], events: [] });
+        setSearchCounts({ blogs: 0, podcasts: 0, videos: 0, courses: 0, posts: 0, jobs: 0, events: 0, total: 0 });
       } else {
         setSearchResults({
           blogs: searchResponse.results.blogs.map((item: any) => ({
@@ -479,18 +572,51 @@ const NewDashboard: React.FC = () => {
             time: item.published_date || new Date().toISOString(),
             published_date: item.published_date || null,
             readTime: '15 min'
+          })),
+          courses: (searchResponse.results.courses || []).map((item: any) => ({
+            ...item,
+            time: item.published_date || new Date().toISOString(),
+            published_date: item.published_date || null,
+            readTime: '60 min'
+          })),
+          posts: (searchResponse.results.posts || []).map((item: any) => ({
+            ...item,
+            time: item.published_date || new Date().toISOString(),
+            published_date: item.published_date || null,
+            readTime: '10 min'
+          })) || [],
+          jobs: (searchResponse.results.jobs || []).map((item: any) => ({
+            ...item,
+            time: item.published_date || new Date().toISOString(),
+            published_date: item.published_date || null,
+            readTime: '5 min'
+          })),
+          events: (searchResponse.results.events || []).map((item: any) => ({
+            ...item,
+            time: item.published_date || new Date().toISOString(),
+            published_date: item.published_date || null,
+            readTime: '5 min'
           }))
         });
 
-        setSearchCounts(searchResponse.counts);
+        setSearchCounts({
+          blogs: searchResponse.counts.blogs || 0,
+          podcasts: searchResponse.counts.podcasts || 0,
+          videos: searchResponse.counts.videos || 0,
+          courses: searchResponse.counts.courses || 0,
+          posts: searchResponse.counts.posts || 0,
+          jobs: searchResponse.counts.jobs || 0,
+          events: searchResponse.counts.events || 0,
+          total: searchResponse.counts.total || 0
+        });
         setSearchError(null);
       }
     } catch (err: any) {
       console.error('Search failed:', err);
       setSearchError(`Search temporarily unavailable. Please try again.`);
       setIsSearchActive(true);
-      setSearchResults({ blogs: [], podcasts: [], videos: [] });
-      setSearchCounts({ blogs: 0, podcasts: 0, videos: 0, total: 0 });
+      setSearchResults({ blogs: [], podcasts: [], videos: [], courses: [], posts: [], jobs: [], events: [] });
+      setSearchCounts({ blogs: 0, podcasts: 0, videos: 0, courses: 0, posts: 0, jobs: 0, events: 0, total: 0 });
     } finally {
       setLoading(false);
     }
@@ -760,7 +886,7 @@ const NewDashboard: React.FC = () => {
                         />
                         <ChevronRight size={16} color={theme.palette.text.secondary} />
                         <Chip
-                          label={selectedTab === 'news' ? 'Articles' : selectedTab === 'audio' ? 'Podcasts' : selectedTab === 'video' ? 'Videos' : selectedTab}
+                          label={selectedTab === 'news' ? 'Articles' : selectedTab === 'audio' ? 'Podcasts' : selectedTab === 'video' ? 'Videos' : selectedTab === 'posts' ? 'Posts' : selectedTab === 'courses' ? 'Courses' : selectedTab === 'jobs' ? 'Jobs' : selectedTab === 'events' ? 'Events' : selectedTab}
                           size="small"
                           color="secondary"
                           sx={{ fontWeight: 600 }}
@@ -1047,7 +1173,7 @@ const NewDashboard: React.FC = () => {
                               Add to Preferences
                             </Button>
                           </Paper>
-                        )}                        <NewsItemContainer
+                        )} <NewsItemContainer
                             headerTitle="Your AI Videos"
                             headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                             articles={getTabContent().slice(0, visibleItemsCount)}
@@ -1072,23 +1198,71 @@ const NewDashboard: React.FC = () => {
                     )}
 
                     {/* Learning Tab */}
-                    {!showStatsModal && selectedTab === 'learning' && (
-                      <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
-                        <Typography sx={{ fontSize: '4rem', mb: 2 }}>🎓</Typography>
-                        <Typography variant="h3" fontWeight={700} gutterBottom>
-                          Learning Paths Coming Soon
-                        </Typography>
-                        <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-                          Structured courses from beginner to expert
-                        </Typography>
-                        <Button
-                          variant="contained"
-                          size="large"
-                          onClick={() => navigate('/preferences')}
-                          sx={{ px: 4 }}
-                        >
-                          Manage Preferences
-                        </Button>
+                    {!showStatsModal && selectedTab === 'courses' && (
+                      <Box>
+                        <NewsItemContainer
+                          headerTitle="🎓 Your Learning Path"
+                          headerSubtitle="Personalized courses and tutorials"
+                          articles={getTabContent().slice(0, visibleItemsCount)}
+                          contentType="course"
+                          showInteractions={true}
+                          emptyMessage="No courses match your preferences yet"
+                          emptyIcon="🎓"
+                        />
+                        {visibleItemsCount < getTabContent().length && (
+                          <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <CircularProgress size={24} />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+                              Loading more courses...
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+
+                    {/* Jobs Tab */}
+                    {!showStatsModal && selectedTab === 'jobs' && (
+                      <Box>
+                        <NewsItemContainer
+                          headerTitle="💼 AI & ML Jobs"
+                          headerSubtitle="Open positions in Gen AI, Machine Learning, and AI Infrastructure"
+                          articles={getTabContent().slice(0, visibleItemsCount)}
+                          contentType="job"
+                          showInteractions={true}
+                          emptyMessage="No AI/ML job listings available yet"
+                          emptyIcon="💼"
+                        />
+                        {visibleItemsCount < getTabContent().length && (
+                          <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <CircularProgress size={24} />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+                              Loading more jobs...
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+
+                    {/* Events Tab */}
+                    {!showStatsModal && selectedTab === 'events' && (
+                      <Box>
+                        <NewsItemContainer
+                          headerTitle="📅 AI & ML Events"
+                          headerSubtitle="Conferences, workshops, and meetups in AI, Cloud, and Machine Learning"
+                          articles={getTabContent().slice(0, visibleItemsCount)}
+                          contentType="event"
+                          showInteractions={true}
+                          emptyMessage="No AI/ML events available yet"
+                          emptyIcon="📅"
+                        />
+                        {visibleItemsCount < getTabContent().length && (
+                          <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <CircularProgress size={24} />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+                              Loading more events...
+                            </Typography>
+                          </Box>
+                        )}
                       </Box>
                     )}
                   </Box>

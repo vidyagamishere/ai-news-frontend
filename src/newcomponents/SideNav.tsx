@@ -19,6 +19,8 @@ import {
     Video,
     MessageSquare,
     GraduationCap,
+    Briefcase,
+    CalendarDays,
     Home,
     TrendingUp,
     Bookmark,
@@ -32,7 +34,7 @@ import SocialIcons from './SocialIcons';
 
 interface SideNavProps {
     selectedTab?: string;
-    onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
+    onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning' | 'courses' | 'jobs' | 'events') => void;
     onSettingsClick?: () => void;
     onBookmarksClick?: () => void;
     onStatsClick?: () => void;
@@ -86,7 +88,12 @@ const SideNav: React.FC<SideNavProps> = ({
             'post': <MessageSquare size={20} />,
             'posts': <MessageSquare size={20} />,
             'learning': <GraduationCap size={20} />,
-            'course': <GraduationCap size={20} />
+            'course': <GraduationCap size={20} />,
+            'courses': <GraduationCap size={20} />,
+            'job': <Briefcase size={20} />,
+            'jobs': <Briefcase size={20} />,
+            'event': <CalendarDays size={20} />,
+            'events': <CalendarDays size={20} />
         };
         return iconMap[name.toLowerCase()] || <Newspaper size={20} />;
     };
@@ -104,7 +111,12 @@ const SideNav: React.FC<SideNavProps> = ({
             'posts': 'posts',
             'post': 'posts',
             'learning': 'learning',
-            'course': 'learning'
+            'course': 'courses',
+            'courses': 'courses',
+            'jobs': 'jobs',
+            'job': 'jobs',
+            'events': 'events',
+            'event': 'events'
         };
         return mapping[backendName.toLowerCase()] || backendName.toLowerCase();
     };
@@ -150,7 +162,7 @@ const SideNav: React.FC<SideNavProps> = ({
         { id: 'settings', icon: <Settings size={20} />, label: 'Preferences', type: 'action', action: onSettingsClick },
     ];
 
-    const handleContentTypeClick = (type: 'news' | 'audio' | 'video' | 'posts' | 'learning') => {
+    const handleContentTypeClick = (type: 'news' | 'audio' | 'video' | 'posts' | 'learning' | 'courses' | 'jobs' | 'events') => {
         console.log('📑 SideNav: Content type clicked:', type, 'on page:', isLanding ? 'Landing' : 'Dashboard');
 
         // ✅ Just change tab - don't navigate (same as RightSection)

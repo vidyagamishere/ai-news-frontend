@@ -612,8 +612,8 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
                 borderRadius: 6,
                 fontWeight: 500,
                 cursor: 'pointer',
-                borderColor: topic.count > 0 ? 'success.main' : 'divider',
-                color: topic.count > 0 ? 'success.main' : 'text.primary',
+                borderColor: (topic.count ?? 0) > 0 ? 'success.main' : 'divider',
+                color: (topic.count ?? 0) > 0 ? 'success.main' : 'text.primary',
                 '&:hover': {
                   backgroundColor: alpha(theme.palette.success.main, 0.1),
                   borderColor: 'success.main',

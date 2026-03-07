@@ -1,7 +1,7 @@
 // UPDATED API service - Modular FastAPI Architecture Integration  
 // All API calls now go to direct FastAPI endpoints with modular routing
 import axios from 'axios';
-import type { Article } from '../types/article';
+import type { Article, Category, LandingContent } from '../types/article';
 import DebugLogger from '../utils/debug';
 import { supabaseImageService } from './supabaseImageService';
 type SharePlatform = 'copy_link' | 'email' | 'facebook' | 'twitter' | 'linkedin' | 'whatsapp';
@@ -30,6 +30,7 @@ export const ActionTypeId = {
   FOLLOW: 6,
   READ: 7
 } as const;
+
 
 // Create a separate instance for content requests with longer timeout
 const contentApi = axios.create({
@@ -163,6 +164,23 @@ async function makeModularRequest(
   }
 }
 
+export interface CoursesResponse {
+  courses: Article[];  // ✅ Use Article instead of Course
+  count: number;
+  filters: {
+    topic?: string;
+    difficulty?: string;
+    is_free?: boolean;
+    platform?: string;
+    min_rating?: number;
+  };
+  pagination: {
+    limit: number;
+    offset: number;
+    has_more: boolean;
+  };
+}
+
 // Helper function to assign random Supabase images to articles by category
 const mapArticleImages = async (article: any): Promise<any> => {
   if (!article) return article;
@@ -204,7 +222,7 @@ const mapArticleImagesSync = (articles: any[]): any[] => {
 };
 
 // Async batch mapping for articles with Supabase images
-const mapArticleImagesAsync = async (articles: any[]): Promise<any[]> => {
+export const mapArticleImagesAsync = async (articles: any[]): Promise<any[]> => {
   if (!supabaseImageService.isEnabled()) {
     return mapArticleImagesSync(articles);
   }
@@ -416,6 +434,8 @@ export interface UserStats {
   recent_activities: any[];
 }
 
+
+
 // Complete API service using router pattern
 export class ApiService {
   // ===============================
@@ -571,76 +591,77 @@ export class ApiService {
 
     return data;
   }
-
-  async getLandingContent(limitPerType: number = 10, daysFilter: number = 7, categoryId?: number, contentTypeId?: number): Promise<{
-    categories: Array<{
-      id: number;
-      name: string;
-      priority: number;
-      description: string;
-      content: {
-        blogs: Array<{
-          title: string;
-          summary: string;
-          url: string;
-          source: string;
-          significanceScore: number;
-          published_date: string | null;
-          author: string;
-          category: string;
-          content_type: string;
-        }>;
-        podcasts: Array<{
-          title: string;
-          summary: string;
-          url: string;
-          source: string;
-          significanceScore: number;
-          published_date: string | null;
-          author: string;
-          category: string;
-          content_type: string;
-        }>;
-        videos: Array<{
-          title: string;
-          summary: string;
-          url: string;
-          source: string;
-          significanceScore: number;
-          published_date: string | null;
-          author: string;
-          category: string;
-          content_type: string;
-        }>;
-      };
-    }>;
-    total_categories: number;
-  }> {
+  
+/**
+ * Get landing page content with all content types including courses
+ * Returns categories with embedded content arrays
+ * 
+ * @param limitPerType - Articles per content type per category
+ * @param daysFilter - Filter articles from last N days
+ * @param categoryId - Optional category filter
+ * @param contentTypeId - Optional content type filter
+ * @returns Promise with landing content using Category[]
+ */
+  async getLandingContent(
+    limitPerType: number = 10, 
+    daysFilter: number = 7, 
+    categoryId?: number, 
+    contentTypeId?: number
+  ): Promise<LandingContent> {
     console.log('🏠 Fetching landing content - Days:', daysFilter, 'Category ID:', categoryId, 'Content Type ID:', contentTypeId);
-    const params: any = { limit_per_type: limitPerType, days_filter: daysFilter };
-    if (categoryId !== undefined) params.category_id = categoryId;
-    if (contentTypeId !== undefined) params.content_type_id = contentTypeId;
+    
+    // Build query params
+    const params: Record<string, string> = { 
+      limit_per_type: String(limitPerType), 
+      days_filter: String(daysFilter)
+    };
+    
+    if (categoryId !== undefined) params.category_id = String(categoryId);
+    if (contentTypeId !== undefined) params.content_type_id = String(contentTypeId);
+    
     console.log('📤 API Request params:', params);
-    const data = await makeModularRequest('landing-content', 'GET', params);
+    
+    try {
+      const data = await makeModularRequest('landing-content', 'GET', params);
 
-    // Map Supabase images for all content in all categories
-    if (data.categories && Array.isArray(data.categories)) {
-      for (const category of data.categories) {
-        if (category.content?.blogs) {
-          category.content.blogs = await mapArticleImagesAsync(category.content.blogs);
-        }
-        if (category.content?.podcasts) {
-          category.content.podcasts = await mapArticleImagesAsync(category.content.podcasts);
-        }
-        if (category.content?.videos) {
-          category.content.videos = await mapArticleImagesAsync(category.content.videos);
+      // ✅ Map Supabase images for ALL content types in all categories
+      if (data.categories && Array.isArray(data.categories)) {
+        for (const category of data.categories) {
+          if (category.content) {
+            // Process all content types dynamically
+            const contentTypes = ['blogs', 'podcasts', 'videos', 'courses', 'events', 'jobs', 'posts'];
+            
+            for (const contentType of contentTypes) {
+              if (category.content[contentType] && Array.isArray(category.content[contentType])) {
+                // ✅ All content types are Article[] - uniform image processing
+                category.content[contentType] = await mapArticleImagesAsync(category.content[contentType]);
+                
+                console.log(`✅ Processed ${category.content[contentType].length} ${contentType} for category: ${category.name}`);
+              }
+            }
+          }
         }
       }
-    }
 
-    return data;
+      console.log(`✅ Landing content loaded: ${data.total_categories} categories`);
+      return data;  // ✅ Returns LandingContent with Category[]
+      
+    } catch (error) {
+      console.error('❌ Error fetching landing content:', error);
+      throw error;
+    }
   }
 
+  /**
+ * Search content across all types (blogs, podcasts, videos, courses)
+ * Returns unified search results using Article interface
+ * 
+ * @param query - Search query string
+ * @param categoryId - Optional category filter
+ * @param daysFilter - Filter articles from last N days
+ * @param limitPerType - Max results per content type
+ * @returns Promise with search results grouped by content type
+ */
   async getPosts(limit: number = 50, categoryId?: number, daysFilter: number = 3650): Promise<{
     posts: Array<{
       id: number;
@@ -712,14 +733,22 @@ export class ApiService {
     category_id: number | null;
     days_filter: number;
     results: {
-      blogs: Array<any>;
-      podcasts: Array<any>;
-      videos: Array<any>;
+      blogs: Article[];      // ✅ All use Article interface
+      podcasts: Article[];
+      videos: Article[];
+      courses?: Article[]; 
+      posts?: Article[];
+      events?: Article[];
+      jobs?: Article[];
     };
     counts: {
       blogs: number;
       podcasts: number;
       videos: number;
+      courses?: number;      // ✅ Include course count
+      posts?: number;        // ✅ Include post count
+      events?: number;       // ✅ Include event count
+      jobs?: number;         // ✅ Include job count
       total: number;
     };
     metadata: {
@@ -730,32 +759,43 @@ export class ApiService {
       };
     };
   }> {
-    console.log('🔍 Searching content - Query:', query, 'Category ID:', categoryId, 'Days:', daysFilter);
-    const params: any = {
+    console.log('🔍 Searching content:', { query, categoryId, daysFilter });
+    
+    const params: Record<string, string> = {
       query,
-      days_filter: daysFilter,
-      limit_per_type: limitPerType
+      days_filter: String(daysFilter),
+      limit_per_type: String(limitPerType)
     };
-    if (categoryId !== undefined) params.category_id = categoryId;
+    
+    if (categoryId !== undefined) params.category_id = String(categoryId);
 
-    console.log('📤 Search API Request params:', params);
-    const data = await makeModularRequest('search-content', 'GET', params);
+    try {
+      const data = await makeModularRequest(
+        'search-content',
+        'GET',
+        params
+      );
 
-    // Map Supabase images for all search results
-    if (data.results?.blogs) {
-      data.results.blogs = await mapArticleImagesAsync(data.results.blogs);
-    }
-    if (data.results?.podcasts) {
-      data.results.podcasts = await mapArticleImagesAsync(data.results.podcasts);
-    }
-    if (data.results?.videos) {
-      data.results.videos = await mapArticleImagesAsync(data.results.videos);
-    }
+      // ✅ Map Supabase images for all search results
+      if (data.results) {
+        const contentTypes = ['blogs', 'podcasts', 'videos', 'courses', 'posts', 'events', 'jobs'];
+        
+        for (const contentType of contentTypes) {
+          if (data.results[contentType] && Array.isArray(data.results[contentType])) {
+            data.results[contentType] = await mapArticleImagesAsync(data.results[contentType]);
+            console.log(`✅ Processed ${data.results[contentType].length} ${contentType} results`);
+          }
+        }
+      }
 
-    console.log('✅ Search complete - Total results:', data.counts.total);
-    return data;
+      console.log(`✅ Search complete: ${data.counts?.total || 0} total results`);
+      return data;
+      
+    } catch (error) {
+      console.error('❌ Error searching content:', error);
+      throw error;
+    }
   }
-
   async getPersonalizedDigest(refresh?: boolean): Promise<DigestResponse> {
     const token = localStorage.getItem('authToken');
     if (!token) {
@@ -1205,36 +1245,77 @@ export class ApiService {
   // PERSONALIZED FEED ENDPOINTS
   // ===============================
 
+/**
+ * Get personalized feed with all content types including courses
+ * Returns grouped content by category with all Article types
+ * 
+ * @param filterRequest - Filter parameters for personalized content
+ * @returns Promise with personalized content grouped by category
+ */
   async getPersonalizedFeed(filterRequest: {
     interests?: string[];
     content_types?: string[];
+    content_type_ids?: number[];
     publishers?: string[];
     time_filter?: string;
     search_query?: string;
     limit?: number;
-  }): Promise<any> {
+  }): Promise<{
+    grouped_content: Array<{
+      category: string;
+      category_id: number;
+      items: Article[];
+    }>;
+    total_items: number;
+    filters_applied: {
+      interests: string[];
+      content_types: string[];
+      publishers: string[];
+      time_filter: string;
+      search_query: string;
+    };
+  }> {
     console.log('📱 Fetching personalized feed with filters:', filterRequest);
+    
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    const data = await makeModularRequest('api/v1/personalized-feed', 'POST', {}, {
-      interests: filterRequest.interests || [],
-      content_types: filterRequest.content_types || [],
-      publishers: filterRequest.publishers || [],
-      time_filter: filterRequest.time_filter || '',
-      search_query: filterRequest.search_query || '',
-      limit: filterRequest.limit || 50
-    }, headers, true);
+    
+    try {
+      const data = await makeModularRequest(
+        'api/v1/personalized-feed',
+        'POST',
+        {},  // No query params
+        {    // Request body
+          interests: filterRequest.interests || [],
+          content_types: filterRequest.content_types || [],
+          publishers: filterRequest.publishers || [],
+          time_filter: filterRequest.time_filter || '',
+          search_query: filterRequest.search_query || '',
+          limit: filterRequest.limit || 50
+        },
+        headers,
+        true  // Use content API for longer timeout
+      );
 
-    // Map Supabase images for articles in grouped content
-    if (data.grouped_content && Array.isArray(data.grouped_content)) {
-      for (const group of data.grouped_content) {
-        if (group.items && Array.isArray(group.items)) {
-          group.items = await mapArticleImagesAsync(group.items);
+      // ✅ Map Supabase images for ALL content types in grouped_content
+      if (data.grouped_content && Array.isArray(data.grouped_content)) {
+        for (const group of data.grouped_content) {
+          if (group.items && Array.isArray(group.items)) {
+            // ✅ All items are Article[] regardless of type
+            group.items = await mapArticleImagesAsync(group.items);
+            
+            console.log(`✅ Processed ${group.items.length} items for category: ${group.category}`);
+          }
         }
       }
-    }
 
-    return data;
+      console.log(`✅ Personalized feed loaded: ${data.total_items} total items across ${data.grouped_content?.length || 0} categories`);
+      return data;
+      
+    } catch (error) {
+      console.error('❌ Error fetching personalized feed:', error);
+      throw error;
+    }
   }
 
   async getAvailableInterests(): Promise<{ categories: any[]; count: number }> {
@@ -1624,7 +1705,120 @@ export class ApiService {
       };
     }
   }
+/**
+ * Get AI learning courses with filters
+ * Returns Article objects with course-specific fields populated
+ * 
+ * @param filters - Course filter options
+ * @returns Promise with courses data (using Article type)
+ */
+async getCourses(filters: {
+  topic?: string;
+  difficulty?: string;
+  is_free?: boolean;
+  platform?: string;
+  min_rating?: number;
+  limit?: number;
+  offset?: number;
+} = {}): Promise<CoursesResponse> {
+  console.log('📚 Fetching courses with filters:', filters);
+  
+  const token = localStorage.getItem('authToken');
+  const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
+  try {
+    // Build query params
+    const params: Record<string, string> = {};
+    if (filters.topic) params.topic = filters.topic;
+    if (filters.difficulty) params.difficulty = filters.difficulty;
+    if (filters.is_free !== undefined) params.is_free = String(filters.is_free);
+    if (filters.platform) params.platform = filters.platform;
+    if (filters.min_rating !== undefined) params.min_rating = String(filters.min_rating);
+    params.limit = String(filters.limit || 20);
+    params.offset = String(filters.offset || 0);
+
+    // Use makeModularRequest following existing patterns
+    const response = await makeModularRequest(
+      'api/v1/courses',
+      'GET',
+      params,  // Query params
+      null,    // No body for GET
+      headers,
+      true     // Use content API
+    );
+
+    // ✅ Map Supabase images for courses (same as articles)
+    if (response.courses && Array.isArray(response.courses)) {
+      response.courses = await mapArticleImagesAsync(response.courses);
+    }
+
+    console.log(`✅ Fetched ${response.count} courses`);
+    return response;
+  } catch (error) {
+    console.error('❌ Error fetching courses:', error);
+    throw error;
+  }
+}
+
+/**
+ * Admin: Search and insert learning content via Tavily
+ * Returns search results with article insertion stats
+ * 
+ * @param query - Search query (e.g., "Machine Learning")
+ * @param options - Search options
+ * @returns Promise with search results
+ */
+async adminSearchCourses(
+  query: string,
+  options: {
+    max_results?: number;
+    enrich_with_llm?: boolean;
+    llm_model?: 'ollama' | 'gemini' | 'claude';
+  } = {}
+): Promise<{
+  success: boolean;
+  message: string;
+  search_query: string;
+  formatted_query: string;
+  content_type: string;
+  articles_inserted: number;
+  articles_skipped: number;
+  articles_failed: number;
+  llm_enrichment_enabled: boolean;
+  llm_model_used: string;
+  timestamp: string;
+}> {
+  console.log('🔍 Admin course search:', query, options);
+
+  const adminApiKey = import.meta.env.VITE_ADMIN_API_KEY || 'admin-api-key-2024';
+  const headers = { 'X-Admin-API-Key': adminApiKey };
+
+  // Build query params
+  const params: Record<string, string> = {
+    query,
+    max_results: String(options.max_results || 10),
+    enrich_with_llm: String(options.enrich_with_llm ?? true),
+    llm_model: options.llm_model || 'ollama'
+  };
+
+  try {
+    const response = await makeModularRequest(
+      'admin/tavily/search/courses',
+      'POST',
+      params,  // Query params
+      null,    // No body needed
+      headers,
+      false,
+      'admin'  // Use admin API instance with 10-min timeout
+    );
+
+    console.log(`✅ Admin course search complete: ${response.articles_inserted || 0} inserted`);
+    return response;
+  } catch (error) {
+    console.error('❌ Admin course search failed:', error);
+    throw error;
+  }
+}
 
 }
 

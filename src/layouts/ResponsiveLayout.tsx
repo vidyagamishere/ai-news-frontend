@@ -19,8 +19,8 @@ const RIGHT_WIDTH = 300;
 interface OutletContextType {
   dateFilter?: 1 | 7 | 30 | 365;
   onDateFilterChange?: (filter: 1 | 7 | 30 | 365) => void;
-  selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
-  onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
+  selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning' | 'courses' | 'jobs' | 'events';
+  onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning' | 'courses' | 'jobs' | 'events') => void;
   onCategoryChangeHandlerSet?: (handler: (category: string) => void) => void;
   onSettingsClickHandlerSet?: (handler: () => void) => void;
   onBookmarksClickHandlerSet?: (handler: () => void) => void;
@@ -39,7 +39,7 @@ export default function ResponsiveLayout() {
   const [leftOpen, setLeftOpen] = React.useState(false);
   const [rightOpen, setRightOpen] = React.useState(false);
   const [dateFilter, setDateFilter] = React.useState<1 | 7 | 30 | 365>(7);
-  const [selectedTab, setSelectedTab] = React.useState<'news' | 'audio' | 'video' | 'posts' | 'learning'>('news');
+  const [selectedTab, setSelectedTab] = React.useState<'news' | 'audio' | 'video' | 'posts' | 'learning' | 'courses' | 'jobs' | 'events'>('news');
   const [selectedCategory, setSelectedCategory] = React.useState<string>('All');
   
   // Store the original handlers in refs to avoid re-renders
@@ -86,7 +86,7 @@ export default function ResponsiveLayout() {
   const handleLeftDrawerOpen = () => setLeftOpen(true);
   const handleRightDrawerOpen = () => setRightOpen(true);
 
-  const handleTabChange = (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => {
+  const handleTabChange = (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning' | 'courses' | 'jobs' | 'events') => {
     console.log('📑 ResponsiveLayout: Tab changed to:', tab);
     setSelectedTab(tab);
 

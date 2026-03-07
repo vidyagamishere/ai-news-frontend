@@ -39,8 +39,8 @@ const Landing: React.FC = () => {
   const outletContext = useOutletContext<{
     dateFilter?: 1 | 7 | 30 | 365;
     onDateFilterChange?: (filter: 1 | 7 | 30 | 365) => void;
-    selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'learning';
-    onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => void;
+    selectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'courses' | 'jobs' | 'events';
+    onTabChange?: (tab: 'news' | 'audio' | 'video' | 'posts' | 'courses' | 'jobs' | 'events') => void;
     onCategoryChangeHandlerSet?: (handler: (category: string) => void) => void;
     onSearchStart?: () => void;
     onMenuClick?: () => void;
@@ -64,11 +64,17 @@ const Landing: React.FC = () => {
     blogs: Article[];
     podcasts: Article[];
     videos: Article[];
+    courses: Article[];
+    jobs: Article[];
+    events: Article[];
   } | null>(null);
   const [searchCounts, setSearchCounts] = useState<{
     blogs: number;
     podcasts: number;
     videos: number;
+    courses?: number;
+    jobs?: number;
+    events?: number;
     total: number;
   } | null>(null);
   const [contentCounts, setContentCounts] = useState<{
@@ -76,7 +82,7 @@ const Landing: React.FC = () => {
     podcasts: number;
     videos: number;
   } | null>(null);
-  const [selectedTab, setSelectedTab] = useState<'news' | 'posts' | 'audio' | 'video' | 'learning'>('news');
+  const [selectedTab, setSelectedTab] = useState<'news' | 'posts' | 'audio' | 'video' | 'courses' | 'jobs' | 'events'>('news');
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [contentTypeTabs, setContentTypeTabs] = useState<Array<{ id: string; icon: string; label: string }>>([]);
   const dateFilter = outletContext?.dateFilter || 7;
@@ -97,7 +103,8 @@ const Landing: React.FC = () => {
       return [
         ...searchResults.blogs,
         ...searchResults.podcasts,
-        ...searchResults.videos
+        ...searchResults.videos,
+        ...(searchResults.courses || [])
       ];
     }
 
@@ -108,14 +115,30 @@ const Landing: React.FC = () => {
       const allContent: Article[] = [];
       if (landingContent.categories) {
         landingContent.categories.forEach(cat => {
-          allContent.push(...cat.content.blogs, ...cat.content.podcasts, ...cat.content.videos);
+          allContent.push(
+            ...cat.content.blogs,
+            ...cat.content.podcasts,
+            ...cat.content.videos,
+            ...(cat.content.courses || []),
+            ...(cat.content.posts || []),
+            ...(cat.content.events || []),
+            ...(cat.content.jobs || [])
+          );
         });
       }
       return allContent;
     } else {
       const category = landingContent.categories?.find(cat => cat.name === activeCategory);
       if (category) {
-        return [...category.content.blogs, ...category.content.podcasts, ...category.content.videos];
+        return [
+          ...category.content.blogs,
+          ...category.content.podcasts,
+          ...category.content.videos,
+          ...(category.content.courses || []),
+          ...(category.content.posts || []),
+          ...(category.content.events || []),
+          ...(category.content.jobs || [])
+        ];
       }
     }
     return [];
@@ -153,6 +176,33 @@ const Landing: React.FC = () => {
           item.content_type === 'videos' ||
           item.type === 'video' ||
           item.type === 'videos'
+        );
+        case 'courses':
+          return allContent.filter(item =>
+            item.content_type === 'course' ||
+            item.content_type === 'courses' ||
+            item.type === 'course' ||
+            item.type === 'courses'
+        );
+
+      case 'jobs':
+        return allContent.filter(item =>
+          item.content_type === 'job' ||
+          item.content_type === 'jobs' ||
+          item.type === 'job' ||
+          item.type === 'jobs' ||
+          item.content_type_label === 'Jobs' ||
+          item.content_type_name === 'Jobs'
+        );
+
+      case 'events':
+        return allContent.filter(item =>
+          item.content_type === 'event' ||
+          item.content_type === 'events' ||
+          item.type === 'event' ||
+          item.type === 'events' ||
+          item.content_type_label === 'Events' ||
+          item.content_type_name === 'Events'
         );
 
       default:
@@ -277,19 +327,19 @@ const Landing: React.FC = () => {
             label: ct.display_name
           }));
 
-        // Add Posts and Learning tabs (coming soon)
+        // Add Posts and courses tabs (coming soon)
         tabs.push(
           { id: 'posts', icon: '🗨️', label: 'Posts' },
-          { id: 'learning', icon: '🎓', label: 'Learning' }
+          { id: 'courses', icon: '🎓', label: 'Courses' }
         );
 
-        // Reorder to: News, Podcasts, Videos, Posts, Learning
+        // Reorder to: News, Podcasts, Videos, Posts, Courses
         const orderedTabs = [
           tabs.find(t => t.id === 'news'),
           tabs.find(t => t.id === 'audio'),
           tabs.find(t => t.id === 'video'),
           tabs.find(t => t.id === 'posts'),
-          tabs.find(t => t.id === 'learning')
+          tabs.find(t => t.id === 'courses')
         ].filter(Boolean) as Array<{ id: string; icon: string; label: string }>;
 
         setContentTypeTabs(orderedTabs);
@@ -301,7 +351,7 @@ const Landing: React.FC = () => {
           { id: 'audio', icon: '🎧', label: 'Podcasts' },
           { id: 'video', icon: '📹', label: 'Videos' },
           { id: 'posts', icon: '🗨️', label: 'Posts' },
-          { id: 'learning', icon: '🎓', label: 'Learning' }
+          { id: 'courses', icon: '🎓', label: 'Courses' }
         ]);
       }
     } catch (error) {
@@ -312,7 +362,7 @@ const Landing: React.FC = () => {
         { id: 'audio', icon: '🎧', label: 'Podcasts' },
         { id: 'video', icon: '📹', label: 'Videos' },
         { id: 'posts', icon: '🗨️', label: 'Posts' },
-        { id: 'learning', icon: '🎓', label: 'Learning' }
+        { id: 'courses', icon: '🎓', label: 'Courses' }
       ]);
     }
   };
@@ -368,7 +418,33 @@ const Landing: React.FC = () => {
                   published_date: item.published_date || null,
                   readTime: '15 min'
                 }))
-                : []
+                : [],
+              posts: (cat.content?.posts || []).map((item: any) => ({
+                ...item,
+                url: item.url || item.link || '#',
+                time: item.published_date || new Date().toISOString(),
+                published_date: item.published_date || null,
+                readTime: '10 min'
+              })),
+              courses: (cat.content?.courses || []).map((item: any) => ({
+                ...item,
+                url: item.url || item.link || '#',
+                time: item.published_date || new Date().toISOString(),
+                published_date: item.published_date || null,
+                readTime: '60 min'
+              })),
+              jobs: (cat.content?.jobs || []).map((item: any) => ({
+                ...item,
+                url: item.url || item.link || '#',
+                time: item.published_date || new Date().toISOString(),
+                published_date: item.published_date || null,
+              })),
+              events: (cat.content?.events || []).map((item: any) => ({
+                ...item,
+                url: item.url || item.link || '#',
+                time: item.published_date || new Date().toISOString(),
+                published_date: item.published_date || null,
+              }))
             }
           })),
           total_categories: landingResponse.total_categories
@@ -408,19 +484,23 @@ const Landing: React.FC = () => {
     let podcastsCount = 0;
     let videosCount = 0;
 
+    let coursesCount = 0;
+
     if (content && content.categories) {
       content.categories.forEach(cat => {
         blogsCount += (cat.content?.blogs || []).length;
         podcastsCount += (cat.content?.podcasts || []).length;
         videosCount += (cat.content?.videos || []).length;
+        coursesCount += (cat.content?.courses || []).length;
       });
     }
 
     setContentCounts({
       blogs: blogsCount,
       podcasts: podcastsCount,
-      videos: videosCount
-    });
+      videos: videosCount,
+      courses: coursesCount
+    } as any);
 
     console.log('📊 Content counts updated:', { blogs: blogsCount, podcasts: podcastsCount, videos: videosCount });
   };
@@ -473,8 +553,8 @@ const Landing: React.FC = () => {
       const totalResults = searchResponse.counts.total;
       if (totalResults === 0) {
         setSearchError(`No results found for "${query}" in ${activeCategory} category`);
-        setSearchResults({ blogs: [], podcasts: [], videos: [] });
-        setSearchCounts({ blogs: 0, podcasts: 0, videos: 0, total: 0 });
+        setSearchResults({ blogs: [], podcasts: [], videos: [], courses: [], jobs: [], events: [] });
+        setSearchCounts({ blogs: 0, podcasts: 0, videos: 0, courses: 0, total: 0 });
       } else {
         // Store search results
         setSearchResults({
@@ -498,6 +578,25 @@ const Landing: React.FC = () => {
             time: item.published_date || new Date().toISOString(),
             published_date: item.published_date || null,
             readTime: '15 min'
+          })),
+          courses: (searchResponse.results.courses || []).map((item: any) => ({
+            ...item,
+            url: item.url || item.link || '#',
+            time: item.published_date || new Date().toISOString(),
+            published_date: item.published_date || null,
+            readTime: '60 min'
+          })),
+          jobs: (searchResponse.results.jobs || []).map((item: any) => ({
+            ...item,
+            url: item.url || item.link || '#',
+            time: item.published_date || new Date().toISOString(),
+            published_date: item.published_date || null,
+          })),
+          events: (searchResponse.results.events || []).map((item: any) => ({
+            ...item,
+            url: item.url || item.link || '#',
+            time: item.published_date || new Date().toISOString(),
+            published_date: item.published_date || null,
           }))
         });
 
@@ -511,8 +610,8 @@ const Landing: React.FC = () => {
       // Show user-friendly error message
       setSearchError(`Search temporarily unavailable. Please try again.`);
       setIsSearchActive(true); // Keep search active to show error message
-      setSearchResults({ blogs: [], podcasts: [], videos: [] });
-      setSearchCounts({ blogs: 0, podcasts: 0, videos: 0, total: 0 });
+      setSearchResults({ blogs: [], podcasts: [], videos: [], courses: [], jobs: [], events: [] });
+      setSearchCounts({ blogs: 0, podcasts: 0, videos: 0, courses: 0, total: 0 });
     } finally {
       setLoading(false);
     }
@@ -549,7 +648,9 @@ const Landing: React.FC = () => {
       'audio': 3,   // podcasts
       'video': 2,   // videos
       'posts': 4,   // posts
-      'learning': 5 // learning
+      'courses': 5, // courses
+      'jobs': 6,    // jobs
+      'events': 7   // events
     };
 
     return tabMap[tab];
@@ -602,7 +703,9 @@ const Landing: React.FC = () => {
       audio: 3,   // podcasts
       video: 2,   // videos
       posts: 4,
-      learning: 5
+      courses: 5, // courses
+      jobs: 6,    // jobs
+      events: 7   // events
     };
     const contentTypeId = contentTypeMap[selectedTab];
 
@@ -625,7 +728,7 @@ const Landing: React.FC = () => {
     }
   }, [outletContext?.selectedTab]);
 
-  const handleTabChange = (newTab: 'news' | 'audio' | 'video' | 'posts' | 'learning') => {
+  const handleTabChange = (newTab: 'news' | 'audio' | 'video' | 'posts' | 'courses') => {
     console.log('📑 Landing: Tab changed locally to:', newTab);
     setSelectedTab(newTab);
     // Try to sync with parent if handler exists
@@ -756,7 +859,7 @@ const Landing: React.FC = () => {
                           />
                           <ChevronRight size={16} color={theme.palette.text.secondary} />
                           <Chip
-                            label={selectedTab === 'news' ? 'Articles' : selectedTab === 'audio' ? 'Podcasts' : selectedTab === 'video' ? 'Videos' : selectedTab}
+                            label={selectedTab === 'news' ? 'Articles' : selectedTab === 'audio' ? 'Podcasts' : selectedTab === 'video' ? 'Videos' : selectedTab === 'posts' ? 'Posts' : selectedTab === 'courses' ? 'Courses' : selectedTab === 'jobs' ? 'Jobs' : selectedTab === 'events' ? 'Events' : selectedTab}
                             size="small"
                             color="secondary"
                             sx={{ fontWeight: 600 }}
@@ -899,24 +1002,72 @@ const Landing: React.FC = () => {
                       <PostsTab />
                     )}
 
-                    {/* Learning Tab */}
-                    {selectedTab === 'learning' && (
-                      <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
-                        <Typography sx={{ fontSize: '4rem', mb: 2 }}>🎓</Typography>
-                        <Typography variant="h3" fontWeight={700} gutterBottom>
-                          Learning Paths Coming Soon
-                        </Typography>
-                        <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-                          Structured courses from beginner to expert
-                        </Typography>
-                        <Button
-                          variant="contained"
-                          size="large"
-                          onClick={() => navigate('/auth')}
-                          sx={{ px: 4 }}
-                        >
-                          Join Waitlist
-                        </Button>
+                    {/* Courses Tab */}
+                    {selectedTab === 'courses' && (
+                      <Box>
+                        <NewsItemContainer
+                          headerTitle={`🎓 AI Courses - ${activeCategory}`}
+                          headerSubtitle="Learn AI through curated courses and tutorials"
+                          articles={tabContent.slice(0, visibleItemsCount)}
+                          contentType="course"
+                          showInteractions={false}
+                          emptyMessage="No courses available yet"
+                          emptyIcon="🎓"
+                        />
+                        {visibleItemsCount < tabContent.length && (
+                          <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <CircularProgress size={24} />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+                              Loading more courses...
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+
+                    {/* Jobs Tab */}
+                    {selectedTab === 'jobs' && (
+                      <Box>
+                        <NewsItemContainer
+                          headerTitle={`💼 AI & ML Jobs - ${activeCategory}`}
+                          headerSubtitle="Open positions in Gen AI, Machine Learning, and AI Infrastructure"
+                          articles={tabContent.slice(0, visibleItemsCount)}
+                          contentType="job"
+                          showInteractions={false}
+                          emptyMessage="No AI/ML job listings available yet"
+                          emptyIcon="💼"
+                        />
+                        {visibleItemsCount < tabContent.length && (
+                          <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <CircularProgress size={24} />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+                              Loading more jobs...
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+
+                    {/* Events Tab */}
+                    {selectedTab === 'events' && (
+                      <Box>
+                        <NewsItemContainer
+                          headerTitle={`📅 AI & ML Events - ${activeCategory}`}
+                          headerSubtitle="Conferences, workshops, and meetups in AI, Cloud, and Machine Learning"
+                          articles={tabContent.slice(0, visibleItemsCount)}
+                          contentType="event"
+                          showInteractions={false}
+                          emptyMessage="No AI/ML events available yet"
+                          emptyIcon="📅"
+                        />
+                        {visibleItemsCount < tabContent.length && (
+                          <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <CircularProgress size={24} />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+                              Loading more events...
+                            </Typography>
+                          </Box>
+                        )}
                       </Box>
                     )}
                   </Box>
