@@ -37,6 +37,9 @@ export interface Article {
   content_type_name?: string;
   category?: string;
   category_name?: string;
+  content_type_label?: string;  // Display name (e.g., "Videos", "Courses")
+  category_label?: string;      // Category display name
+  created_date?: string;        // Creation date (fallback for published_date)
   
   // Metrics (REQUIRED)
   readTime: string;
@@ -83,8 +86,59 @@ export interface Article {
   shares?: number;
   comments?: number;
   engagement_score?: number;
-   // Stats (using correct column name)
+// ===== COURSE-SPECIFIC FIELDS (metadata from articles.metadata JSONB) =====
+  // These are populated from metadata column for content_type_id = 5 (Courses)
+  instructor?: string;                    // Course instructor name
+  platform?: string;                      // Coursera, Udemy, edX, etc.
+  provider?: string;                      // University/Company (Stanford, Google, MIT)
+  difficulty?: 'Beginner' | 'Intermediate' | 'Advanced';
+  duration_hours?: number;                // Total course duration
+  duration_weeks?: number;                // Estimated weeks to complete
+  price?: number;                         // Course price (USD)
+  currency?: string;                      // Price currency
+  is_free?: boolean;                      // Free vs paid course
+  has_certificate?: boolean;              // Offers certification
+  course_type?: string;                   // Free, Paid, Certification, Audit
+  rating?: number;                        // Course rating (0-5)
+  num_reviews?: number;                   // Number of reviews
+  num_students?: number;                  // Enrolled students
+  completion_rate?: number;               // Percentage of students who complete
+  modules?: string[];                     // Course modules/chapters
+  prerequisites?: string[];               // Required knowledge
+  learning_outcomes?: string[];           // What students will learn
+  topics_covered?: string[];              // Topics in the course
+  enrollment_url?: string;                // Direct enrollment link
+  start_date?: string;                    // Course start date
+  is_self_paced?: boolean;               // Self-paced vs scheduled
+  enrollment_open?: boolean;              // Currently accepting enrollment
+  ai_topics?: string[];                   // AI-specific categorization
+  recommended_for?: string;               // Target audience
+  skill_level_required?: string;          // Prerequisites summary
+  
+  // ===== EVENT-SPECIFIC FIELDS (for future content_type_id = 6) =====
+  event_date?: string;                    // Event date/time
+  event_location?: string;                // Physical or virtual location
+  event_type?: string;                    // Conference, Workshop, Webinar
+  is_virtual?: boolean;                   // Online vs in-person
+  registration_url?: string;              // Event registration link
+  event_hosts?: string[];                 // Event organizers
+  
+  // ===== JOB-SPECIFIC FIELDS (for future content_type_id = 7) =====
+  company?: string;                       // Hiring company
+  job_title?: string;                     // Position title
+  job_location?: string;                  // Job location
+  is_remote?: boolean;                    // Remote work option
+  salary_range?: string;                  // Salary information
+  experience_level?: string;              // Junior, Mid, Senior
+  job_type?: string;                      // Full-time, Part-time, Contract
+  application_url?: string;               // Job application link
+  skills_required?: string[];             // Required skills
+  
+  // Generic metadata field (JSONB from database)
+  metadata?: Record<string, any>;        // Stores all content-type-specific data
 }
+
+
 
 // Category structure
 export interface Category {
@@ -92,10 +146,16 @@ export interface Category {
   name: string;
   priority: number;
   description: string;
+  category?: string;  // Added for easier mapping
+  count?: number;  // Number of articles in this category
   content: {
     blogs: Article[];
     podcasts: Article[];
     videos: Article[];
+    posts: Article[];
+    courses: Article[];
+    events: Article[];
+    jobs: Article[];
   };
 }
 

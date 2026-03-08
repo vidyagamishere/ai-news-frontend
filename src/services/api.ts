@@ -1,8 +1,8 @@
 // UPDATED API service - Modular FastAPI Architecture Integration  
 // All API calls now go to direct FastAPI endpoints with modular routing
 import axios from 'axios';
+import type { Article, Category, LandingContent } from '../types/article';
 import DebugLogger from '../utils/debug';
-import type { Article } from '../types/article';
 import { supabaseImageService } from './supabaseImageService';
 type SharePlatform = 'copy_link' | 'email' | 'facebook' | 'twitter' | 'linkedin' | 'whatsapp';
 
@@ -31,10 +31,20 @@ export const ActionTypeId = {
   READ: 7
 } as const;
 
+
 // Create a separate instance for content requests with longer timeout
 const contentApi = axios.create({
   baseURL: API_BASE_URL,
   timeout: 90000, // 90 seconds for digest processing with comprehensive database views
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Create a separate instance for admin operations with very long timeout
+const adminApi = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 600000, // 10 minutes for scraping and other long-running admin operations
   headers: {
     'Content-Type': 'application/json',
   },
@@ -49,19 +59,20 @@ const cacheTimeout = 10000; // 10 seconds cache for better deduplication
 
 // Direct modular endpoint request function - calls FastAPI endpoints directly
 async function makeModularRequest(
-  endpoint: string, 
-  method: string = 'GET', 
-  params: any = {}, 
+  endpoint: string,
+  method: string = 'GET',
+  params: any = {},
   data: any = null,
   headers: any = {},
-  useContentApi: boolean = false
+  useContentApi: boolean = false,
+  apiType: 'default' | 'content' | 'admin' = 'default'
 ) {
   debug.enter('makeModularRequest', { endpoint, method, params, hasData: !!data, headers: Object.keys(headers) });
   const startTime = Date.now();
-  
+
   // Create cache key for GET requests only (POST requests should not be cached)
   const cacheKey = method === 'GET' ? `${method}:${endpoint}:${JSON.stringify(params)}:${JSON.stringify(headers)}` : null;
-  
+
   if (cacheKey) {
     // Check if request is in cache and still valid
     const cached = requestCache.get(cacheKey);
@@ -70,13 +81,19 @@ async function makeModularRequest(
       return cached.promise;
     }
   }
-  
+
   try {
-    const apiInstance = useContentApi ? contentApi : api;
-    
+    // Select API instance based on apiType (with backwards compatibility for useContentApi)
+    let apiInstance = api;
+    if (apiType === 'admin') {
+      apiInstance = adminApi;
+    } else if (apiType === 'content' || useContentApi) {
+      apiInstance = contentApi;
+    }
+
     debug.step('makeModularRequest', 'sending_request', { endpoint, method });
     console.log(`📡 Modular Request: ${method} /${endpoint}`);
-    
+
     // Build request configuration
     const config: any = {
       method: method.toLowerCase(),
@@ -86,55 +103,55 @@ async function makeModularRequest(
         'Content-Type': 'application/json'
       }
     };
-    
-    // Add query parameters for GET requests
-    if (method === 'GET' && Object.keys(params).length > 0) {
+
+    // Add query parameters for GET and DELETE requests
+    if ((method === 'GET' || method === 'DELETE') && Object.keys(params).length > 0) {
       config.params = params;
     }
-    
+
     // Add request body for POST/PUT requests
     if ((method === 'POST' || method === 'PUT') && (data || Object.keys(params).length > 0)) {
       config.data = data || params;
     }
-    
+
     const response = await apiInstance.request(config);
-    
-    debug.step('makeModularRequest', 'received_response', { 
-      endpoint, 
-      status: response.status, 
-      hasData: !!response.data 
-    });
-    
-    console.log(`✅ Modular Response: /${endpoint} - ${response.status}`);
-    
-    const executionTime = Date.now() - startTime;
-    debug.exit('makeModularRequest', { 
-      status: response.status, 
+
+    debug.step('makeModularRequest', 'received_response', {
       endpoint,
-      dataType: typeof response.data 
+      status: response.status,
+      hasData: !!response.data
+    });
+
+    console.log(`✅ Modular Response: /${endpoint} - ${response.status}`);
+
+    const executionTime = Date.now() - startTime;
+    debug.exit('makeModularRequest', {
+      status: response.status,
+      endpoint,
+      dataType: typeof response.data
     }, executionTime);
-    
+
     return response.data;
   } catch (error: any) {
     const executionTime = Date.now() - startTime;
     debug.error('makeModularRequest', error, executionTime);
-    
+
     console.error(`❌ Modular request failed for /${endpoint}:`, error);
-    
+
     // Handle authentication errors
     if (error.response?.status === 401) {
       throw new Error('Authentication required');
     }
-    
+
     // Handle not found errors
     if (error.response?.status === 404) {
       throw new Error(`Endpoint /${endpoint} not found`);
     }
-    
+
     // Return detailed error info with all backend error data preserved
     const errorData = error.response?.data || {};
     const errorMessage = errorData.detail || errorData.message || error.message;
-    
+
     // Create enhanced error with all backend data preserved
     const enhancedError = new Error(errorMessage);
     (enhancedError as any).error_code = errorData.error_code;
@@ -142,20 +159,37 @@ async function makeModularRequest(
     (enhancedError as any).redirect_to_signin = errorData.redirect_to_signin;
     (enhancedError as any).redirect_to_signup = errorData.redirect_to_signup;
     (enhancedError as any).detailed_instructions = errorData.detailed_instructions;
-    
+
     throw enhancedError;
   }
+}
+
+export interface CoursesResponse {
+  courses: Article[];  // ✅ Use Article instead of Course
+  count: number;
+  filters: {
+    topic?: string;
+    difficulty?: string;
+    is_free?: boolean;
+    platform?: string;
+    min_rating?: number;
+  };
+  pagination: {
+    limit: number;
+    offset: number;
+    has_more: boolean;
+  };
 }
 
 // Helper function to assign random Supabase images to articles by category
 const mapArticleImages = async (article: any): Promise<any> => {
   if (!article) return article;
-  
+
   // Use category_label from backend (ai_categories_master.category_label) if available
   // This directly matches Supabase folder names (e.g., "generative_ai", "ai_startups")
   // Otherwise fallback to category name conversion
   const categoryLabel = article.category_label || article.category || article.category_name || article.topic_category || 'General';
-  
+
   // Fetch random image from Supabase for this category
   let supabaseImage: string | null = null;
   if (supabaseImageService.isEnabled()) {
@@ -163,10 +197,10 @@ const mapArticleImages = async (article: any): Promise<any> => {
   } else {
     console.warn('⚠️ Supabase service is disabled');
   }
-  
+
   // Use Supabase image if available, otherwise use placeholder
   const finalImage = supabaseImage || article.image || '/placeholder-article.jpg';
-  
+
   return {
     ...article,
     image: finalImage,  // Primary field with Supabase image
@@ -188,11 +222,11 @@ const mapArticleImagesSync = (articles: any[]): any[] => {
 };
 
 // Async batch mapping for articles with Supabase images
-const mapArticleImagesAsync = async (articles: any[]): Promise<any[]> => {
+export const mapArticleImagesAsync = async (articles: any[]): Promise<any[]> => {
   if (!supabaseImageService.isEnabled()) {
     return mapArticleImagesSync(articles);
   }
-  
+
   // Map all articles with images in parallel
   return Promise.all(articles.map(article => mapArticleImages(article)));
 };
@@ -206,10 +240,10 @@ const DAILY_CACHE_KEY = 'daily_cache_timestamp';
 const shouldClearDailyCache = (): boolean => {
   const lastClear = localStorage.getItem(DAILY_CACHE_KEY);
   if (!lastClear) return true;
-  
+
   const timeSinceLastClear = Date.now() - parseInt(lastClear);
   const oneDayMs = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-  
+
   return timeSinceLastClear > oneDayMs;
 };
 
@@ -400,6 +434,8 @@ export interface UserStats {
   recent_activities: any[];
 }
 
+
+
 // Complete API service using router pattern
 export class ApiService {
   // ===============================
@@ -411,10 +447,10 @@ export class ApiService {
     if (shouldClearDailyCache()) {
       clearDailyCache();
     }
-    
+
     const params = refresh ? { refresh: '1' } : {};
     const cacheKey = getCacheKey('digest', params);
-    
+
     if (!refresh) {
       const cached = getCachedData(cacheKey);
       if (cached) {
@@ -422,10 +458,10 @@ export class ApiService {
         return cached;
       }
     }
-    
+
     console.log('📡 Fetching digest via modular endpoint...');
     const data = await makeModularRequest('digest', 'GET', params, null, {}, true);
-    
+
     // Map Supabase images for all articles in the digest
     if (data.topStories) {
       data.topStories = await mapArticleImagesAsync(data.topStories);
@@ -437,7 +473,7 @@ export class ApiService {
         }
       }
     }
-    
+
     setCachedData(cacheKey, data);
     return data;
   }
@@ -472,12 +508,12 @@ export class ApiService {
   }> {
     console.log('🚨 Fetching breaking news alerts for landing page...');
     const data = await makeModularRequest('breaking-news', 'GET', { limit });
-    
+
     // Map Supabase images for articles
     if (data.articles && Array.isArray(data.articles)) {
       data.articles = await mapArticleImagesAsync(data.articles);
     }
-    
+
     return data;
   }
 
@@ -497,12 +533,12 @@ export class ApiService {
   }> {
     console.log('🤖 Fetching Generative AI stories for landing page...');
     const data = await makeModularRequest('generative-ai-content', 'GET', { limit });
-    
+
     // Map Supabase images for articles
     if (data.articles && Array.isArray(data.articles)) {
       data.articles = await mapArticleImagesAsync(data.articles);
     }
-    
+
     return data;
   }
 
@@ -522,12 +558,12 @@ export class ApiService {
   }> {
     console.log('🏢 Fetching AI Applications stories for landing page...');
     const data = await makeModularRequest('ai-applications-content', 'GET', { limit });
-    
+
     // Map Supabase images for articles
     if (data.articles && Array.isArray(data.articles)) {
       data.articles = await mapArticleImagesAsync(data.articles);
     }
-    
+
     return data;
   }
 
@@ -547,82 +583,143 @@ export class ApiService {
   }> {
     console.log('🚀 Fetching AI Startups stories for landing page...');
     const data = await makeModularRequest('ai-startups-content', 'GET', { limit });
-    
+
     // Map Supabase images for articles
     if (data.articles && Array.isArray(data.articles)) {
       data.articles = await mapArticleImagesAsync(data.articles);
     }
-    
+
     return data;
   }
-
-  async getLandingContent(limitPerType: number = 10, daysFilter: number = 7, categoryId?: number, contentTypeId?: number): Promise<{
-    categories: Array<{
-      id: number;
-      name: string;
-      priority: number;
-      description: string;
-      content: {
-        blogs: Array<{
-          title: string;
-          summary: string;
-          url: string;
-          source: string;
-          significanceScore: number;
-          published_date: string | null;
-          author: string;
-          category: string;
-          content_type: string;
-        }>;
-        podcasts: Array<{
-          title: string;
-          summary: string;
-          url: string;
-          source: string;
-          significanceScore: number;
-          published_date: string | null;
-          author: string;
-          category: string;
-          content_type: string;
-        }>;
-        videos: Array<{
-          title: string;
-          summary: string;
-          url: string;
-          source: string;
-          significanceScore: number;
-          published_date: string | null;
-          author: string;
-          category: string;
-          content_type: string;
-        }>;
-      };
-    }>;
-    total_categories: number;
-  }> {
+  
+/**
+ * Get landing page content with all content types including courses
+ * Returns categories with embedded content arrays
+ * 
+ * @param limitPerType - Articles per content type per category
+ * @param daysFilter - Filter articles from last N days
+ * @param categoryId - Optional category filter
+ * @param contentTypeId - Optional content type filter
+ * @returns Promise with landing content using Category[]
+ */
+  async getLandingContent(
+    limitPerType: number = 10, 
+    daysFilter: number = 7, 
+    categoryId?: number, 
+    contentTypeId?: number
+  ): Promise<LandingContent> {
     console.log('🏠 Fetching landing content - Days:', daysFilter, 'Category ID:', categoryId, 'Content Type ID:', contentTypeId);
-    const params: any = { limit_per_type: limitPerType, days_filter: daysFilter };
-    if (categoryId !== undefined) params.category_id = categoryId;
-    if (contentTypeId !== undefined) params.content_type_id = contentTypeId;
-    console.log('📤 API Request params:', params);
-    const data = await makeModularRequest('landing-content', 'GET', params);
     
-    // Map Supabase images for all content in all categories
-    if (data.categories && Array.isArray(data.categories)) {
-      for (const category of data.categories) {
-        if (category.content?.blogs) {
-          category.content.blogs = await mapArticleImagesAsync(category.content.blogs);
-        }
-        if (category.content?.podcasts) {
-          category.content.podcasts = await mapArticleImagesAsync(category.content.podcasts);
-        }
-        if (category.content?.videos) {
-          category.content.videos = await mapArticleImagesAsync(category.content.videos);
+    // Build query params
+    const params: Record<string, string> = { 
+      limit_per_type: String(limitPerType), 
+      days_filter: String(daysFilter)
+    };
+    
+    if (categoryId !== undefined) params.category_id = String(categoryId);
+    if (contentTypeId !== undefined) params.content_type_id = String(contentTypeId);
+    
+    console.log('📤 API Request params:', params);
+    
+    try {
+      const data = await makeModularRequest('landing-content', 'GET', params);
+
+      // ✅ Map Supabase images for ALL content types in all categories
+      if (data.categories && Array.isArray(data.categories)) {
+        for (const category of data.categories) {
+          if (category.content) {
+            // Process all content types dynamically
+            const contentTypes = ['blogs', 'podcasts', 'videos', 'courses', 'events', 'jobs', 'posts'];
+            
+            for (const contentType of contentTypes) {
+              if (category.content[contentType] && Array.isArray(category.content[contentType])) {
+                // ✅ All content types are Article[] - uniform image processing
+                category.content[contentType] = await mapArticleImagesAsync(category.content[contentType]);
+                
+                console.log(`✅ Processed ${category.content[contentType].length} ${contentType} for category: ${category.name}`);
+              }
+            }
+          }
         }
       }
+
+      console.log(`✅ Landing content loaded: ${data.total_categories} categories`);
+      return data;  // ✅ Returns LandingContent with Category[]
+      
+    } catch (error) {
+      console.error('❌ Error fetching landing content:', error);
+      throw error;
     }
-    
-    return data;
+  }
+
+  /**
+ * Search content across all types (blogs, podcasts, videos, courses)
+ * Returns unified search results using Article interface
+ * 
+ * @param query - Search query string
+ * @param categoryId - Optional category filter
+ * @param daysFilter - Filter articles from last N days
+ * @param limitPerType - Max results per content type
+ * @returns Promise with search results grouped by content type
+ */
+  async getPosts(limit: number = 50, categoryId?: number, daysFilter: number = 3650): Promise<{
+    posts: Array<{
+      id: number;
+      title: string;
+      summary: string;
+      url: string;
+      source: string;
+      significance_score: number;
+      published_date: string | null;
+      author: string;
+      keywords: string;
+      category: string;
+      category_label: string;
+      content_type: string;
+    }>;
+    count: number;
+  }> {
+    const params: any = { limit, days_filter: daysFilter };
+    if (categoryId !== undefined) params.category_id = categoryId;
+    return makeModularRequest('posts', 'GET', params);
+  }
+
+  async createPost(
+    data: {
+      title: string;
+      html_content: string;
+      author?: string;
+      category_id?: number;
+      significance_score?: number;
+      url?: string;
+      source?: string;
+      keywords?: string;
+    }
+  ): Promise<{ success: boolean; id: number; title: string; message: string }> {
+    const token = localStorage.getItem('authToken');
+    return makeModularRequest('posts', 'POST', {}, data, token ? { 'Authorization': `Bearer ${token}` } : {});
+  }
+
+  async updatePost(
+    id: number,
+    data: {
+      title: string;
+      html_content: string;
+      author?: string;
+      category_id?: number;
+      significance_score?: number;
+      url?: string;
+      source?: string;
+      keywords?: string;
+    }
+  ): Promise<{ success: boolean; id: number; message: string }> {
+    const token = localStorage.getItem('authToken');
+    return makeModularRequest(`posts/${id}`, 'PUT', {}, data, token ? { 'Authorization': `Bearer ${token}` } : {});
+  }
+
+  async deletePost(id: number): Promise<{ success: boolean; message: string }> {
+    const token = localStorage.getItem('authToken');
+    return makeModularRequest(`posts/${id}`, 'DELETE', {}, undefined, token ? { 'Authorization': `Bearer ${token}` } : {});
   }
 
   async searchContent(
@@ -636,14 +733,22 @@ export class ApiService {
     category_id: number | null;
     days_filter: number;
     results: {
-      blogs: Array<any>;
-      podcasts: Array<any>;
-      videos: Array<any>;
+      blogs: Article[];      // ✅ All use Article interface
+      podcasts: Article[];
+      videos: Article[];
+      courses?: Article[]; 
+      posts?: Article[];
+      events?: Article[];
+      jobs?: Article[];
     };
     counts: {
       blogs: number;
       podcasts: number;
       videos: number;
+      courses?: number;      // ✅ Include course count
+      posts?: number;        // ✅ Include post count
+      events?: number;       // ✅ Include event count
+      jobs?: number;         // ✅ Include job count
       total: number;
     };
     metadata: {
@@ -654,48 +759,59 @@ export class ApiService {
       };
     };
   }> {
-    console.log('🔍 Searching content - Query:', query, 'Category ID:', categoryId, 'Days:', daysFilter);
-    const params: any = { 
-      query, 
-      days_filter: daysFilter,
-      limit_per_type: limitPerType 
+    console.log('🔍 Searching content:', { query, categoryId, daysFilter });
+    
+    const params: Record<string, string> = {
+      query,
+      days_filter: String(daysFilter),
+      limit_per_type: String(limitPerType)
     };
-    if (categoryId !== undefined) params.category_id = categoryId;
     
-    console.log('📤 Search API Request params:', params);
-    const data = await makeModularRequest('search-content', 'GET', params);
-    
-    // Map Supabase images for all search results
-    if (data.results?.blogs) {
-      data.results.blogs = await mapArticleImagesAsync(data.results.blogs);
-    }
-    if (data.results?.podcasts) {
-      data.results.podcasts = await mapArticleImagesAsync(data.results.podcasts);
-    }
-    if (data.results?.videos) {
-      data.results.videos = await mapArticleImagesAsync(data.results.videos);
-    }
-    
-    console.log('✅ Search complete - Total results:', data.counts.total);
-    return data;
-  }
+    if (categoryId !== undefined) params.category_id = String(categoryId);
 
+    try {
+      const data = await makeModularRequest(
+        'search-content',
+        'GET',
+        params
+      );
+
+      // ✅ Map Supabase images for all search results
+      if (data.results) {
+        const contentTypes = ['blogs', 'podcasts', 'videos', 'courses', 'posts', 'events', 'jobs'];
+        
+        for (const contentType of contentTypes) {
+          if (data.results[contentType] && Array.isArray(data.results[contentType])) {
+            data.results[contentType] = await mapArticleImagesAsync(data.results[contentType]);
+            console.log(`✅ Processed ${data.results[contentType].length} ${contentType} results`);
+          }
+        }
+      }
+
+      console.log(`✅ Search complete: ${data.counts?.total || 0} total results`);
+      return data;
+      
+    } catch (error) {
+      console.error('❌ Error searching content:', error);
+      throw error;
+    }
+  }
   async getPersonalizedDigest(refresh?: boolean): Promise<DigestResponse> {
     const token = localStorage.getItem('authToken');
     if (!token) {
       throw new Error('Authentication required for personalized content');
     }
-    
+
     if (shouldClearDailyCache()) {
       clearDailyCache();
     }
-    
+
     const params = refresh ? { refresh: '1' } : {};
     const headers = {
       'Authorization': `Bearer ${token}`
     };
     const cacheKey = getCacheKey('personalized-digest', params);
-    
+
     if (!refresh) {
       const cached = getCachedData(cacheKey);
       if (cached) {
@@ -703,10 +819,10 @@ export class ApiService {
         return cached;
       }
     }
-    
+
     console.log('📡 Fetching personalized digest via modular endpoint...');
     const data = await makeModularRequest('digest', 'GET', params, null, headers, true);
-    
+
     // Map Supabase images for all articles in the personalized digest
     if (data.topStories) {
       data.topStories = await mapArticleImagesAsync(data.topStories);
@@ -718,7 +834,7 @@ export class ApiService {
         }
       }
     }
-    
+
     setCachedData(cacheKey, data);
     return data;
   }
@@ -751,12 +867,12 @@ export class ApiService {
   async getContentByType(contentType: string, refresh?: boolean): Promise<any> {
     const params = refresh ? { refresh: 'true', content_type: contentType } : { content_type: contentType };
     const data = await makeModularRequest(`content/${contentType}`, 'GET', params, null, {}, true);
-    
+
     // Map Supabase images if response contains articles array
     if (data.articles && Array.isArray(data.articles)) {
       data.articles = await mapArticleImagesAsync(data.articles);
     }
-    
+
     return data;
   }
 
@@ -765,7 +881,7 @@ export class ApiService {
     if (!token) {
       throw new Error('Authentication required for user preferences');
     }
-    
+
     const headers = {
       'Authorization': `Bearer ${token}`
     };
@@ -778,11 +894,11 @@ export class ApiService {
 
   async authenticateWithGoogle(idToken: string): Promise<AuthResponse> {
     console.log('🔐 Authenticating with Google via modular endpoint...');
-    
+
     const data = {
       credential: idToken
     };
-    
+
     return await makeModularRequest('api/v2/auth/google', 'POST', {}, data);
   }
 
@@ -791,11 +907,11 @@ export class ApiService {
     if (!token) {
       return { valid: false, error: 'no_token' };
     }
-    
+
     const headers = {
       'Authorization': `Bearer ${token}`
     };
-    
+
     try {
       const result = await makeModularRequest('auth/profile', 'GET', {}, null, headers);
       return { valid: true, user: result };
@@ -808,7 +924,7 @@ export class ApiService {
   async logout(): Promise<{ success: boolean; message: string }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     try {
       const result = await makeModularRequest('api/v2/auth/logout', 'POST', {}, {}, headers);
       localStorage.removeItem('authToken');
@@ -859,6 +975,235 @@ export class ApiService {
     const headers = { 'X-Admin-Key': adminKey };
     return await makeModularRequest('admin/validation-status', 'GET', {}, null, headers);
   }
+  // ============= ENHANCED ADMIN ENDPOINTS =============
+
+  async getFilteredArticles(params: {
+    page?: number;
+    page_size?: number;
+    category_id?: number;
+    publisher_id?: number;
+    llm_model?: string;
+    start_date?: string;
+    end_date?: string;
+    search_query?: string;
+  }, adminApiKey: string) {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      `admin/articles/filtered?${queryParams.toString()}`,
+      'GET',
+      {},
+      null,
+      headers
+    );
+  }
+
+  async deleteArticle(articleId: number, adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      `admin/articles/${articleId}`,
+      'DELETE',
+      {},
+      null,
+      headers
+    );
+  }
+
+  async bulkDeleteArticles(articleIds: number[], adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      'admin/articles/bulk-delete',
+      'POST',
+      {},
+      { article_ids: articleIds },
+      headers
+    );
+  }
+
+  async getSourcesByType(contentType: string, adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      `admin/sources/by-type?content_type=${contentType}`,
+      'GET',
+      {},
+      null,
+      headers
+    );
+  }
+
+  async bulkUpdateSources(updates: Array<{
+    id: number;
+    is_active?: boolean;
+    scraping_frequency_hours?: number;
+    llm_model?: string;
+    priority?: number;
+  }>, adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      'admin/sources/bulk-update',
+      'POST',
+      {},
+      { updates },
+      headers
+    );
+  }
+
+  async bulkDeleteSources(sourceIds: number[], contentType: string, adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      'admin/sources/bulk-delete',
+      'POST',
+      {},
+      { source_ids: sourceIds, content_type: contentType },
+      headers
+    );
+  }
+
+  async getAllCategories(adminApiKey: string) {
+    console.log('🔵 [APIService] getAllCategories() START', { hasAdminApiKey: !!adminApiKey });
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    try {
+      const result = await makeModularRequest(
+        'admin/categories/all',
+        'GET',
+        {},
+        null,
+        headers
+      );
+      console.log('🟢 [APIService] getAllCategories() SUCCESS', {
+        categoriesCount: result?.categories?.length || 0,
+        result
+      });
+      return result;
+    } catch (error) {
+      console.error('🔴 [APIService] getAllCategories() ERROR', error);
+      throw error;
+    }
+  }
+
+  async getActiveScrapingJobs(adminApiKey: string) {
+    console.log('🔵 [APIService] getActiveScrapingJobs() START', { hasAdminApiKey: !!adminApiKey });
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    try {
+      const result = await makeModularRequest(
+        'admin/scraping/active-jobs',
+        'GET',
+        {},
+        null,
+        headers
+      );
+      console.log('🟢 [APIService] getActiveScrapingJobs() SUCCESS', {
+        activeJobsCount: result?.active_jobs?.length || 0,
+        result
+      });
+      return result;
+    } catch (error) {
+      console.error('🔴 [APIService] getActiveScrapingJobs() ERROR', error);
+      throw error;
+    }
+  }
+
+  async searchTavily(params: {
+    query: string;
+    max_results?: number;
+    enrich_with_llm?: boolean;
+    llm_model?: string;
+  }, adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+
+    // Build query string manually since FastAPI expects Query parameters
+    const queryString = new URLSearchParams({
+      query: params.query,
+      max_results: String(params.max_results || 10),
+      enrich_with_llm: String(params.enrich_with_llm || false),
+      llm_model: params.llm_model || 'gemini'
+    }).toString();
+
+    // POST with empty body but query params in URL
+    return await makeModularRequest(
+      `admin/tavily/search?${queryString}`,
+      'POST',
+      {},  // Empty params
+      {},  // Empty body
+      headers
+    );
+  }
+
+  async getTavilySearchHistory(page: number = 1, pageSize: number = 20, adminApiKey: string) {
+    const headers = { 'X-Admin-API-Key': adminApiKey };
+    return await makeModularRequest(
+      `admin/tavily/searches?page=${page}&page_size=${pageSize}`,
+      'GET',
+      {},
+      null,
+      headers
+    );
+  }
+
+  // ✅ FIXED: Correct endpoint path and better error handling
+  async getTrendingKeywords(days: number = 1, limit: number = 10): Promise<{
+    trending_keywords: Array<{
+      id: string;
+      label: string;
+      count: number;
+    }>;
+    timestamp: string;
+    days: number;
+    limit: number;
+    count: number;
+  }> {
+    console.log(`🔥 Fetching trending keywords (last ${days} day(s), limit: ${limit})`);
+
+    try {
+      const response = await makeModularRequest(
+        'api/v1/trending-keywords',  // ✅ FIXED: Correct endpoint path
+        'GET',
+        { days, limit },
+        null,
+        {},
+        false,
+        'default'
+      );
+
+      console.log(`✅ Trending keywords fetched: ${response.trending_keywords?.length || 0} keywords`);
+
+      // ✅ Validate response structure
+      if (!response.trending_keywords || !Array.isArray(response.trending_keywords)) {
+        console.warn('⚠️ Invalid response structure from trending keywords API');
+        return {
+          trending_keywords: [],
+          timestamp: new Date().toISOString(),
+          days,
+          limit,
+          count: 0
+        };
+      }
+
+      return {
+        trending_keywords: response.trending_keywords,
+        timestamp: response.timestamp || new Date().toISOString(),
+        days: response.days || days,
+        limit: response.limit || limit,
+        count: response.count || response.trending_keywords.length
+      };
+    } catch (error) {
+      console.error('❌ Failed to fetch trending keywords:', error);
+      // Return empty array on error instead of throwing
+      return {
+        trending_keywords: [],
+        timestamp: new Date().toISOString(),
+        days,
+        limit,
+        count: 0
+      };
+    }
+  }
 
   // ===============================
   // TESTING & DEBUG
@@ -869,14 +1214,14 @@ export class ApiService {
   }
 
   async callEndpoint(
-    endpoint: string, 
-    method: string = 'GET', 
-    params: any = {}, 
+    endpoint: string,
+    method: string = 'GET',
+    params: any = {},
     requireAuth: boolean = false,
     customHeaders: any = {}
   ) {
-    let headers: any = {};
-    
+    let headers: any = { ...customHeaders };
+
     if (requireAuth) {
       const token = localStorage.getItem('authToken');
       if (!token) {
@@ -884,10 +1229,11 @@ export class ApiService {
       }
       headers['Authorization'] = `Bearer ${token}`;
     }
-    
-    headers = { ...headers, ...customHeaders };
-    
-    return await makeModularRequest(endpoint, method, params, null, headers);
+
+    // Use admin API instance for scraping operations (long timeout)
+    const apiType = endpoint.includes('admin/scrape') || endpoint.includes('admin/tavily') ? 'admin' : 'default';
+
+    return await makeModularRequest(endpoint, method, params, null, headers, false, apiType);
   }
 
   async get(endpoint: string, params?: any): Promise<any> {
@@ -899,36 +1245,77 @@ export class ApiService {
   // PERSONALIZED FEED ENDPOINTS
   // ===============================
 
+/**
+ * Get personalized feed with all content types including courses
+ * Returns grouped content by category with all Article types
+ * 
+ * @param filterRequest - Filter parameters for personalized content
+ * @returns Promise with personalized content grouped by category
+ */
   async getPersonalizedFeed(filterRequest: {
     interests?: string[];
     content_types?: string[];
+    content_type_ids?: number[];
     publishers?: string[];
     time_filter?: string;
     search_query?: string;
     limit?: number;
-  }): Promise<any> {
+  }): Promise<{
+    grouped_content: Array<{
+      category: string;
+      category_id: number;
+      items: Article[];
+    }>;
+    total_items: number;
+    filters_applied: {
+      interests: string[];
+      content_types: string[];
+      publishers: string[];
+      time_filter: string;
+      search_query: string;
+    };
+  }> {
     console.log('📱 Fetching personalized feed with filters:', filterRequest);
+    
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    const data = await makeModularRequest('api/v1/personalized-feed', 'POST', {}, {
-      interests: filterRequest.interests || [],
-      content_types: filterRequest.content_types || [],
-      publishers: filterRequest.publishers || [],
-      time_filter: filterRequest.time_filter || '',
-      search_query: filterRequest.search_query || '',
-      limit: filterRequest.limit || 50
-    }, headers, true);
     
-    // Map Supabase images for articles in grouped content
-    if (data.grouped_content && Array.isArray(data.grouped_content)) {
-      for (const group of data.grouped_content) {
-        if (group.items && Array.isArray(group.items)) {
-          group.items = await mapArticleImagesAsync(group.items);
+    try {
+      const data = await makeModularRequest(
+        'api/v1/personalized-feed',
+        'POST',
+        {},  // No query params
+        {    // Request body
+          interests: filterRequest.interests || [],
+          content_types: filterRequest.content_types || [],
+          publishers: filterRequest.publishers || [],
+          time_filter: filterRequest.time_filter || '',
+          search_query: filterRequest.search_query || '',
+          limit: filterRequest.limit || 50
+        },
+        headers,
+        true  // Use content API for longer timeout
+      );
+
+      // ✅ Map Supabase images for ALL content types in grouped_content
+      if (data.grouped_content && Array.isArray(data.grouped_content)) {
+        for (const group of data.grouped_content) {
+          if (group.items && Array.isArray(group.items)) {
+            // ✅ All items are Article[] regardless of type
+            group.items = await mapArticleImagesAsync(group.items);
+            
+            console.log(`✅ Processed ${group.items.length} items for category: ${group.category}`);
+          }
         }
       }
+
+      console.log(`✅ Personalized feed loaded: ${data.total_items} total items across ${data.grouped_content?.length || 0} categories`);
+      return data;
+      
+    } catch (error) {
+      console.error('❌ Error fetching personalized feed:', error);
+      throw error;
     }
-    
-    return data;
   }
 
   async getAvailableInterests(): Promise<{ categories: any[]; count: number }> {
@@ -937,7 +1324,7 @@ export class ApiService {
     return await makeModularRequest('ai-topics', 'GET', {}, null, headers);
   }
 
-  async getAvailablePublishers(): Promise<{ publishers: Array<{id: number; name: string; category_id?: number; priority?: number}>; count: number }> {
+  async getAvailablePublishers(): Promise<{ publishers: Array<{ id: number; name: string; category_id?: number; priority?: number }>; count: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
@@ -948,7 +1335,7 @@ export class ApiService {
     }
   }
 
-  async getAvailableContentTypes(): Promise<{ content_types: Array<{id: number; name: string; display_name: string; description?: string}>; count: number }> {
+  async getAvailableContentTypes(): Promise<{ content_types: Array<{ id: number; name: string; display_name: string; description?: string }>; count: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
@@ -959,20 +1346,20 @@ export class ApiService {
     }
   }
 
-  async getAvailableCategories(): Promise<{ categories: Array<{id: number; name: string; description?: string; priority?: number; count?: number}>; count: number }> {
+  async getAvailableCategories(): Promise<{ categories: Array<{ id: number; name: string; description?: string; priority?: number; count?: number }>; count: number }> {
     console.log('📂 Fetching available categories...');
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
       const response = await makeModularRequest('api/v1/available-categories', 'GET', {}, null, headers);
       console.log('✅ Categories fetched successfully:', response);
-      
+
       // Ensure response has expected structure
       if (!response.categories || !Array.isArray(response.categories)) {
         console.warn('⚠️ Invalid categories response structure:', response);
         return { categories: [], count: 0 };
       }
-      
+
       return {
         categories: response.categories,
         count: response.count || response.categories.length
@@ -983,7 +1370,7 @@ export class ApiService {
     }
   }
 
-  async getPublishersByCategory(categoryId?: number): Promise<{ publishers: Array<{id: number; name: string; category_id?: number; priority?: number}>; count: number }> {
+  async getPublishersByCategory(categoryId?: number): Promise<{ publishers: Array<{ id: number; name: string; category_id?: number; priority?: number }>; count: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     try {
@@ -1000,17 +1387,17 @@ export class ApiService {
     if (!token) {
       throw new Error('Authentication required for updating preferences');
     }
-    
+
     const headers = {
       'Authorization': `Bearer ${token}`
     };
-    
+
     return await makeModularRequest('api/v2/auth/preferences', 'PUT', {}, preferences, headers);
   }
 
   async getContentCounts(categoryId: string = 'all', timeFilter: string = 'all'): Promise<any> {
     debug.enter('getContentCounts', { categoryId, timeFilter });
-    
+
     const params: any = {};
     if (categoryId && categoryId !== 'all') {
       params.category_id = categoryId;
@@ -1018,13 +1405,13 @@ export class ApiService {
     if (timeFilter) {
       params.time_filter = timeFilter;
     }
-    
+
     try {
       const response = await makeModularRequest('content-counts', 'GET', params, null, {}, true);
-      debug.exit('getContentCounts', { 
-        totalArticles: response.total_blogs || 0, 
-        totalPodcasts: response.total_podcasts || 0, 
-        totalVideos: response.total_videos || 0 
+      debug.exit('getContentCounts', {
+        totalArticles: response.total_blogs || 0,
+        totalPodcasts: response.total_podcasts || 0,
+        totalVideos: response.total_videos || 0
       });
       return response;
     } catch (error) {
@@ -1045,15 +1432,15 @@ export class ApiService {
   async getBookmarks(): Promise<{ articles: Article[] }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     try {
-      const response = await makeModularRequest('bookmarks', 'GET', {}, null, headers);
-      
+      const response = await makeModularRequest('api/v1/interactions/bookmarks', 'GET', {}, null, headers);
+
       // Map Supabase images for bookmarked articles
       if (response.articles && Array.isArray(response.articles)) {
         response.articles = await mapArticleImagesAsync(response.articles);
       }
-      
+
       return response;
     } catch (error) {
       console.error('Failed to fetch bookmarks:', error);
@@ -1064,7 +1451,7 @@ export class ApiService {
   async bookmarkArticle(articleId: string): Promise<void> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     try {
       await makeModularRequest(`bookmarks/${articleId}`, 'POST', {}, null, headers);
     } catch (error) {
@@ -1076,7 +1463,7 @@ export class ApiService {
   async removeBookmark(articleId: string): Promise<void> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     try {
       await makeModularRequest(`bookmarks/${articleId}`, 'DELETE', {}, null, headers);
     } catch (error) {
@@ -1094,22 +1481,22 @@ export class ApiService {
       'share': ActionTypeId.SHARE,
       'comment': ActionTypeId.COMMENT,
     };
-    
+
     const actionTypeId = typeMap[interactionType.toLowerCase()];
     if (!actionTypeId) {
       console.warn(`Unknown interaction type: ${interactionType}`);
       return;
     }
-    
+
     await this.createInteraction({
       article_id: articleId,
       action_type_id: actionTypeId
     });
   }
 
-// ✅ UPDATED: Create interaction method
-  async createInteraction(data: { 
-    article_id: number | string; 
+  // ✅ UPDATED: Create interaction method
+  async createInteraction(data: {
+    article_id: number | string;
     action_type_id: number;  // Changed from interaction_type string
     metadata?: any;
   }): Promise<void> {
@@ -1123,10 +1510,10 @@ export class ApiService {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     await makeModularRequest(
-      'api/v1/interactions/article', 
-      'DELETE', 
+      'api/v1/interactions/article',
+      'DELETE',
       { article_id: articleId, action_type_id: actionTypeId },  // Changed param name
-      null, 
+      null,
       headers
     );
   }
@@ -1137,7 +1524,7 @@ export class ApiService {
     if (!token) {
       throw new Error('Authentication required');
     }
-    
+
     await makeModularRequest(
       'api/v1/interactions/share/track',
       'POST',
@@ -1159,15 +1546,15 @@ export class ApiService {
   }): Promise<{ articles: Article[]; has_more: boolean; total: number }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     try {
       const response = await makeModularRequest('feed/swipeable', 'GET', params, null, headers, true);
-      
+
       // Map Supabase images for articles
       if (response.articles && Array.isArray(response.articles)) {
         response.articles = await mapArticleImagesAsync(response.articles);
       }
-      
+
       return response;
     } catch (error) {
       console.error('Failed to fetch swipeable feed:', error);
@@ -1185,20 +1572,20 @@ export class ApiService {
     page_size?: number;  // ✅ ADD THIS
     sort_by?: string;  // ✅ ADD THIS
     sort_order?: string;  // ✅ ADD THIS
-  }): Promise<{ 
+  }): Promise<{
     success?: boolean;  // ✅ ADD THIS
-    articles: Article[]; 
+    articles: Article[];
     items?: Article[];  // ✅ ADD THIS
     meta?: any;  // ✅ ADD THIS
-    has_more: boolean; 
+    has_more: boolean;
     total: number;
   }> {
     const token = localStorage.getItem('authToken');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     try {
       const response = await makeModularRequest('content/paginated', 'GET', params, null, headers, true);
-      
+
       // Map Supabase images for articles
       if (response.articles && Array.isArray(response.articles)) {
         response.articles = await mapArticleImagesAsync(response.articles);
@@ -1206,7 +1593,7 @@ export class ApiService {
       if (response.items && Array.isArray(response.items)) {
         response.items = await mapArticleImagesAsync(response.items);
       }
-      
+
       return response;
     } catch (error) {
       console.error('Failed to fetch paginated content:', error);
@@ -1260,6 +1647,25 @@ export class ApiService {
     });
   }
 
+  // Reading stats
+  async getUserReadingStats(): Promise<{
+    total_articles_read: number;
+    total_minutes_read: number;
+    avg_articles_per_active_day: number;
+    active_days_last_30: number;
+    daily_stats: Array<{ date: string; day_label: string; articles_read: number; minutes_read: number }>;
+    weekly_stats: Array<{ week_start: string; week_label: string; articles_read: number; minutes_read: number }>;
+  }> {
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await api.get('/api/v1/interactions/user/reading-stats', { headers });
+      return response.data;
+    } catch {
+      return { total_articles_read: 0, total_minutes_read: 0, avg_articles_per_active_day: 0, active_days_last_30: 0, daily_stats: [], weekly_stats: [] };
+    }
+  }
+
   // User stats method
   async getUserStats(): Promise<UserStats> {
     try {
@@ -1268,7 +1674,25 @@ export class ApiService {
       const response = await api.get('/api/v1/interactions/user/stats', {
         headers
       });
-      return response.data;
+      const d = response.data;
+      // Backend returns nested { points: {...}, streak: {...}, actions_breakdown: [...] }
+      // Normalize to flat UserStats shape
+      const points = d.points || {};
+      const totalPoints = points.total_points ?? d.total_points ?? 0;
+      const level = points.level ?? d.current_level ?? 1;
+      const nextThreshold = points.next_level_threshold ?? d.points_to_next_level ?? 100;
+      return {
+        total_points: totalPoints,
+        current_level: level,
+        level_name: d.level_name ?? `Level ${level}`,
+        points_to_next_level: nextThreshold,
+        actions_breakdown: (d.actions_breakdown || []).map((a: any) => ({
+          action_type: a.action_type,
+          count: a.count ?? 0,
+          points: a.total_points ?? a.points ?? 0,
+        })),
+        recent_activities: d.recent_activities || [],
+      };
     } catch (error) {
       console.error('Failed to fetch user stats:', error);
       return {
@@ -1281,7 +1705,120 @@ export class ApiService {
       };
     }
   }
+/**
+ * Get AI learning courses with filters
+ * Returns Article objects with course-specific fields populated
+ * 
+ * @param filters - Course filter options
+ * @returns Promise with courses data (using Article type)
+ */
+async getCourses(filters: {
+  topic?: string;
+  difficulty?: string;
+  is_free?: boolean;
+  platform?: string;
+  min_rating?: number;
+  limit?: number;
+  offset?: number;
+} = {}): Promise<CoursesResponse> {
+  console.log('📚 Fetching courses with filters:', filters);
   
+  const token = localStorage.getItem('authToken');
+  const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+  try {
+    // Build query params
+    const params: Record<string, string> = {};
+    if (filters.topic) params.topic = filters.topic;
+    if (filters.difficulty) params.difficulty = filters.difficulty;
+    if (filters.is_free !== undefined) params.is_free = String(filters.is_free);
+    if (filters.platform) params.platform = filters.platform;
+    if (filters.min_rating !== undefined) params.min_rating = String(filters.min_rating);
+    params.limit = String(filters.limit || 20);
+    params.offset = String(filters.offset || 0);
+
+    // Use makeModularRequest following existing patterns
+    const response = await makeModularRequest(
+      'api/v1/courses',
+      'GET',
+      params,  // Query params
+      null,    // No body for GET
+      headers,
+      true     // Use content API
+    );
+
+    // ✅ Map Supabase images for courses (same as articles)
+    if (response.courses && Array.isArray(response.courses)) {
+      response.courses = await mapArticleImagesAsync(response.courses);
+    }
+
+    console.log(`✅ Fetched ${response.count} courses`);
+    return response;
+  } catch (error) {
+    console.error('❌ Error fetching courses:', error);
+    throw error;
+  }
+}
+
+/**
+ * Admin: Search and insert learning content via Tavily
+ * Returns search results with article insertion stats
+ * 
+ * @param query - Search query (e.g., "Machine Learning")
+ * @param options - Search options
+ * @returns Promise with search results
+ */
+async adminSearchCourses(
+  query: string,
+  options: {
+    max_results?: number;
+    enrich_with_llm?: boolean;
+    llm_model?: 'ollama' | 'gemini' | 'claude';
+  } = {}
+): Promise<{
+  success: boolean;
+  message: string;
+  search_query: string;
+  formatted_query: string;
+  content_type: string;
+  articles_inserted: number;
+  articles_skipped: number;
+  articles_failed: number;
+  llm_enrichment_enabled: boolean;
+  llm_model_used: string;
+  timestamp: string;
+}> {
+  console.log('🔍 Admin course search:', query, options);
+
+  const adminApiKey = import.meta.env.VITE_ADMIN_API_KEY || 'admin-api-key-2024';
+  const headers = { 'X-Admin-API-Key': adminApiKey };
+
+  // Build query params
+  const params: Record<string, string> = {
+    query,
+    max_results: String(options.max_results || 10),
+    enrich_with_llm: String(options.enrich_with_llm ?? true),
+    llm_model: options.llm_model || 'ollama'
+  };
+
+  try {
+    const response = await makeModularRequest(
+      'admin/tavily/search/courses',
+      'POST',
+      params,  // Query params
+      null,    // No body needed
+      headers,
+      false,
+      'admin'  // Use admin API instance with 10-min timeout
+    );
+
+    console.log(`✅ Admin course search complete: ${response.articles_inserted || 0} inserted`);
+    return response;
+  } catch (error) {
+    console.error('❌ Admin course search failed:', error);
+    throw error;
+  }
+}
 
 }
 

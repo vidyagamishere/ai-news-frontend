@@ -1,42 +1,32 @@
-import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
-  Typography,
+  Button,
   Chip,
+  Divider,
+  IconButton,
+  Menu,
+  MenuItem,
   Paper,
   Stack,
-  Divider,
-  useTheme,
-  IconButton,
-  Button,
-  Avatar,
-  Badge,
-  useMediaQuery,
-  Container,
-  Menu,
-  MenuItem
+  Typography,
+  useTheme
 } from '@mui/material';
-import { styled, alpha } from '@mui/material/styles';
+import { alpha } from '@mui/material/styles';
 import {
-  TrendingUp,
-  Sparkles,
-  Search,
-  Bell,
-  Menu as MenuIcon,
-  User,
-  LogOut,
   BookmarkPlus,
+  LogOut,
   Settings,
-  Edit,
-  Trophy
+  Sparkles,
+  TrendingUp,
+  Trophy,
+  User
 } from 'lucide-react';
-import { useDashboardContext } from '../contexts/DashboardContext';
-import { useNavigate, useLocation } from 'react-router-dom';
-import EnhancedSearchBar from '../components/EnhancedSearchBar';
-import { useSearch } from '../contexts/SearchContext';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useDashboardContext } from '../contexts/DashboardContext';
 import { apiService } from '../services/api';
-import { cacheService, CACHE_DURATION } from '../utils/cacheService';
+import { CACHE_DURATION, cacheService } from '../utils/cacheService';
 
 
 interface Topic {
@@ -61,19 +51,15 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
   const location = useLocation();
   const isDashboard = location.pathname.includes('/dashboard');
   const isLanding = location.pathname === '/' || location.pathname === '/landing';
-  
+
   // Add unique ID for debugging
   const instanceId = React.useRef(Math.random().toString(36).substr(2, 9));
-  
+
   useEffect(() => {
-    console.log(`🔍 RightSection Instance: ${instanceId.current}`);
-    console.log(`📍 Location: ${location.pathname}`);
-    console.log(`🎯 Is Dashboard: ${isDashboard}`);
-    console.log(`🏠 Is Landing: ${isLanding}`);
   }, [location.pathname, isDashboard, isLanding]);
-  
+
   const { user, isAuthenticated, logout } = useAuth();
-  
+
   // ✅ ALWAYS call the hook, but only use values if on dashboard
   let dashboardContext;
   try {
@@ -82,7 +68,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
     // Context not available
     dashboardContext = { content: [], categories: [], selectedCategory: 'All' };
   }
-  
+
   // Only use dashboard context values if on dashboard page
   const contextContent = isDashboard ? dashboardContext.content : [];
   const contextCategories = isDashboard ? dashboardContext.categories : [];
@@ -90,24 +76,25 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
-  
+
   // Fetch categories directly from API
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ NEW: Add state for trending keywords
+  const [trendingKeywords, setTrendingKeywords] = useState<Topic[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(true);
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        console.log('🔄 RightSection: Fetching categories directly from API...');
         const response = await cacheService.get(
-          'available_categories', 
-          () => apiService.getAvailableCategories(), 
+          'available_categories',
+          () => apiService.getAvailableCategories(),
           CACHE_DURATION.LONG
         );
-        
+
         if (response && Array.isArray(response.categories)) {
-          console.log('✅ RightSection: Categories fetched:', response.categories.length);
-          console.log('📊 RightSection: Sample category:', response.categories[0]);
           setAvailableCategories(response.categories);
         }
       } catch (error) {
@@ -118,6 +105,49 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
     };
 
     fetchCategories();
+  }, []);
+
+  // ✅ IMPROVED: Fetch trending keywords with better error handling
+  useEffect(() => {
+    const fetchTrendingKeywords = async () => {
+      try {
+        setTrendingLoading(true);
+
+        const response = await cacheService.get(
+          'trending_keywords',
+          () => apiService.getTrendingKeywords(1, 10),  // Last 1 day, max 10 keywords
+          CACHE_DURATION.TRENDING  // 10 minutes cache
+        );
+
+        // ✅ Validate response structure
+        if (response && response.trending_keywords && Array.isArray(response.trending_keywords)) {
+
+          // Transform to Topic format if needed
+          const transformedKeywords = response.trending_keywords.map(kw => ({
+            id: kw.id || kw.label.toLowerCase().replace(/\s+/g, '-'),
+            label: kw.label,
+            count: kw.count || 0
+          }));
+
+          setTrendingKeywords(transformedKeywords);
+        } else {
+          console.warn('⚠️ RightSection: Invalid or empty trending keywords response');
+          console.warn('Response structure:', response);
+          setTrendingKeywords([]);
+        }
+      } catch (error) {
+        console.error('❌ RightSection: Failed to fetch trending keywords:', error);
+        setTrendingKeywords([]);
+      } finally {
+        setTrendingLoading(false);
+      }
+    };
+
+    fetchTrendingKeywords();
+
+    // Refresh trending keywords every 10 minutes
+    const interval = setInterval(fetchTrendingKeywords, 10 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   // Use directly fetched categories with counts from API
@@ -136,7 +166,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
       const userCategoryIds = (user.preferences as any)?.category_ids_selected || [];
       const userCategories = availableCategories.filter(cat => userCategoryIds.includes(cat.id));
       const otherCategories = availableCategories.filter(cat => !userCategoryIds.includes(cat.id));
-      
+
       // Show user's selected categories first, then others sorted by count
       topics = [
         ...userCategories.map(cat => ({
@@ -166,10 +196,6 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
   // Keep selectedCategory for UI state
   const content = isDashboard ? contextContent : [];
   const selectedCategory = selectedCategoryProp || (isDashboard ? contextSelectedCategory : 'All');
-
-  console.log('📊 RightSection: Using categories with counts:', availableCategories.length);
-  console.log('📍 RightSection: Current page:', isDashboard ? 'Dashboard' : isLanding ? 'Landing' : 'Other');
-  console.log('🎯 RightSection: Selected category:', selectedCategory);
 
   // Extract trending topics from actual content
   const trendingTopics = useMemo(() => {
@@ -208,14 +234,29 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
   ];
 
   const displayRecommendedTopics = recommendedTopics.length > 0 ? recommendedTopics : fallbackRecommendedTopics;
-  const displayTrendingTopics = trendingTopics.length > 0 ? trendingTopics : [
-    { id: 'gpt-4', label: 'GPT-4', count: 0 },
-    { id: 'dalle', label: 'DALL-E', count: 0 },
-    { id: 'claude', label: 'Claude AI', count: 0 },
-    { id: 'midjourney', label: 'Midjourney', count: 0 },
-    { id: 'llm', label: 'Large Language Models', count: 0 }
-  ];
+  const displayTrendingTopics = useMemo(() => {
+    // Priority 1: Use real trending keywords from API (if available and loaded)
+    if (!trendingLoading && trendingKeywords.length > 0) {
+      console.log('✅ Displaying API trending keywords:', trendingKeywords.length);
+      return trendingKeywords;
+    }
 
+    // Priority 2: Extract from actual content (existing logic)
+    if (trendingTopics.length > 0) {
+      console.log('✅ Displaying content-based trending:', trendingTopics.length);
+      return trendingTopics;
+    }
+
+    // Priority 3: Fallback to generic AI topics
+    console.log('⚠️ Using fallback trending topics');
+    return [
+      { id: 'generative-ai', label: 'Generative AI', count: 0 },
+      { id: 'machine-learning', label: 'Machine Learning', count: 0 },
+      { id: 'ai-applications', label: 'AI Applications', count: 0 },
+      { id: 'llm', label: 'Large Language Models', count: 0 },
+      { id: 'computer-vision', label: 'Computer Vision', count: 0 }
+    ];
+  }, [trendingKeywords, trendingTopics, trendingLoading]);
 
   const handleNotificationOpen = (event: React.MouseEvent<HTMLElement>) => {
     setNotificationAnchor(event.currentTarget);
@@ -253,12 +294,12 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
 
   const handleCategoryClick = (categoryName: string) => {
     console.log('📂 Category clicked:', categoryName);
-    
+
     // Call the parent handler if provided
     if (onCategoryChange) {
       onCategoryChange(categoryName);
     }
-    
+
     // For non-authenticated users on landing, navigate to auth
     {/*if (!isAuthenticated && isLanding) {
       navigate('/auth?mode=signup');
@@ -266,10 +307,10 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
   };
 
   return (
-    <Box 
-      sx={{ 
-        p: 2, 
-        width: '100%', 
+    <Box
+      sx={{
+        pr: 2,
+        width: '100%',
         height: '100%',
         overflowY: 'auto',
         overflowX: 'hidden',
@@ -343,9 +384,9 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
 
       {/* User Actions - Only show for authenticated users */}
       {isAuthenticated && (
-        <Stack 
-          direction="row" 
-          spacing={1} 
+        <Stack
+          direction="row"
+          spacing={1}
           justifyContent="center"
           sx={{ mb: 2 }}
         >
@@ -362,7 +403,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
               }
             }}
           >
-           <User size={20} />
+            <User size={20} />
           </IconButton>
           {/*}
             <IconButton
@@ -439,7 +480,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
             const isSelected = selectedCategory === topic.label;
             const isPreferred = topic.isPreferred !== false; // Default to true for landing page
             const showPreferenceHint = isDashboard && !isPreferred;
-            
+
             return (
               <Box
                 key={topic.id}
@@ -456,8 +497,8 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
                   border: showPreferenceHint ? `1px dashed ${alpha(theme.palette.text.secondary, 0.3)}` : 'none',
                   opacity: showPreferenceHint ? 0.7 : 1,
                   '&:hover': {
-                    backgroundColor: isSelected 
-                      ? alpha(theme.palette.primary.main, 0.16) 
+                    backgroundColor: isSelected
+                      ? alpha(theme.palette.primary.main, 0.16)
                       : alpha(theme.palette.primary.main, 0.08),
                     opacity: 1
                   }
@@ -469,9 +510,9 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
                   fontWeight={isSelected ? 600 : 500}
                   sx={{
                     flex: 1,
-                    color: isSelected 
-                      ? 'primary.main' 
-                      : showPreferenceHint 
+                    color: isSelected
+                      ? 'primary.main'
+                      : showPreferenceHint
                         ? 'text.secondary'
                         : 'text.primary'
                   }}
@@ -487,7 +528,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
                       fontSize: '0.7rem',
                       fontWeight: 600,
                       minWidth: '28px',
-                      backgroundColor: isSelected 
+                      backgroundColor: isSelected
                         ? alpha(theme.palette.primary.main, 0.2)
                         : showPreferenceHint
                           ? alpha(theme.palette.text.secondary, 0.1)
@@ -518,6 +559,16 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
           <Typography variant="h6" fontWeight={700}>
             Trending Now
           </Typography>
+          {trendingLoading && (
+            <Typography variant="caption" color="text.secondary">
+              (loading...)
+            </Typography>
+          )}
+          {!trendingLoading && trendingKeywords.length > 0 && (
+            <Typography variant="caption" color="success.main">
+              ({trendingKeywords.length} live)
+            </Typography>
+          )}
         </Stack>
 
         <Stack spacing={1} direction="row" flexWrap="wrap" useFlexGap>
@@ -528,7 +579,7 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
               variant="outlined"
               size="medium"
               onClick={() => {
-                console.log('🔥 Trending topic clicked:', topic.label);
+                console.log('🔥 Trending topic clicked:', topic.label, 'count:', topic.count);
                 if (onTrendingClick) {
                   onTrendingClick(topic.label);
                 }
@@ -537,6 +588,8 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
                 borderRadius: 6,
                 fontWeight: 500,
                 cursor: 'pointer',
+                borderColor: (topic.count ?? 0) > 0 ? 'success.main' : 'divider',
+                color: (topic.count ?? 0) > 0 ? 'success.main' : 'text.primary',
                 '&:hover': {
                   backgroundColor: alpha(theme.palette.success.main, 0.1),
                   borderColor: 'success.main',
@@ -550,41 +603,41 @@ const RightSection: React.FC<RightSectionProps> = ({ onCategoryChange, selectedC
 
       {/* Reading List Promo */}
       {isAuthenticated && (
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2.5,
-          mt: 2,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 2
-        }}
-      >
-        <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-          📚 Create Your Reading List
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Save articles and organize them into custom collections
-        </Typography>
-        <Box
+        <Paper
+          elevation={0}
           sx={{
-            backgroundColor: 'primary.main',
-            color: 'white',
-            textAlign: 'center',
-            py: 1,
-            borderRadius: 1,
-            cursor: 'pointer',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-            '&:hover': {
-              backgroundColor: 'primary.dark'
-            }
+            p: 2.5,
+            mt: 2,
+            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2
           }}
         >
-          Get Started
-        </Box>
-      </Paper>
+          <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+            📚 Create Your Reading List
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Save articles and organize them into custom collections
+          </Typography>
+          <Box
+            sx={{
+              backgroundColor: 'primary.main',
+              color: 'white',
+              textAlign: 'center',
+              py: 1,
+              borderRadius: 1,
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              '&:hover': {
+                backgroundColor: 'primary.dark'
+              }
+            }}
+          >
+            Get Started
+          </Box>
+        </Paper>
       )}
       {/* User Profile Menu */}
       <Menu

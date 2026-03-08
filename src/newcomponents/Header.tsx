@@ -25,6 +25,7 @@ import { useNavigate } from 'react-router-dom';
 import EnhancedSearchBar from '../components/EnhancedSearchBar';
 import { useSearch } from '../contexts/SearchContext';
 import { Psychology } from '@mui/icons-material';
+import SocialIcons from './SocialIcons';
 
 const SearchContainer = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -116,75 +117,68 @@ const Header: React.FC<HeaderProps> = ({
         background: 'white',
       }}
     >
-
-      <Box
-        sx={{
-          width: '100%',
-          mx: 'auto',
-          px: { xs: 0, md: 6 },
-          maxWidth: { md: '1200px' }
-        }}
-      >
-        <Toolbar sx={{ px: { lg: 2 }, py: 1 }}>
+        <Toolbar disableGutters sx={{ px: 1, py: 0.5, minHeight: 48, gap: 0.5 }}>
           {/* Left: Mobile Menu Icon */}
           {isMobile && onMenuClick && (
             <IconButton
               color="inherit"
               edge="start"
               onClick={onMenuClick}
-              sx={{ mr: 1 }}
               title="Open Menu"
             >
               <MenuIcon />
             </IconButton>
           )}
 
-          {/* Center: Search Bar (Desktop) or Title (Mobile) */}
-          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' }, alignItems: 'center', gap: 2 }}>
-            {/* Mobile Title */}
-            {isMobile && (
+          {/* Search Bar (Desktop) or Title (Mobile) */}
+          {isMobile && (
+            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center' }}>
               <Psychology sx={{ fontSize: 32, color: 'primary.main' }} />
-            )}
-            {!isMobile && finalShowSearch && finalOnSearch && (
-              <>
-                <Box sx={{ width: { md: 300, lg: 400 } }}>
-                  <EnhancedSearchBar
-                    onSearch={finalOnSearch}
-                    categoryId={finalCategoryId}
-                    placeholder="Search AI content..."
-                    showSuggestions={true}
-                  />
-                </Box>
-                {/* Date Filter next to Search Bar (Desktop only) */}
-                {dateFilter !== undefined && onDateFilterChange && (
-                  <FormControl size="small" sx={{ minWidth: 140 }}>
-                    <Select
-                      value={dateFilter}
-                      onChange={(e: SelectChangeEvent<number>) => onDateFilterChange(e.target.value as 1 | 7 | 30 | 365)}
-                      sx={{ bgcolor: 'background.paper', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' } }}
-                    >
-                      <MenuItem value={1}>Last 24h</MenuItem>
-                      <MenuItem value={7}>Last 7 days</MenuItem>
-                      <MenuItem value={30}>Last 30 days</MenuItem>
-                      <MenuItem value={365}>Last year</MenuItem>
-                    </Select>
-                  </FormControl>
-                )}
-              </>
-            )}
-          </Box>
+            </Box>
+          )}
+          {!isMobile && finalShowSearch && finalOnSearch && (
+            <Box sx={{ flexShrink: 1, minWidth: 80, maxWidth: 240 }}>
+              <EnhancedSearchBar
+                onSearch={finalOnSearch}
+                categoryId={finalCategoryId}
+                placeholder="Search..."
+                showSuggestions={true}
+              />
+            </Box>
+          )}
+          {/* Date Filter (Desktop only) */}
+          {!isMobile && dateFilter !== undefined && onDateFilterChange && (
+            <FormControl size="small" sx={{ minWidth: 120, flexShrink: 0 }}>
+              <Select
+                value={dateFilter}
+                onChange={(e: SelectChangeEvent<number>) => onDateFilterChange(e.target.value as 1 | 7 | 30 | 365)}
+                sx={{ bgcolor: 'background.paper', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' } }}
+              >
+                <MenuItem value={1}>Last 24 hours</MenuItem>
+                <MenuItem value={7}>Last 7 days</MenuItem>
+                <MenuItem value={30}>Last 30 days</MenuItem>
+                <MenuItem value={365}>Last year</MenuItem>
+              </Select>
+            </FormControl>
+          )}
 
-          {/* Right: Icons and Filters */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {/* Mobile Trending Icon */}
-            {isMobile && onTrendingClick && (
-              <IconButton color="inherit" size="small" onClick={onTrendingClick} title="Trending Topics">
-                <TrendingUp size={20} />
-              </IconButton>
-            )}
-          </Box>
+          {/* Social Icons right after date filter (Desktop) */}
+          {!isMobile && (
+            <Box sx={{ ml: 2, flexShrink: 0 }}>
+              <SocialIcons size="small" iconSize={16} spacing={0} />
+            </Box>
+          )}
+
+          {/* Spacer fills remaining space */}
+          <Box sx={{ flexGrow: 1 }} />
+
+          {/* Mobile Trending Icon */}
+          {isMobile && onTrendingClick && (
+            <IconButton color="inherit" size="small" onClick={onTrendingClick} title="Trending Topics">
+              <TrendingUp size={20} />
+            </IconButton>
+          )}
         </Toolbar>
-      </Box>
       {/* Mobile-only second row for Search and Date Filter */}
       {isMobile && (
         <Box sx={{ px: 2, pb: 2, display: 'flex', flexDirection: 'column', gap: 2, borderTop: 1, borderColor: 'divider' }}>

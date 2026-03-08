@@ -5,18 +5,12 @@ import {
   Grid,
   Typography,
   Link,
-  IconButton,
   Divider,
   Stack
 } from '@mui/material';
-import {
-  Twitter,
-  Linkedin,
-  Github,
-  Mail,
-  ExternalLink
-} from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { Link as RouterLink } from 'react-router-dom';
+import SocialIcons from './SocialIcons';
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -60,13 +54,6 @@ const Footer: React.FC = () => {
     }
   ];
 
-  const socialLinks = [
-    { icon: <Twitter size={20} />, label: 'Twitter', url: 'https://twitter.com' },
-    { icon: <Linkedin size={20} />, label: 'LinkedIn', url: 'https://linkedin.com' },
-    { icon: <Github size={20} />, label: 'GitHub', url: 'https://github.com' },
-    { icon: <Mail size={20} />, label: 'Email', url: 'mailto:contact@aiinsights.com' },
-  ];
-
   return (
     <Box
       component="footer"
@@ -102,27 +89,7 @@ const Footer: React.FC = () => {
               Your trusted source for the latest AI news, research, and insights.
               Join our community of AI enthusiasts and professionals.
             </Typography>
-            <Stack direction="row" spacing={1}>
-              {socialLinks.map((social) => (
-                <IconButton
-                  key={social.label}
-                  href={social.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  size="small"
-                  sx={{
-                    color: 'text.secondary',
-                    '&:hover': {
-                      color: 'primary.main',
-                      backgroundColor: 'action.hover'
-                    }
-                  }}
-                  aria-label={social.label}
-                >
-                  {social.icon}
-                </IconButton>
-              ))}
-            </Stack>
+            <SocialIcons size="small" iconSize={20} spacing={0.5} />
           </Grid>
 
           {/* Footer Links */}

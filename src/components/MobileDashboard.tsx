@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search } from 'lucide-react';
-import { apiService } from '../services/api';
+import { apiService, type Article } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { renderingStateManager } from '../utils/renderingStateManager';
 
@@ -263,16 +263,20 @@ const MobileDashboard: React.FC = () => {
       
       // Convert grouped content back to flat array for compatibility
       const flatContent: ContentItem[] = [];
-      response.grouped_content?.forEach((group: { category: string; items: Array<{ id?: number | string; content_type_label?: string; title?: string; summary?: string; description?: string; url?: string; published_date?: string; source?: string; significance_score?: number }> }) => {
+      response.grouped_content?.forEach((group: { 
+      category: string; 
+      category_id: number; 
+      items: Article[];  // ✅ Use Article type directly
+    }) => {
         group.items?.forEach((item) => {
           flatContent.push({
             id: item.id?.toString() || Math.random().toString(),
             category: group.category,
-            type: (item.content_type_label as 'BLOGS' | 'VIDEOS' | 'PODCASTS') || 'BLOGS',
-            title: item.title || 'Untitled',
+            type: (item.content_type_label as 'BLOGS' | 'VIDEOS' | 'PODCASTS') || 'COURSES' || 'POSTS' ,
+            title: item.title || 'Untitled',  
             summary: item.summary || item.description || 'No description available',
             sourceLink: item.url || '#',
-            publishDate: item.published_date || new Date().toISOString(),
+            publishDate: item.published_date || item.time || new Date().toISOString(),
             publisher: item.source || 'Unknown',
             significance: item.significance_score || 5
           });
