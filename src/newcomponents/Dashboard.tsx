@@ -26,6 +26,9 @@ import type { LandingContent } from '../types/article';
 import { CACHE_DURATION, cacheService } from '../utils/cacheService';
 import Header from './Header';
 import PostsTab from './PostsTab';
+import CourseContainer from './cards/CourseContainer';
+import EventContainer from './cards/EventContainer';
+import JobContainer from './cards/JobContainer';
 import NewsItemContainer from './cards/NewsItemContainer';
 
 
@@ -405,7 +408,7 @@ const NewDashboard: React.FC = () => {
     let blogsCount = 0;
     let podcastsCount = 0;
     let videosCount = 0;
-    let postsCount = 0;      
+    let postsCount = 0;
     let coursesCount = 0;
     let jobsCount = 0;
     let eventsCount = 0;
@@ -1097,35 +1100,36 @@ const NewDashboard: React.FC = () => {
 
                       {/* Audio Tab */}
                       {!showStatsModal && selectedTab === 'audio' && (
-                        <>                        {getTabContent().length === 0 && activeCategory !== 'All' && (
-                          <Paper
-                            elevation={0}
-                            sx={{
-                              p: 6,
-                              textAlign: 'center',
-                              bgcolor: alpha(theme.palette.warning.main, 0.05),
-                              borderRadius: 3,
-                              border: '2px dashed',
-                              borderColor: alpha(theme.palette.warning.main, 0.3),
-                              mb: 3
-                            }}
-                          >
-                            <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔔</Typography>
-                            <Typography variant="h5" fontWeight={700} gutterBottom>
-                              No podcasts from {activeCategory}
-                            </Typography>
-                            <Typography color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
-                              This category is not in your preferences. Add it to start seeing podcasts from {activeCategory}.
-                            </Typography>
-                            <Button
-                              variant="contained"
-                              onClick={() => setShowSettingsModal(true)}
-                              startIcon={<Settings size={18} />}
+                        <>
+                          {getTabContent().length === 0 && activeCategory !== 'All' && (
+                            <Paper
+                              elevation={0}
+                              sx={{
+                                p: 6,
+                                textAlign: 'center',
+                                bgcolor: alpha(theme.palette.warning.main, 0.05),
+                                borderRadius: 3,
+                                border: '2px dashed',
+                                borderColor: alpha(theme.palette.warning.main, 0.3),
+                                mb: 3
+                              }}
                             >
-                              Add to Preferences
-                            </Button>
-                          </Paper>
-                        )}                        <NewsItemContainer
+                              <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔔</Typography>
+                              <Typography variant="h5" fontWeight={700} gutterBottom>
+                                No podcasts from {activeCategory}
+                              </Typography>
+                              <Typography color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
+                                This category is not in your preferences. Add it to start seeing podcasts from {activeCategory}.
+                              </Typography>
+                              <Button
+                                variant="contained"
+                                onClick={() => setShowSettingsModal(true)}
+                                startIcon={<Settings size={18} />}
+                              >
+                                Add to Preferences
+                              </Button>
+                            </Paper>
+                          )}                        <NewsItemContainer
                             headerTitle="Your AI Podcasts"
                             headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                             articles={getTabContent().slice(0, visibleItemsCount)}
@@ -1145,35 +1149,37 @@ const NewDashboard: React.FC = () => {
 
                       {/* Video Tab */}
                       {!showStatsModal && selectedTab === 'video' && (
-                        <>                        {getTabContent().length === 0 && activeCategory !== 'All' && (
-                          <Paper
-                            elevation={0}
-                            sx={{
-                              p: 6,
-                              textAlign: 'center',
-                              bgcolor: alpha(theme.palette.warning.main, 0.05),
-                              borderRadius: 3,
-                              border: '2px dashed',
-                              borderColor: alpha(theme.palette.warning.main, 0.3),
-                              mb: 3
-                            }}
-                          >
-                            <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔔</Typography>
-                            <Typography variant="h5" fontWeight={700} gutterBottom>
-                              No videos from {activeCategory}
-                            </Typography>
-                            <Typography color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
-                              This category is not in your preferences. Add it to start seeing videos from {activeCategory}.
-                            </Typography>
-                            <Button
-                              variant="contained"
-                              onClick={() => setShowSettingsModal(true)}
-                              startIcon={<Settings size={18} />}
+                        <>
+                          {getTabContent().length === 0 && activeCategory !== 'All' && (
+                            <Paper
+                              elevation={0}
+                              sx={{
+                                p: 6,
+                                textAlign: 'center',
+                                bgcolor: alpha(theme.palette.warning.main, 0.05),
+                                borderRadius: 3,
+                                border: '2px dashed',
+                                borderColor: alpha(theme.palette.warning.main, 0.3),
+                                mb: 3
+                              }}
                             >
-                              Add to Preferences
-                            </Button>
-                          </Paper>
-                        )} <NewsItemContainer
+                              <Typography sx={{ fontSize: '3rem', mb: 2 }}>🔔</Typography>
+                              <Typography variant="h5" fontWeight={700} gutterBottom>
+                                No videos from {activeCategory}
+                              </Typography>
+                              <Typography color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
+                                This category is not in your preferences. Add it to start seeing videos from {activeCategory}.
+                              </Typography>
+                              <Button
+                                variant="contained"
+                                onClick={() => setShowSettingsModal(true)}
+                                startIcon={<Settings size={18} />}
+                              >
+                                Add to Preferences
+                              </Button>
+                            </Paper>
+                          )}
+                          <NewsItemContainer
                             headerTitle="Your AI Videos"
                             headerSubtitle={activeCategory === 'All' ? 'All categories' : activeCategory}
                             articles={getTabContent().slice(0, visibleItemsCount)}
@@ -1200,11 +1206,10 @@ const NewDashboard: React.FC = () => {
                     {/* Learning Tab */}
                     {!showStatsModal && selectedTab === 'courses' && (
                       <Box>
-                        <NewsItemContainer
+                        <CourseContainer
                           headerTitle="🎓 Your Learning Path"
                           headerSubtitle="Personalized courses and tutorials"
                           articles={getTabContent().slice(0, visibleItemsCount)}
-                          contentType="course"
                           showInteractions={true}
                           emptyMessage="No courses match your preferences yet"
                           emptyIcon="🎓"
@@ -1223,11 +1228,10 @@ const NewDashboard: React.FC = () => {
                     {/* Jobs Tab */}
                     {!showStatsModal && selectedTab === 'jobs' && (
                       <Box>
-                        <NewsItemContainer
+                        <JobContainer
                           headerTitle="💼 AI & ML Jobs"
                           headerSubtitle="Open positions in Gen AI, Machine Learning, and AI Infrastructure"
                           articles={getTabContent().slice(0, visibleItemsCount)}
-                          contentType="job"
                           showInteractions={true}
                           emptyMessage="No AI/ML job listings available yet"
                           emptyIcon="💼"
@@ -1246,11 +1250,10 @@ const NewDashboard: React.FC = () => {
                     {/* Events Tab */}
                     {!showStatsModal && selectedTab === 'events' && (
                       <Box>
-                        <NewsItemContainer
+                        <EventContainer
                           headerTitle="📅 AI & ML Events"
                           headerSubtitle="Conferences, workshops, and meetups in AI, Cloud, and Machine Learning"
                           articles={getTabContent().slice(0, visibleItemsCount)}
-                          contentType="event"
                           showInteractions={true}
                           emptyMessage="No AI/ML events available yet"
                           emptyIcon="📅"

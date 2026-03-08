@@ -1,18 +1,15 @@
-import * as React from 'react';
 import {
   Box,
   CssBaseline,
   Drawer,
-  Typography,
-  IconButton,
-  useTheme,
   useMediaQuery,
+  useTheme
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
+import * as React from 'react';
+import { useCallback } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import SideNav from '../newcomponents/SideNav';
 import RightSection from '../newcomponents/RightSection';
-import { useCallback, useRef } from 'react';
+import SideNav from '../newcomponents/SideNav';
 
 const LEFT_WIDTH = 280;
 const RIGHT_WIDTH = 300;
@@ -41,7 +38,7 @@ export default function ResponsiveLayout() {
   const [dateFilter, setDateFilter] = React.useState<1 | 7 | 30 | 365>(7);
   const [selectedTab, setSelectedTab] = React.useState<'news' | 'audio' | 'video' | 'posts' | 'learning' | 'courses' | 'jobs' | 'events'>('news');
   const [selectedCategory, setSelectedCategory] = React.useState<string>('All');
-  
+
   // Store the original handlers in refs to avoid re-renders
   const originalHandlerRef = React.useRef<((category: string) => void) | undefined>(undefined);
   const onTrendingClickHandlerRef = React.useRef<((topic: string) => void) | undefined>(undefined);
@@ -70,7 +67,7 @@ export default function ResponsiveLayout() {
     onSettingsClickHandlerRef.current = handler;
   }, []);
 
-    // Add handler setters (around line 90):
+  // Add handler setters (around line 90):
   const handleSetBookmarksHandler = useCallback((handler: () => void) => {
     onBookmarksClickHandlerRef.current = handler;
   }, []);
@@ -179,35 +176,36 @@ export default function ResponsiveLayout() {
       </Box>
 
       {/* RIGHT SECTION - Show on Landing page */}
-      
-        <Drawer
-          anchor="right"
-          variant={isMobile ? 'temporary' : 'permanent'}
-          open={isMobile ? rightOpen : true}
-          onClose={() => setRightOpen(false)}
-          sx={{
-            flexGrow: 1,
-            display: 'flex',
-            maxWidth: RIGHT_WIDTH,
-            marginRight: isMobile ? 0 : 2,
-            '& .MuiDrawer-paper': {
-              width: RIGHT_WIDTH,
-              backgroundColor: 'background.default',
-              borderLeft: 'none',
-              overflow: 'auto',
-            },
-          }}
-        >
-          <RightSection
-            onCategoryChange={wrappedCategoryHandler}
-            selectedCategory={selectedCategory}
-            onSettingsClick={() => onSettingsClickHandlerRef.current?.()}
-            onTrendingClick={handleTrendingTopicClick}
-            onStatsClick={() => onStatsClickHandlerRef.current?.()}  // Add this line
 
-          />
-        </Drawer>
-      
+      <Drawer
+        anchor="right"
+        variant={isMobile ? 'temporary' : 'permanent'}
+        open={isMobile ? rightOpen : true}
+        onClose={() => setRightOpen(false)}
+        sx={{
+          flexGrow: 1,
+          display: 'flex',
+          maxWidth: RIGHT_WIDTH,
+          width: RIGHT_WIDTH,
+          //marginRight: isMobile ? 0 : 2,
+          '& .MuiDrawer-paper': {
+            width: RIGHT_WIDTH,
+            backgroundColor: 'background.default',
+            borderLeft: 'none',
+            overflow: 'auto',
+          },
+        }}
+      >
+        <RightSection
+          onCategoryChange={wrappedCategoryHandler}
+          selectedCategory={selectedCategory}
+          onSettingsClick={() => onSettingsClickHandlerRef.current?.()}
+          onTrendingClick={handleTrendingTopicClick}
+          onStatsClick={() => onStatsClickHandlerRef.current?.()}  // Add this line
+
+        />
+      </Drawer>
+
     </Box>
   );
 }
