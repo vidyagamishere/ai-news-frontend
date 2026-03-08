@@ -37,9 +37,10 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
+import { CACHE_DURATION, cacheService } from '../utils/cacheService';
 
 interface PostCreatorProps {
   onClose: () => void;
@@ -56,14 +57,6 @@ interface PostCreatorProps {
     keywords: string;
   };
 }
-
-const CATEGORIES = [
-  { id: 1, name: 'Generative AI' },
-  { id: 2, name: 'AI Applications' },
-  { id: 3, name: 'AI Startups' },
-  { id: 4, name: 'Machine Learning' },
-  { id: 5, name: 'AI Research' },
-];
 
 const ToolbarButton: React.FC<{
   title: string;
@@ -93,8 +86,12 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onClose, onSuccess, initialDa
   const editorRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState(initialData?.title || '');
   const [author, setAuthor] = useState(initialData?.author || user?.name || user?.email || '');
-  const categoryIdFromName = CATEGORIES.find(c => c.name === initialData?.category)?.id ?? 1;
-  const [categoryId, setCategoryId] = useState(categoryIdFromName);
+  
+  // Fetch categories from backend
+  const [availableCategories, setAvailableCategories] = useState<Array<{ id: number; name: string }>>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  
+  const [categoryId, setCategoryId] = useState<number>(1);
   const [significanceScore, setSignificanceScore] = useState(initialData?.significance_score ?? 7.0);
   const [url, setUrl] = useState(initialData?.url || '');
   const [source, setSource] = useState(initialData?.source || '');
@@ -105,6 +102,47 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onClose, onSuccess, initialDa
   const [success, setSuccess] = useState(false);
   const [htmlMode, setHtmlMode] = useState(false);
   const [rawHtml, setRawHtml] = useState('');
+
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await cacheService.get(
+          'available_categories',
+          () => apiService.getAvailableCategories(),
+          CACHE_DURATION.LONG
+        );
+
+        if (response && Array.isArray(response.categories)) {
+          setAvailableCategories(response.categories);
+          
+          // Set initial category ID if editing
+          if (isEditing && initialData?.category) {
+            const matchedCategory = response.categories.find(
+              (c: any) => c.name === initialData.category
+            );
+            if (matchedCategory) {
+              setCategoryId(matchedCategory.id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ PostCreator: Failed to fetch categories:', error);
+        // Set fallback categories on error
+        setAvailableCategories([
+          { id: 1, name: 'Generative AI' },
+          { id: 2, name: 'AI Applications' },
+          { id: 3, name: 'AI Startups' },
+          { id: 4, name: 'Machine Learning' },
+          { id: 5, name: 'AI Research' },
+        ]);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, [isEditing, initialData]);
 
   // Pre-load existing HTML content into the editor
   React.useEffect(() => {
@@ -258,16 +296,22 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onClose, onSuccess, initialDa
             size="small"
             sx={{ minWidth: 160 }}
           />
-          <FormControl size="small" sx={{ minWidth: 180 }}>
+          <FormControl size="small" sx={{ minWidth: 180 }} disabled={categoriesLoading}>
             <InputLabel>Category</InputLabel>
             <Select
               value={categoryId}
               label="Category"
               onChange={(e) => setCategoryId(Number(e.target.value))}
             >
-              {CATEGORIES.map((c) => (
-                <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
-              ))}
+              {categoriesLoading ? (
+                <MenuItem disabled>Loading categories...</MenuItem>
+              ) : availableCategories.length > 0 ? (
+                availableCategories.map((c) => (
+                  <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                ))
+              ) : (
+                <MenuItem disabled>No categories available</MenuItem>
+              )}
             </Select>
           </FormControl>
           <TextField

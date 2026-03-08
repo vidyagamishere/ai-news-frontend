@@ -18,6 +18,9 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { LandingSkeleton } from '../components/LoadingSkeleton';
 import SEO from '../components/SEO';
 import { SearchProvider } from '../contexts/SearchContext';
+import CourseContainer from '../newcomponents/cards/CourseContainer';
+import EventContainer from '../newcomponents/cards/EventContainer';
+import JobContainer from '../newcomponents/cards/JobContainer';
 import NewsItemContainer from '../newcomponents/cards/NewsItemContainer';
 import Header from '../newcomponents/Header';
 import PostsTab from '../newcomponents/PostsTab';
@@ -1005,11 +1008,10 @@ const Landing: React.FC = () => {
                     {/* Courses Tab */}
                     {selectedTab === 'courses' && (
                       <Box>
-                        <NewsItemContainer
+                        <CourseContainer
                           headerTitle={`🎓 AI Courses - ${activeCategory}`}
                           headerSubtitle="Learn AI through curated courses and tutorials"
                           articles={tabContent.slice(0, visibleItemsCount)}
-                          contentType="course"
                           showInteractions={false}
                           emptyMessage="No courses available yet"
                           emptyIcon="🎓"
@@ -1028,11 +1030,10 @@ const Landing: React.FC = () => {
                     {/* Jobs Tab */}
                     {selectedTab === 'jobs' && (
                       <Box>
-                        <NewsItemContainer
+                        <JobContainer
                           headerTitle={`💼 AI & ML Jobs - ${activeCategory}`}
                           headerSubtitle="Open positions in Gen AI, Machine Learning, and AI Infrastructure"
                           articles={tabContent.slice(0, visibleItemsCount)}
-                          contentType="job"
                           showInteractions={false}
                           emptyMessage="No AI/ML job listings available yet"
                           emptyIcon="💼"
@@ -1051,11 +1052,10 @@ const Landing: React.FC = () => {
                     {/* Events Tab */}
                     {selectedTab === 'events' && (
                       <Box>
-                        <NewsItemContainer
+                        <EventContainer
                           headerTitle={`📅 AI & ML Events - ${activeCategory}`}
                           headerSubtitle="Conferences, workshops, and meetups in AI, Cloud, and Machine Learning"
                           articles={tabContent.slice(0, visibleItemsCount)}
-                          contentType="event"
                           showInteractions={false}
                           emptyMessage="No AI/ML events available yet"
                           emptyIcon="📅"
