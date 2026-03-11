@@ -442,12 +442,19 @@ const Landing: React.FC = () => {
                 time: item.published_date || new Date().toISOString(),
                 published_date: item.published_date || null,
               })),
-              events: (cat.content?.events || []).map((item: any) => ({
-                ...item,
-                url: item.url || item.link || '#',
-                time: item.published_date || new Date().toISOString(),
-                published_date: item.published_date || null,
-              }))
+              events: (cat.content?.events || []).map((item: any) => {
+                console.log('🎫 Mapping event item from API:', item);
+                console.log('   event_date:', item.event_date);
+                console.log('   metadata:', item.metadata);
+                console.log('   metadata?.event_date:', item.metadata?.event_date);
+                
+                return {
+                  ...item,
+                  url: item.url || item.link || '#',
+                  time: item.published_date || new Date().toISOString(),
+                  published_date: item.published_date || null,
+                };
+              })
             }
           })),
           total_categories: landingResponse.total_categories
@@ -595,12 +602,19 @@ const Landing: React.FC = () => {
             time: item.published_date || new Date().toISOString(),
             published_date: item.published_date || null,
           })),
-          events: (searchResponse.results.events || []).map((item: any) => ({
-            ...item,
-            url: item.url || item.link || '#',
-            time: item.published_date || new Date().toISOString(),
-            published_date: item.published_date || null,
-          }))
+          events: (searchResponse.results.events || []).map((item: any) => {
+            console.log('🔍 Mapping search event item from API:', item);
+            console.log('   event_date:', item.event_date);
+            console.log('   metadata:', item.metadata);
+            console.log('   metadata?.event_date:', item.metadata?.event_date);
+            
+            return {
+              ...item,
+              url: item.url || item.link || '#',
+              time: item.published_date || new Date().toISOString(),
+              published_date: item.published_date || null,
+            };
+          })
         });
 
         setSearchCounts(searchResponse.counts);
