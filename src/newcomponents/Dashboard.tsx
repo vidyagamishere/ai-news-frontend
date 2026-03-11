@@ -216,6 +216,14 @@ const NewDashboard: React.FC = () => {
       const articles: Article[] = [];
       response.grouped_content?.forEach((group: any) => {
         group.items?.forEach((item: any) => {
+          // 🎫 DEBUG: Log event items to trace event_date
+          if (item.content_type_label?.toLowerCase()?.includes('event') || item.content_type_id === 7) {
+            console.log('🎫 [Dashboard] Mapping event item from personalized feed API:', item);
+            console.log('   event_date (top-level):', item.event_date);
+            console.log('   metadata:', item.metadata);
+            console.log('   metadata?.event_date:', item.metadata?.event_date);
+          }
+
           articles.push({
             id: item.id?.toString() || Math.random().toString(),
             title: item.title || 'Untitled',
@@ -233,6 +241,7 @@ const NewDashboard: React.FC = () => {
             thumbnail_url: item.thumbnail_url || item.thumbnail || item.image,
             image: item.thumbnail_url || item.thumbnail || item.image,
             readTime: item.read_time || item.readTime || '5 min',
+            significanceScore: item.significance_score || 5,
             // ✅ Map user interaction states from backend
             is_liked: item.has_liked || false,
             is_bookmarked: item.has_bookmarked || false,
@@ -243,7 +252,26 @@ const NewDashboard: React.FC = () => {
             views: item.total_views || 0,
             shares: item.total_shares || 0,
             comments: item.total_comments || 0,
-            engagement_score: item.engagement_score || 0
+            engagement_score: item.engagement_score || 0,
+            // ✅ Map metadata fields (event_date, instructor, company, etc.)
+            event_date: item.event_date || item.metadata?.event_date,
+            event_location: item.event_location || item.metadata?.event_location,
+            event_type: item.event_type || item.metadata?.event_type,
+            is_virtual: item.is_virtual ?? item.metadata?.is_virtual,
+            event_hosts: item.event_hosts || item.metadata?.event_hosts,
+            registration_url: item.registration_url || item.metadata?.registration_url,
+            instructor: item.instructor || item.metadata?.instructor,
+            platform: item.platform || item.metadata?.platform,
+            difficulty: item.difficulty || item.metadata?.difficulty,
+            duration_hours: item.duration_hours || item.metadata?.duration_hours,
+            is_free: item.is_free ?? item.metadata?.is_free,
+            company: item.company || item.metadata?.company,
+            job_title: item.job_title || item.metadata?.job_title,
+            job_location: item.job_location || item.metadata?.job_location,
+            is_remote: item.is_remote ?? item.metadata?.is_remote,
+            salary_range: item.salary_range || item.metadata?.salary_range,
+            application_deadline: item.application_deadline || item.metadata?.application_deadline,
+            metadata: item.metadata
           } as Article);
         });
       });
@@ -594,12 +622,27 @@ const NewDashboard: React.FC = () => {
             published_date: item.published_date || null,
             readTime: '5 min'
           })),
-          events: (searchResponse.results.events || []).map((item: any) => ({
-            ...item,
-            time: item.published_date || new Date().toISOString(),
-            published_date: item.published_date || null,
-            readTime: '5 min'
-          }))
+          events: (searchResponse.results.events || []).map((item: any) => {
+            // 🎫 DEBUG: Log event items from search results
+            console.log('🎫 [Dashboard] Mapping event item from search results:', item);
+            console.log('   event_date (top-level):', item.event_date);
+            console.log('   metadata:', item.metadata);
+            console.log('   metadata?.event_date:', item.metadata?.event_date);
+            
+            return {
+              ...item,
+              time: item.published_date || new Date().toISOString(),
+              published_date: item.published_date || null,
+              readTime: '5 min',
+              // ✅ Map event metadata fields
+              event_date: item.event_date || item.metadata?.event_date,
+              event_location: item.event_location || item.metadata?.event_location,
+              event_type: item.event_type || item.metadata?.event_type,
+              is_virtual: item.is_virtual ?? item.metadata?.is_virtual,
+              event_hosts: item.event_hosts || item.metadata?.event_hosts,
+              registration_url: item.registration_url || item.metadata?.registration_url,
+            };
+          })
         });
 
         setSearchCounts({
