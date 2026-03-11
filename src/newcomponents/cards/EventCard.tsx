@@ -45,27 +45,72 @@ const EVENT_GRADIENTS: Record<EventTypeKey, string> = {
 };
 
 function parseEventDate(dateStr?: string) {
-  if (!dateStr) return null;
+  console.log('🔍 parseEventDate called with:', dateStr, 'Type:', typeof dateStr);
+  
+  if (!dateStr) {
+    console.log('❌ No dateStr provided');
+    return null;
+  }
+  
   try {
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return null;
-    return {
+    console.log('📅 Created Date object:', d);
+    console.log('⏰ getTime():', d.getTime());
+    console.log('🔢 isNaN check:', isNaN(d.getTime()));
+    
+    if (isNaN(d.getTime())) {
+      console.log('❌ Invalid date - isNaN returned true');
+      return null;
+    }
+    
+    const result = {
       month: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
       day: d.getDate(),
       weekday: d.toLocaleDateString('en-US', { weekday: 'short' }),
       time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       full: d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
     };
-  } catch { return null; }
+    
+    console.log('✅ Successfully parsed date:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Parse error:', error);
+    return null;
+  }
 }
 
 function daysUntil(dateStr?: string): number | null {
-  if (!dateStr) return null;
+  console.log('🔍 daysUntil called with:', dateStr);
+  
+  if (!dateStr) {
+    console.log('❌ No dateStr provided to daysUntil');
+    return null;
+  }
+  
   try {
-    const diff = new Date(dateStr).getTime() - Date.now();
-    if (diff < 0) return null;
-    return Math.ceil(diff / (1000 * 60 * 60 * 24));
-  } catch { return null; }
+    const eventDate = new Date(dateStr);
+    const now = Date.now();
+    const diff = eventDate.getTime() - now;
+    
+    console.log('📊 daysUntil calculation:', {
+      eventDate: eventDate.toISOString(),
+      now: new Date(now).toISOString(),
+      diff,
+      diffInDays: diff / (1000 * 60 * 60 * 24)
+    });
+    
+    if (diff < 0) {
+      console.log('⏰ Event is in the past');
+      return null;
+    }
+    
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    console.log('✅ Days until event:', days);
+    return days;
+  } catch (error) {
+    console.error('❌ daysUntil error:', error);
+    return null;
+  }
 }
 
 const EventCard: React.FC<EventCardProps> = ({
@@ -84,16 +129,47 @@ const EventCard: React.FC<EventCardProps> = ({
   const [localLikesCount, setLocalLikesCount] = useState(article.likes || article.likes_count || 0);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
+  // 🔍 DEBUG: Log all event-related data
+  console.group(`🎫 EventCard Debug: ${article.title?.substring(0, 40)}...`);
+  console.log('📦 Full article object:', article);
+  console.log('📅 article.event_date:', article.event_date);
+  console.log('🗂️ article.metadata:', article.metadata);
+  console.log('📅 article.metadata?.event_date:', article.metadata?.event_date);
+  
   const eventDate = article.event_date || article.metadata?.event_date;
+  console.log('✅ Final eventDate value:', eventDate);
+  console.log('🔢 Type of eventDate:', typeof eventDate);
+  
   const location = article.event_location || article.metadata?.event_location;
   const isVirtual = article.is_virtual ?? article.metadata?.is_virtual;
   const eventType: string = article.event_type || article.metadata?.event_type || '';
   const regUrl = article.registration_url || article.url;
   const hosts: string[] = article.event_hosts || article.metadata?.event_hosts || [];
 
-  const parsed = useMemo(() => parseEventDate(eventDate), [eventDate]);
-  const remaining = useMemo(() => daysUntil(eventDate), [eventDate]);
+  const parsed = useMemo(() => {
+    const result = parseEventDate(eventDate);
+    console.log('🗓️ Parsed date result:', result);
+    return result;
+  }, [eventDate]);
+  
+  const remaining = useMemo(() => {
+    const days = daysUntil(eventDate);
+    console.log('⏱️ Days until event:', days);
+    return days;
+  }, [eventDate]);
+  
   const upcoming = remaining !== null;
+  
+  console.log('📊 Summary:', {
+    eventDate,
+    parsed,
+    remaining,
+    upcoming,
+    location,
+    isVirtual,
+    eventType
+  });
+  console.groupEnd();
 
   const eventKey = Object.keys(EVENT_GRADIENTS).find((k) =>
     eventType.toLowerCase().includes(k.toLowerCase())
@@ -191,6 +267,8 @@ const EventCard: React.FC<EventCardProps> = ({
             </>
           ) : (
             <>
+              {console.log('📌 Rendering TBD because parsed is:', parsed)}
+              {console.log('📌 eventDate was:', eventDate)}
               <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: 1.5, opacity: 0.8 }}>
                 DATE
               </Typography>
