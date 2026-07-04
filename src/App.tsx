@@ -18,6 +18,8 @@ import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import About from './pages/About';
 import AdminLogin from './pages/AdminLogin';
+import ArticlePage from './pages/ArticlePage';
+import CategoryPage from './pages/CategoryPage';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import Loading from './components/Loading';
 import ResponsiveLayout from './layouts/ResponsiveLayout';
@@ -143,6 +145,8 @@ function AppContent() {
       {/* Public Routes - No Header/SideNav/Footer */}
       <Route element={<ResponsiveLayout />}>
         <Route path="/" element={<LandingRoute />} />
+        <Route path="/article/:slug" element={<ArticlePage />} />
+        <Route path="/category/:slug" element={<CategoryPage />} />
       </Route>
 
       <Route element={<AuthLayout />}>
@@ -157,7 +161,6 @@ function AppContent() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/about" element={<About />} />
-
         <Route path="/admin/login" element={<AdminLogin />} />
         
         <Route path="/admin" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>

@@ -8,6 +8,7 @@ import {
 import * as React from 'react';
 import { useCallback } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import RightSection from '../newcomponents/RightSection';
 import SideNav from '../newcomponents/SideNav';
 
@@ -32,6 +33,7 @@ export default function ResponsiveLayout() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   const [leftOpen, setLeftOpen] = React.useState(false);
   const [rightOpen, setRightOpen] = React.useState(false);
@@ -48,14 +50,30 @@ export default function ResponsiveLayout() {
 
   // Check if we're on Landing page (no SideNav needed)
   const isLandingPage = location.pathname === '/' || location.pathname === '/landing';
+  const isDashboardRoute = location.pathname.includes('/dashboard');
 
   // Wrapper function that updates local state and calls the original handler
   const wrappedCategoryHandler = React.useCallback((category: string) => {
     setSelectedCategory(category);
+
+    if (!isDashboardRoute) {
+      if (isAuthenticated) {
+        navigate('/dashboard', {
+          state: {
+            preselectedCategory: category,
+            preselectedTab: selectedTab,
+          },
+        });
+      } else {
+        navigate('/');
+      }
+      return;
+    }
+
     if (originalHandlerRef.current) {
       originalHandlerRef.current(category);
     }
-  }, []);
+  }, [isAuthenticated, isDashboardRoute, navigate, selectedTab]);
 
   // Function to set the category change handler from child components
   const handleSetCategoryHandler = React.useCallback((handler: (category: string) => void) => {
@@ -87,6 +105,20 @@ export default function ResponsiveLayout() {
     console.log('📑 ResponsiveLayout: Tab changed to:', tab);
     setSelectedTab(tab);
 
+    if (!isDashboardRoute) {
+      if (isAuthenticated) {
+        navigate('/dashboard', {
+          state: {
+            preselectedTab: tab,
+            preselectedCategory: tab === 'news' ? 'All' : selectedCategory,
+          },
+        });
+      } else {
+        navigate('/');
+      }
+      return;
+    }
+
     // If switching to 'news' tab (home), reset category to 'All'
     if (tab === 'news') {
       console.log('🏠 ResponsiveLayout: Resetting category to All');
@@ -106,6 +138,25 @@ export default function ResponsiveLayout() {
 
   const handleTrendingTopicClick = React.useCallback((topic: string) => {
     console.log('🔥 ResponsiveLayout: Trending topic clicked:', topic);
+
+    if (!isDashboardRoute) {
+      if (isAuthenticated) {
+        navigate('/dashboard', {
+          state: {
+            preselectedTab: 'news',
+            initialSearchQuery: topic,
+          },
+        });
+      } else {
+        navigate('/');
+      }
+
+      if (isMobile) {
+        setRightOpen(false);
+      }
+      return;
+    }
+
     // Trigger search through the handler if available
     if (onTrendingClickHandlerRef.current) {
       onTrendingClickHandlerRef.current(topic);
@@ -114,7 +165,7 @@ export default function ResponsiveLayout() {
     if (isMobile) {
       setRightOpen(false);
     }
-  }, [isMobile]);
+  }, [isAuthenticated, isDashboardRoute, isMobile, navigate]);
 
 
   return (

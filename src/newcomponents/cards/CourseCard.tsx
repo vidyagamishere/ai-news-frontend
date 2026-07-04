@@ -22,7 +22,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShareDialog from '../../components/ShareDialog';
 import { useAuth } from '../../contexts/AuthContext';
-import { ActionTypeId, apiService } from '../../services/api';
+import { ActionTypeId, apiService, SLUG_NAV_ENABLED } from '../../services/api';
+import { trackArticleClick } from '../../utils/analytics';
 import type { Article } from '../../types/article';
 
 interface CourseCardProps {
@@ -74,8 +75,13 @@ const CourseCard: React.FC<CourseCardProps> = ({
   const diffMeta = difficulty ? DIFFICULTY_META[difficulty] : null;
 
   const handleEnroll = () => {
+    trackArticleClick(article.title, article.source ?? '', article.category ?? '');
     const url = article.enrollment_url || article.url;
-    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    if (SLUG_NAV_ENABLED && article.slug) {
+      navigate(`/article/${article.slug}`);
+    } else if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
     if (article.id) apiService.trackInteraction(String(article.id), 'view').catch(() => { });
   };
 
@@ -351,6 +357,8 @@ const CourseCard: React.FC<CourseCardProps> = ({
         articleId={typeof article.id === 'number' ? article.id : parseInt(String(article.id))}
         articleUrl={article.url}
         articleTitle={article.title}
+        articleSlug={article.slug}
+        preferOwnedArticleUrl={false}
         onShareTracked={() => { }}
       />
     </>

@@ -1824,6 +1824,53 @@ async adminSearchCourses(
 
 export const apiService = new ApiService();
 
+// ---------------------------------------------------------------------------
+// Feature flag – controls whether article card clicks navigate to internal
+// /article/:slug pages instead of opening the external source URL directly.
+// Set  VITE_SLUG_NAV_ENABLED=true  in .env.local to enable.
+// ---------------------------------------------------------------------------
+export const SLUG_NAV_ENABLED =
+  import.meta.env.VITE_SLUG_NAV_ENABLED === 'true';
+
+// ---------------------------------------------------------------------------
+// Slug-based content fetchers (for ArticlePage / CategoryPage)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch a single article by its canonical slug.
+ * Returns null when the backend responds with 404 (not found).
+ */
+export async function fetchArticleBySlug(slug: string): Promise<Article | null> {
+  try {
+    const data = await makeModularRequest(`article/${encodeURIComponent(slug)}`);
+    return (data?.article as Article) ?? null;
+  } catch (err: any) {
+    if (err?.message?.includes('not found') || err?.status === 404) return null;
+    throw err;
+  }
+}
+
+/**
+ * Fetch a category by its slug together with its recent articles.
+ * Returns null when the backend responds with 404.
+ */
+export async function fetchCategoryBySlug(
+  slug: string,
+  limit = 50,
+  daysFilter = 30
+): Promise<{ category: any; articles: Article[]; count: number } | null> {
+  try {
+    const data = await makeModularRequest(`category/${encodeURIComponent(slug)}`, 'GET', {
+      limit,
+      days_filter: daysFilter,
+    });
+    return data ?? null;
+  } catch (err: any) {
+    if (err?.message?.includes('not found') || err?.status === 404) return null;
+    throw err;
+  }
+}
+
 console.log('✅ API Service initialized with complete modular FastAPI architecture');
 console.log('🔗 All endpoints now use direct modular FastAPI routing with APIRouter');
 console.log('🔐 Authentication, admin, and content endpoints integrated via PostgreSQL backend');

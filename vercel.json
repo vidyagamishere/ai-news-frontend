@@ -1,7 +1,8 @@
 {
+  "buildCommand": "npm run build:prerender",
   "rewrites": [
     {
-      "source": "/((?!assets/).*)",
+      "source": "/((?!assets/|prerender/|404\\.html|410\\.html).*)",
       "destination": "/index.html"
     }
   ],

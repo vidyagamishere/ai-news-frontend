@@ -1,6 +1,9 @@
 import React from 'react';
 import { Star, Link2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { TopStory } from '../services/api';
+import { SLUG_NAV_ENABLED } from '../services/api';
+import { trackArticleClick } from '../utils/analytics';
 import SmartImage from './SmartImage';
 import TopicLabels from './TopicLabels';
 
@@ -9,6 +12,7 @@ interface TopStoriesProps {
 }
 
 const TopStories: React.FC<TopStoriesProps> = ({ stories }) => {
+    const navigate = useNavigate();
   // Add validation for stories data
   if (!stories) {
     console.log('TopStories: No stories data received');
@@ -49,11 +53,14 @@ const TopStories: React.FC<TopStoriesProps> = ({ stories }) => {
   }
 
 
-  const openStoryLink = (url: string, event?: React.MouseEvent | React.TouchEvent) => {
-    if (event) {
-      event.stopPropagation();
+  const openStoryLink = (story: TopStory, event?: React.MouseEvent | React.TouchEvent) => {
+    if (event) event.stopPropagation();
+    trackArticleClick(story.title, story.source ?? '', '');
+    if (SLUG_NAV_ENABLED && (story as any).slug) {
+      navigate(`/article/${(story as any).slug}`);
+    } else {
+      window.open(story.url, '_blank', 'noopener,noreferrer');
     }
-    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
 
@@ -114,10 +121,10 @@ const TopStories: React.FC<TopStoriesProps> = ({ stories }) => {
                   <div className="story-actions">
                     <button 
                       className="read-article-btn"
-                      onClick={(e) => openStoryLink(story.url, e)}
+                      onClick={(e) => openStoryLink(story, e)}
                       onTouchStart={(e) => {
                         e.preventDefault();
-                        openStoryLink(story.url, e);
+                        openStoryLink(story, e);
                       }}
                       type="button"
                       aria-label="Open article in new tab"

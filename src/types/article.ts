@@ -14,7 +14,8 @@ export interface AITopic {
 export interface Article {
   // Core identifiers
   id?: number | string;
-  
+  slug?: string;          // canonical SEO slug – stable, backend-generated
+
   // Content
   title: string;
   url: string;
