@@ -22,7 +22,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShareDialog from '../../components/ShareDialog';
 import { useAuth } from '../../contexts/AuthContext';
-import { ActionTypeId, apiService } from '../../services/api';
+import { ActionTypeId, apiService, SLUG_NAV_ENABLED } from '../../services/api';
+import { trackArticleClick } from '../../utils/analytics';
 import type { Article } from '../../types/article';
 import { formatTimeAgo } from '../../types/article';
 
@@ -96,7 +97,12 @@ const JobCard: React.FC<JobCardProps> = ({
     : 'linear-gradient(180deg, #64748b, #475569)';
 
   const handleApply = () => {
-    if (applyUrl) window.open(applyUrl, '_blank', 'noopener,noreferrer');
+    trackArticleClick(article.title, article.source ?? '', article.category ?? '');
+    if (SLUG_NAV_ENABLED && article.slug) {
+      navigate(`/article/${article.slug}`);
+    } else if (applyUrl) {
+      window.open(applyUrl, '_blank', 'noopener,noreferrer');
+    }
     if (article.id) apiService.trackInteraction(String(article.id), 'view').catch(() => { });
   };
 
@@ -434,6 +440,8 @@ const JobCard: React.FC<JobCardProps> = ({
         articleId={typeof article.id === 'number' ? article.id : parseInt(String(article.id))}
         articleUrl={article.url}
         articleTitle={article.title}
+        articleSlug={article.slug}
+        preferOwnedArticleUrl={false}
         onShareTracked={() => { }}
       />
     </>

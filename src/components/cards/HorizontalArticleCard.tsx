@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import type { Article } from '../../types/article';
 import { formatTimeAgo, getArticleSummary, getArticleSource } from '../../types/article';
-import { apiService } from '../../services/api';
+import { apiService, SLUG_NAV_ENABLED } from '../../services/api';
+import { trackArticleClick } from '../../utils/analytics';
 import '../../styles/horizontal-card.css';
 
 interface HorizontalArticleCardProps {
@@ -26,6 +27,7 @@ const HorizontalArticleCard: React.FC<HorizontalArticleCardProps> = ({
 
   const handleCardClick = () => {
     // Track view interaction (only for authenticated users)
+    trackArticleClick(article.title, article.source ?? '', article.category ?? '');
     if (article.id) {
       const token = localStorage.getItem('authToken');
       if (token) {
@@ -35,7 +37,11 @@ const HorizontalArticleCard: React.FC<HorizontalArticleCardProps> = ({
         });
       }
     }
-    window.open(article.url, '_blank', 'noopener,noreferrer');
+    if (SLUG_NAV_ENABLED && article.slug) {
+      window.location.href = `/article/${article.slug}`;
+    } else {
+      window.open(article.url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleInteraction = (e: React.MouseEvent, action?: (id: number) => void) => {

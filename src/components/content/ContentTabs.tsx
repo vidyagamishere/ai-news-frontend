@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { apiService, type TopStory } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
+import { apiService, SLUG_NAV_ENABLED, type TopStory } from '../../services/api';
+import { trackArticleClick } from '../../utils/analytics';
 import { useAuth } from '../../contexts/AuthContext';
 import Loading from '../Loading';
 import SmartImage from '../SmartImage';
@@ -38,6 +40,7 @@ interface ContentTabsProps {
 
 export default function ContentTabs({ userTier, topStories = [], isArchive = false, archiveContent, previewMode = false, onSignUpPrompt, digestContent }: ContentTabsProps) {
   const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>('all_sources');
   const [contentTypes, setContentTypes] = useState<Record<string, ContentType>>({});
   const [content, setContent] = useState<Record<string, ContentResponse>>({});
@@ -469,7 +472,10 @@ export default function ContentTabs({ userTier, topStories = [], isArchive = fal
                     itemScope 
                     itemType="https://schema.org/Article"
                     onClick={() => {
-                      if (article.url && article.url !== '#') {
+                      trackArticleClick(article.title, article.source ?? '', article.category ?? '');
+                      if (SLUG_NAV_ENABLED && article.slug) {
+                        navigate(`/article/${article.slug}`);
+                      } else if (article.url && article.url !== '#') {
                         try {
                           window.open(article.url, '_blank', 'noopener,noreferrer');
                         } catch (error) {
@@ -482,7 +488,10 @@ export default function ContentTabs({ userTier, topStories = [], isArchive = fal
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        if (article.url && article.url !== '#') {
+                        trackArticleClick(article.title, article.source ?? '', article.category ?? '');
+                        if (SLUG_NAV_ENABLED && article.slug) {
+                          navigate(`/article/${article.slug}`);
+                        } else if (article.url && article.url !== '#') {
                           try {
                             window.open(article.url, '_blank', 'noopener,noreferrer');
                           } catch (error) {

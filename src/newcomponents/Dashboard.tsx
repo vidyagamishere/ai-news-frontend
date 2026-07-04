@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { Bookmark, ChevronRight, Settings } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import { LandingSkeleton } from '../components/LoadingSkeleton';
 import SEO from '../components/SEO';
 import SettingsFullScreen from '../components/SettingsFullScreen';
@@ -36,6 +36,7 @@ const NewDashboard: React.FC = () => {
   const { user, isAuthenticated, logout, updatePreferences } = useAuth();
   const [showStatsModal, setShowStatsModal] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const outletContext = useOutletContext<{
@@ -226,6 +227,7 @@ const NewDashboard: React.FC = () => {
 
           articles.push({
             id: item.id?.toString() || Math.random().toString(),
+            slug: item.slug,
             title: item.title || 'Untitled',
             url: item.url || '#',
             source: item.source || 'Unknown',
@@ -667,6 +669,32 @@ const NewDashboard: React.FC = () => {
       setLoading(false);
     }
   }, [activeCategory, availableCategories, dateFilter, outletContext, loadPersonalizedFeed]);
+
+  useEffect(() => {
+    const state = location.state as {
+      preselectedTab?: 'news' | 'audio' | 'video' | 'posts' | 'courses' | 'jobs' | 'events';
+      preselectedCategory?: string;
+      initialSearchQuery?: string;
+    } | null;
+
+    if (!state) return;
+
+    if (state.preselectedTab) {
+      setSelectedTab(state.preselectedTab);
+    }
+
+    if (typeof state.preselectedCategory === 'string') {
+      setActiveCategory(state.preselectedCategory);
+      setShowBookmarksOnly(false);
+      setShowStatsModal(false);
+    }
+
+    if (typeof state.initialSearchQuery === 'string' && state.initialSearchQuery.trim()) {
+      handleSearch(state.initialSearchQuery.trim());
+    }
+
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate, handleSearch]);
 
   const handleLogout = () => {
     logout();

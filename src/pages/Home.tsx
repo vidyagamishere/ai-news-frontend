@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { SLUG_NAV_ENABLED } from '../services/api';
+import { trackArticleClick } from '../utils/analytics';
 import {
   Box,
   Container,
@@ -36,6 +38,16 @@ const Home: React.FC = () => {
 
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Shared article-open helper used by all card grids in this page
+  const openStory = (story: { url: string; title: string; source?: string; slug?: string }) => {
+    trackArticleClick(story.title, story.source ?? '', '');
+    if (SLUG_NAV_ENABLED && story.slug) {
+      navigate(`/article/${story.slug}`);
+    } else {
+      window.open(story.url, '_blank');
+    }
+  };
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -276,7 +288,14 @@ const Home: React.FC = () => {
                       cursor: 'pointer',
                       '&:hover': { transform: 'translateY(-4px)', transition: 'transform 0.3s' }
                     }}
-                    onClick={() => window.open(story.url, '_blank')}
+                    onClick={() => {
+                      trackArticleClick(story.title, story.source ?? '', '');
+                      if (SLUG_NAV_ENABLED && (story as any).slug) {
+                        navigate(`/article/${(story as any).slug}`);
+                      } else {
+                        window.open(story.url, '_blank');
+                      }
+                    }}
                   >
                     <CardContent>
                       <Typography variant="h6" fontWeight="bold" gutterBottom>
@@ -312,7 +331,7 @@ const Home: React.FC = () => {
                   <Grid sx={{xs:12, sm:6, md:4}} key={index}>
                     <Card
                       sx={{ height: '100%', cursor: 'pointer' }}
-                      onClick={() => window.open(story.url, '_blank')}
+                      onClick={() => openStory(story as any)}
                     >
                       <CardContent>
                         <Typography variant="h6" gutterBottom>
@@ -343,7 +362,7 @@ const Home: React.FC = () => {
                     <Grid sx={{xs:12, sm:6, md:4}} key={index}>
                       <Card
                         sx={{ height: '100%', cursor: 'pointer' }}
-                        onClick={() => window.open(story.url, '_blank')}
+                        onClick={() => openStory(story as any)}
                       >
                         <CardContent>
                           <Typography variant="h6" gutterBottom>
@@ -375,7 +394,7 @@ const Home: React.FC = () => {
                     <Grid sx={{xs:12, sm:6, md:4}} key={index}>
                       <Card
                         sx={{ height: '100%', cursor: 'pointer' }}
-                        onClick={() => window.open(story.url, '_blank')}
+                        onClick={() => openStory(story as any)}
                       >
                         <CardContent>
                           <Typography variant="h6" gutterBottom>
@@ -407,7 +426,7 @@ const Home: React.FC = () => {
                     <Grid sx={{xs:12, sm:6, md:4}} key={index}>
                       <Card
                         sx={{ height: '100%', cursor: 'pointer' }}
-                        onClick={() => window.open(story.url, '_blank')}
+                        onClick={() => openStory(story as any)}
                       >
                         <CardContent>
                           <Typography variant="h6" gutterBottom>
@@ -439,7 +458,7 @@ const Home: React.FC = () => {
                     <Grid sx={{xs:12, sm:6, md:4}} key={index}>
                       <Card
                         sx={{ height: '100%', cursor: 'pointer' }}
-                        onClick={() => window.open(story.url, '_blank')}
+                        onClick={() => openStory(story as any)}
                       >
                         <CardContent>
                           <Typography variant="h6" gutterBottom>

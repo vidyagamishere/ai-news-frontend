@@ -14,7 +14,9 @@ import {
 } from '@mui/material';
 import { Share2, Copy, Mail, Check, MessageCircle } from 'lucide-react';
 import { Facebook, LinkedIn, MailOutline, WhatsApp, X } from '@mui/icons-material';
-import { apiService } from '../services/api';
+import { apiService, SLUG_NAV_ENABLED } from '../services/api';
+
+type SharePlatform = 'copy_link' | 'email' | 'facebook' | 'twitter' | 'linkedin' | 'whatsapp';
 
 interface ShareDialogProps {
   open: boolean;
@@ -22,6 +24,9 @@ interface ShareDialogProps {
   articleId: number;
   articleUrl: string;
   articleTitle: string;
+  articleSlug?: string;
+  preferOwnedArticleUrl?: boolean;
+  canonicalUrl?: string;
   onShareTracked?: () => void;
 }
 
@@ -31,17 +36,40 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
   articleId,
   articleUrl,
   articleTitle,
+  articleSlug,
+  preferOwnedArticleUrl = false,
+  canonicalUrl,
   onShareTracked
 }) => {
   const [copied, setCopied] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
+  const trackShareSafely = async (platform: SharePlatform) => {
+    try {
+      await apiService.trackShare(articleId, platform);
+    } catch (err) {
+      console.warn('Share tracking skipped:', err);
+    }
+  };
+
+  const resolvedShareUrl = React.useMemo(() => {
+    if (canonicalUrl) {
+      return canonicalUrl;
+    }
+
+    if (preferOwnedArticleUrl && SLUG_NAV_ENABLED && articleSlug && typeof window !== 'undefined') {
+      return `${window.location.origin}/article/${articleSlug}`;
+    }
+
+    return articleUrl;
+  }, [articleSlug, articleUrl, canonicalUrl, preferOwnedArticleUrl]);
+
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(articleUrl);
+      await navigator.clipboard.writeText(resolvedShareUrl);
       setCopied(true);
-      await apiService.trackShare(articleId, 'copy_link');
+      await trackShareSafely('copy_link');
       setSnackbarMessage('Link copied to clipboard!');
       setSnackbarOpen(true);
       if (onShareTracked) onShareTracked();
@@ -54,9 +82,9 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
   const handleEmailShare = async () => {
     try {
       const subject = encodeURIComponent(`Check out: ${articleTitle}`);
-      const body = encodeURIComponent(`I thought you might find this interesting:\n\n${articleTitle}\n\n${articleUrl}`);
+      const body = encodeURIComponent(`I thought you might find this interesting:\n\n${articleTitle}\n\n${resolvedShareUrl}`);
       window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
-      await apiService.trackShare(articleId, 'email');
+      await trackShareSafely('email');
       setSnackbarMessage('Opening email client...');
       setSnackbarOpen(true);
       if (onShareTracked) onShareTracked();
@@ -67,8 +95,8 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 
   const handleFacebookShare = async () => {
     try {
-      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`, '_blank', 'width=600,height=400');
-      await apiService.trackShare(articleId, 'facebook');
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(resolvedShareUrl)}`, '_blank', 'width=600,height=400');
+      await trackShareSafely('facebook');
       setSnackbarMessage('Opening Facebook...');
       setSnackbarOpen(true);
       if (onShareTracked) onShareTracked();
@@ -80,8 +108,8 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
   const handleTwitterShare = async () => {
     try {
       const text = encodeURIComponent(articleTitle);
-      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(articleUrl)}`, '_blank', 'width=600,height=400');
-      await apiService.trackShare(articleId, 'twitter');
+      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(resolvedShareUrl)}`, '_blank', 'width=600,height=400');
+      await trackShareSafely('twitter');
       setSnackbarMessage('Opening X (Twitter)...');
       setSnackbarOpen(true);
       if (onShareTracked) onShareTracked();
@@ -92,8 +120,8 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 
   const handleLinkedInShare = async () => {
     try {
-      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(articleUrl)}`, '_blank', 'width=600,height=400');
-      await apiService.trackShare(articleId, 'linkedin');
+      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(resolvedShareUrl)}`, '_blank', 'width=600,height=400');
+      await trackShareSafely('linkedin');
       setSnackbarMessage('Opening LinkedIn...');
       setSnackbarOpen(true);
       if (onShareTracked) onShareTracked();
@@ -104,9 +132,9 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
 
   const handleWhatsAppShare = async () => {
     try {
-      const text = encodeURIComponent(`${articleTitle}\n\n${articleUrl}`);
+      const text = encodeURIComponent(`${articleTitle}\n\n${resolvedShareUrl}`);
       window.open(`https://wa.me/?text=${text}`, '_blank');
-      await apiService.trackShare(articleId, 'whatsapp');
+      await trackShareSafely('whatsapp');
       setSnackbarMessage('Opening WhatsApp...');
       setSnackbarOpen(true);
       if (onShareTracked) onShareTracked();
@@ -128,6 +156,9 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
         <DialogContent>
           <Typography variant="body2" color="text.secondary" mb={3}>
             {articleTitle}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2, wordBreak: 'break-all' }}>
+            {resolvedShareUrl}
           </Typography>
 
           <Box display="flex" justifyContent="center" gap={2} flexWrap="wrap">

@@ -17,9 +17,15 @@ import { useNavigate } from 'react-router-dom';
 import InlineComments from '../../components/InlineComments';
 import ShareDialog from '../../components/ShareDialog';
 import { useAuth } from '../../contexts/AuthContext';
-import { ActionTypeId, apiService } from '../../services/api';
+import { ActionTypeId, apiService, SLUG_NAV_ENABLED } from '../../services/api';
+import { trackArticleClick } from '../../utils/analytics';
 import type { Article } from '../../types/article';
 import { formatTimeAgo, getArticleSource, getArticleSummary } from '../../types/article';
+
+function hasOwnedArticlePage(article: Article, contentType: string): boolean {
+  const normalized = (contentType || article.content_type || article.content_type_label || '').toLowerCase();
+  return ['blog', 'article', 'news'].some((token) => normalized.includes(token));
+}
 
 interface NewsItemProps {
   article: Article;
@@ -60,17 +66,18 @@ const NewsItem: React.FC<NewsItemProps> = ({
       onCardClick();
       return;
     }
-    // Track view interaction (works for both authenticated and anonymous users)
     console.log('🖱️ Article clicked:', { id: article.id, url: article.url, title: article.title });
-    // Open URL first (this is the main action)
-    if (article.url && article.url !== '#') {
+    trackArticleClick(article.title, article.source ?? '', article.category ?? '');
+    if (SLUG_NAV_ENABLED && article.slug) {
+      navigate(`/article/${article.slug}`);
+    } else if (article.url && article.url !== '#') {
       window.open(article.url, '_blank', 'noopener,noreferrer');
     } else {
       console.error('❌ No valid URL for article:', article);
       return;
     }
     if (article.id) {
-      const articleId = String(article.id);  // Convert to string
+      const articleId = String(article.id);
       apiService.trackInteraction(articleId, 'view').catch(err => {
         console.error('Failed to track article view:', err);
       });
@@ -349,6 +356,8 @@ const NewsItem: React.FC<NewsItemProps> = ({
         articleId={typeof article.id === 'number' ? article.id : parseInt(String(article.id))}
         articleUrl={article.url}
         articleTitle={article.title}
+        articleSlug={article.slug}
+        preferOwnedArticleUrl={hasOwnedArticlePage(article, contentType)}
         onShareTracked={() => {
           setLocalSharesCount(prev => prev + 1);
         }}
