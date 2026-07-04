@@ -2,7 +2,15 @@
   "buildCommand": "npm run build",
   "rewrites": [
     {
-      "source": "/((?!assets/|prerender/|404\\.html|410\\.html).*)",
+      "source": "/article/:slug",
+      "destination": "/api/prerender?type=article&slug=:slug"
+    },
+    {
+      "source": "/category/:slug",
+      "destination": "/api/prerender?type=category&slug=:slug"
+    },
+    {
+      "source": "/((?!api/|assets/|prerender/|404\\.html|410\\.html).*)",
       "destination": "/index.html"
     }
   ],

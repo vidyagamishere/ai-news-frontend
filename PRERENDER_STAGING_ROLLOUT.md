@@ -1,16 +1,23 @@
 # Prerender Staging Rollout
 
-This rollout must be completed in staging before enabling prerender middleware in production.
+This rollout must be completed in staging before enabling prerender runtime routing in production.
 
 ## Safety Defaults
 
-- `prerender_middleware_enabled` defaults to disabled when Edge Config read fails.
-- Middleware backend slug validation timeout: `650ms`.
-- On backend validation timeout/error, middleware falls back to SPA (`NextResponse.next()`), never hangs and never 500s.
+- Runtime flag key: `prerender_middleware_enabled` from Edge Config.
+- If Edge Config read fails or times out, runtime defaults to disabled (`fail-open`).
+- Manifest fetch timeout: `250ms`; manifest cache TTL: `60s`; flag cache TTL: `30s`.
+- On manifest fetch/parse error, routing falls back to SPA shell instead of returning a hard error.
 
 ## Deploy Pipeline Wiring (CI)
 
-Vercel build command is configured to run:
+Current deployment-safe Vercel build command is:
+
+- `npm run build`
+
+This means prerender artifacts are not generated during the default production build.
+
+When prerender runtime routing is ready for staged enablement, switch build command to:
 
 - `npm run build:prerender`
 
@@ -26,6 +33,12 @@ Which executes:
 - `PRERENDER_PREVIOUS_SITE_BASE_URL` derived from that URL (if unset)
 
 This ensures fresh CI environments can bootstrap incremental mode from the last successful deployment artifact.
+
+## Runtime Integration (Vite + Vercel)
+
+- Active runtime entry: `api/prerender.js` (Vercel Function).
+- Legacy file `scripts/prerender-next-middleware-reference.ts` is reference-only and not runtime active.
+- `vercel.json` rewrites `/article/:slug` and `/category/:slug` to `/api/prerender` first, then falls back to `/index.html`.
 
 ## Staging Validation Steps
 
@@ -59,8 +72,8 @@ curl -i "https://<staging-domain>/article/not-a-real-slug-404-check"
 ```
 
 Expected:
-- HTTP 404
-- body from `404.html`
+- With current fail-open policy: SPA fallback (no edge 500).
+- If strict 404 behavior is reintroduced later, update runtime policy and this check together.
 
 6. Validate gone slug returns real 410:
 
