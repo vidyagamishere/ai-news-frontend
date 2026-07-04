@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build:prerender",
+  "buildCommand": "npm run build",
   "rewrites": [
     {
       "source": "/((?!assets/|prerender/|404\\.html|410\\.html).*)",
