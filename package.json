@@ -29,6 +29,7 @@
     "@types/react-router-dom": "^5.3.3",
     "@vercel/edge-config": "^1.4.3",
     "axios": "^1.6.0",
+    "@sparticuz/chromium": "^149.0.0",
     "date-fns": "^3.6.0",
     "framer-motion": "^12.23.24",
     "gtag": "^1.0.1",

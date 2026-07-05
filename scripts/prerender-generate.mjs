@@ -14,7 +14,29 @@ const PAGE_TIMEOUT_MS = Number(process.env.PRERENDER_PAGE_TIMEOUT_MS || '45000')
 const RENDER_CONCURRENCY = Number(process.env.PRERENDER_RENDER_CONCURRENCY || '8');
 const RESTORE_CONCURRENCY = Number(process.env.PRERENDER_RESTORE_CONCURRENCY || '32');
 const FETCH_ARTIFACT_TIMEOUT_MS = Number(process.env.PRERENDER_FETCH_ARTIFACT_TIMEOUT_MS || '8000');
-const MAX_RENDER_ROUTES = Number(process.env.PRERENDER_MAX_RENDER_ROUTES || '0');
+const MAX_RENDER_ROUTES = Number(
+  process.env.PRERENDER_MAX_RENDER_ROUTES || (process.env.VERCEL === '1' ? '50' : '0')
+);
+
+async function launchBrowser() {
+  if (process.env.VERCEL === '1' || process.env.PRERENDER_BROWSER === 'serverless') {
+    const chromiumModule = await import('@sparticuz/chromium');
+    const chromium = chromiumModule.default ?? chromiumModule;
+
+    return puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
+    });
+  }
+
+  return puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+}
 
 function parseArg(flag, fallback) {
   const idx = process.argv.indexOf(flag);
@@ -198,10 +220,7 @@ async function main() {
   try {
     await waitForPreview(previewBaseUrl);
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    const browser = await launchBrowser();
 
     let renderedCount = 0;
 

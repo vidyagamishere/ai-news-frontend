@@ -35,6 +35,12 @@ function ensureDeployDefaults() {
   if (!process.env.PRERENDER_API_BASE && process.env.VITE_API_BASE) {
     process.env.PRERENDER_API_BASE = process.env.VITE_API_BASE;
   }
+
+  // Vercel production builds need a bounded first bootstrap render so the
+  // pipeline can establish the manifest/artifact cache without timing out.
+  if (process.env.VERCEL === '1' && !process.env.PRERENDER_MAX_RENDER_ROUTES) {
+    process.env.PRERENDER_MAX_RENDER_ROUTES = '50';
+  }
 }
 
 async function main() {
