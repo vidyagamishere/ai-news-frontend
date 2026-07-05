@@ -17,6 +17,9 @@ const FETCH_ARTIFACT_TIMEOUT_MS = Number(process.env.PRERENDER_FETCH_ARTIFACT_TI
 const MAX_RENDER_ROUTES = Number(
   process.env.PRERENDER_MAX_RENDER_ROUTES || (process.env.VERCEL === '1' ? '50' : '0')
 );
+const ENABLE_SEO_INJECTION = process.env.PRERENDER_ENABLE_SEO_INJECTION === 'true';
+const SITE_URL = (process.env.PRERENDER_SITE_URL || 'https://www.vidyagam.com').replace(/\/$/, '');
+const BACKEND_BASE = (process.env.PRERENDER_API_BASE || 'https://mindful-adventure-production-50fa.up.railway.app').replace(/\/$/, '');
 
 async function launchBrowser() {
   if (process.env.VERCEL === '1' || process.env.PRERENDER_BROWSER === 'serverless') {
@@ -118,6 +121,176 @@ async function fetchWithTimeout(url, timeoutMs) {
   }
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function absoluteUrl(value) {
+  if (!value) return '';
+  const text = String(value).trim();
+  if (!text) return '';
+  if (/^https?:\/\//i.test(text)) return text;
+  if (text.startsWith('//')) return `https:${text}`;
+  return `${SITE_URL}${text.startsWith('/') ? text : `/${text}`}`;
+}
+
+function firstText(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function normalizeTags(tags) {
+  if (!Array.isArray(tags)) return [];
+  return tags.map((tag) => String(tag).trim()).filter(Boolean).slice(0, 10);
+}
+
+async function fetchSeoData(route) {
+  if (route.kind !== 'article' && route.kind !== 'category') return null;
+
+  const endpoint = route.kind === 'article'
+    ? `${BACKEND_BASE}/article/${encodeURIComponent(route.slug)}`
+    : `${BACKEND_BASE}/category/${encodeURIComponent(route.slug)}?limit=1&days_filter=3650`;
+
+  try {
+    const response = await fetchWithTimeout(endpoint, FETCH_ARTIFACT_TIMEOUT_MS);
+    if (!response.ok) return null;
+
+    const payload = await response.json();
+    return route.kind === 'article' ? payload?.article ?? null : payload?.category ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function buildSeoInjection(route, seoData) {
+  if (!seoData) return null;
+
+  if (route.kind === 'article') {
+    const title = firstText(seoData.title, route.slug);
+    const description = firstText(seoData.summary, seoData.description, seoData.content_summary, title);
+    const canonicalUrl = `${SITE_URL}/article/${encodeURIComponent(route.slug)}`;
+    const imageUrl = absoluteUrl(seoData.image || seoData.image_url || seoData.thumbnail_url || seoData.thumbnail || seoData.imageUrl);
+    const articleSection = firstText(seoData.category_label, seoData.category_name, seoData.category, 'Generative AI');
+    const authorName = firstText(seoData.author, seoData.source_name, seoData.source, 'Vidyagam');
+    const publishedTime = firstText(seoData.published_date, seoData.time, seoData.created_date);
+    const tags = normalizeTags(seoData.topic_names || seoData.topics?.map?.((topic) => topic?.name) || seoData.metadata?.tags);
+
+    return {
+      title: `${title} – Vidyagam`,
+      description,
+      canonicalUrl,
+      imageUrl,
+      ogType: 'article',
+      publishedTime,
+      authorName,
+      articleSection,
+      tags,
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: title,
+        description,
+        url: canonicalUrl,
+        mainEntityOfPage: canonicalUrl,
+        articleSection,
+        ...(publishedTime ? { datePublished: publishedTime } : {}),
+        ...(imageUrl ? { image: [imageUrl] } : {}),
+        author: { '@type': 'Person', name: authorName },
+        publisher: {
+          '@type': 'Organization',
+          name: 'Vidyagam',
+          url: SITE_URL,
+        },
+        ...(tags.length ? { keywords: tags } : {}),
+      },
+    };
+  }
+
+  const title = firstText(seoData.name, seoData.title, route.slug);
+  const description = firstText(seoData.description, `Browse the latest ${title.toLowerCase()} coverage on Vidyagam.`);
+  const canonicalUrl = `${SITE_URL}/category/${encodeURIComponent(route.slug)}`;
+
+  return {
+    title: `${title} – Vidyagam`,
+    description,
+    canonicalUrl,
+    imageUrl: '',
+    ogType: 'website',
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: `${title} – Vidyagam`,
+      description,
+      url: canonicalUrl,
+      publisher: {
+        '@type': 'Organization',
+        name: 'Vidyagam',
+        url: SITE_URL,
+      },
+    },
+  };
+}
+
+function injectSeoIntoHtml(html, seo) {
+  if (!seo) return html;
+
+  const injectedTags = [
+    `<title>${escapeHtml(seo.title)}</title>`,
+    `<meta name="title" content="${escapeHtml(seo.title)}" />`,
+    `<meta name="description" content="${escapeHtml(seo.description)}" />`,
+    `<meta name="robots" content="index, follow" />`,
+    `<link rel="canonical" href="${escapeHtml(seo.canonicalUrl)}" />`,
+    `<meta property="og:type" content="${escapeHtml(seo.ogType)}" />`,
+    `<meta property="og:url" content="${escapeHtml(seo.canonicalUrl)}" />`,
+    `<meta property="og:title" content="${escapeHtml(seo.title)}" />`,
+    `<meta property="og:description" content="${escapeHtml(seo.description)}" />`,
+    ...(seo.imageUrl ? [`<meta property="og:image" content="${escapeHtml(seo.imageUrl)}" />`] : []),
+    `<meta property="og:site_name" content="Vidyagam" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:url" content="${escapeHtml(seo.canonicalUrl)}" />`,
+    `<meta name="twitter:title" content="${escapeHtml(seo.title)}" />`,
+    `<meta name="twitter:description" content="${escapeHtml(seo.description)}" />`,
+    ...(seo.imageUrl ? [`<meta name="twitter:image" content="${escapeHtml(seo.imageUrl)}" />`] : []),
+    ...(seo.publishedTime ? [`<meta property="article:published_time" content="${escapeHtml(seo.publishedTime)}" />`] : []),
+    ...(seo.authorName ? [`<meta property="article:author" content="${escapeHtml(seo.authorName)}" />`] : []),
+    ...(seo.articleSection ? [`<meta property="article:section" content="${escapeHtml(seo.articleSection)}" />`] : []),
+    ...(seo.tags || []).map((tag) => `<meta property="article:tag" content="${escapeHtml(tag)}" />`),
+    `<script type="application/ld+json">${JSON.stringify(seo.jsonLd)}</script>`,
+  ].join('\n    ');
+
+  let nextHtml = html;
+  nextHtml = nextHtml.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(seo.title)}</title>`);
+  nextHtml = nextHtml.replace(/<meta[^>]+name=["']title["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+name=["']description["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+name=["']robots["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+property=["']og:type["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+property=["']og:url["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+property=["']og:title["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+property=["']og:description["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+property=["']og:image["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+property=["']og:site_name["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+name=["']twitter:card["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+name=["']twitter:url["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+name=["']twitter:title["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+name=["']twitter:description["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+name=["']twitter:image["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<link[^>]+rel=["']canonical["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+property=["']article:published_time["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+property=["']article:author["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+property=["']article:section["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<meta[^>]+property=["']article:tag["'][^>]*>/gi, '');
+  nextHtml = nextHtml.replace(/<script[^>]+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, '');
+
+  return nextHtml.replace('</head>', `    ${injectedTags}\n  </head>`);
+}
+
 function derivePreviousSiteBase(manifestUrlEnv) {
   if (!manifestUrlEnv) return null;
   try {
@@ -154,6 +327,20 @@ async function waitForPreview(baseUrl) {
   throw new Error(`Preview server did not start within ${PREVIEW_START_TIMEOUT_MS}ms`);
 }
 
+async function writeHtmlArtifact(route, html, distRoot, cacheRoot) {
+  const outputHtml = ENABLE_SEO_INJECTION
+    ? injectSeoIntoHtml(html, buildSeoInjection(route, await fetchSeoData(route)))
+    : html;
+  const relPath = routeToOutputPath(route);
+  const distPath = path.join(distRoot, relPath);
+  const cachePath = path.join(cacheRoot, relPath);
+
+  await ensureDir(distPath);
+  await ensureDir(cachePath);
+  await fs.writeFile(distPath, outputHtml, 'utf8');
+  await fs.writeFile(cachePath, outputHtml, 'utf8');
+}
+
 async function main() {
   const manifestPath = path.resolve(process.cwd(), parseArg('--manifest', DEFAULT_MANIFEST_PATH));
   const cacheRoot = path.resolve(process.cwd(), parseArg('--cache-root', DEFAULT_CACHE_ROOT));
@@ -184,6 +371,10 @@ async function main() {
       await ensureDir(distPath);
       await fs.copyFile(cachePath, distPath);
       restoreCacheHits += 1;
+      if (route.kind === 'article' || route.kind === 'category') {
+        const html = await fs.readFile(distPath, 'utf8');
+        await writeHtmlArtifact(route, html, distRoot, cacheRoot);
+      }
       return;
     }
 
@@ -193,10 +384,7 @@ async function main() {
         const response = await fetchWithTimeout(remoteUrl, FETCH_ARTIFACT_TIMEOUT_MS);
         if (response.ok) {
           const html = await response.text();
-          await ensureDir(distPath);
-          await ensureDir(cachePath);
-          await fs.writeFile(distPath, html, 'utf8');
-          await fs.writeFile(cachePath, html, 'utf8');
+          await writeHtmlArtifact(route, html, distRoot, cacheRoot);
           restoreRemoteHits += 1;
           return;
         }
@@ -231,15 +419,7 @@ async function main() {
           const routeUrl = `${previewBaseUrl}${route.path}`;
           await page.goto(routeUrl, { waitUntil: 'networkidle2', timeout: PAGE_TIMEOUT_MS });
           const html = await page.content();
-
-          const relPath = routeToOutputPath(route);
-          const distPath = path.join(distRoot, relPath);
-          const cachePath = path.join(cacheRoot, relPath);
-
-          await ensureDir(distPath);
-          await ensureDir(cachePath);
-          await fs.writeFile(distPath, html, 'utf8');
-          await fs.writeFile(cachePath, html, 'utf8');
+          await writeHtmlArtifact(route, html, distRoot, cacheRoot);
           renderedCount += 1;
         } finally {
           await page.close();
