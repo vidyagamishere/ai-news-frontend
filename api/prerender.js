@@ -3,7 +3,7 @@ import { get as getEdgeConfigValue } from '@vercel/edge-config';
 const MANIFEST_CACHE_TTL_MS = 60_000;
 const FLAG_CACHE_TTL_MS = 30_000;
 const EDGE_FLAG_TIMEOUT_MS = 40;
-const MANIFEST_FETCH_TIMEOUT_MS = 250;
+const MANIFEST_FETCH_TIMEOUT_MS = Number(process.env.PRERENDER_MANIFEST_FETCH_TIMEOUT_MS || '1200');
 const BACKEND_VALIDATE_TIMEOUT_MS = 650;
 const DEFAULT_BACKEND_BASE = 'https://mindful-adventure-production-50fa.up.railway.app';
 const DEFAULT_SITE_URL = 'https://www.vidyagam.com';
