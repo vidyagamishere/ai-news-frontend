@@ -366,6 +366,27 @@ async function respondWithSpaFallback(res, origin) {
   }
 }
 
+async function respondWithSeoSpaFallback(res, origin, type, slug) {
+  try {
+    const response = await fetch(`${origin}/index.html`, { cache: 'no-store' });
+    if (!response.ok) return false;
+
+    const html = await response.text();
+    const siteUrl = process.env.PRERENDER_SITE_URL || DEFAULT_SITE_URL;
+    const seoSource = await fetchSeoSource(type, slug);
+    const seo = buildSeoPayload(type, slug, seoSource, siteUrl);
+    const output = injectSeoIntoHtml(html, seo);
+
+    res.status(200);
+    res.setHeader('content-type', 'text/html; charset=utf-8');
+    res.setHeader('cache-control', 'public, max-age=60');
+    res.send(output);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function respondWithStaticError(res, origin, statusCode) {
   const staticPath = statusCode === 410 ? '/410.html' : '/404.html';
   const served = await respondWithStaticHtml(res, origin, staticPath, statusCode);
@@ -422,6 +443,11 @@ export default async function handler(req, res) {
       return;
     }
 
+    if (articleState === 'exists') {
+      const seoFallbackServed = await respondWithSeoSpaFallback(res, origin, 'article', slug);
+      if (seoFallbackServed) return;
+    }
+
     await respondWithSpaFallback(res, origin);
     return;
   }
@@ -443,6 +469,11 @@ export default async function handler(req, res) {
   if (categoryState === 'missing') {
     await respondWithStaticError(res, origin, 404);
     return;
+  }
+
+  if (categoryState === 'exists') {
+    const seoFallbackServed = await respondWithSeoSpaFallback(res, origin, 'category', slug);
+    if (seoFallbackServed) return;
   }
 
   await respondWithSpaFallback(res, origin);
