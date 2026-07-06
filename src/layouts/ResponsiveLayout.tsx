@@ -64,6 +64,14 @@ export default function ResponsiveLayout() {
             preselectedTab: selectedTab,
           },
         });
+        return;
+      }
+
+      // Keep unauthenticated landing page interactions local so category
+      // clicks update the center feed instead of no-op navigation.
+      if (isLandingPage && originalHandlerRef.current) {
+        originalHandlerRef.current(category);
+        return;
       } else {
         navigate('/');
       }
@@ -73,7 +81,7 @@ export default function ResponsiveLayout() {
     if (originalHandlerRef.current) {
       originalHandlerRef.current(category);
     }
-  }, [isAuthenticated, isDashboardRoute, navigate, selectedTab]);
+  }, [isAuthenticated, isDashboardRoute, isLandingPage, navigate, selectedTab]);
 
   // Function to set the category change handler from child components
   const handleSetCategoryHandler = React.useCallback((handler: (category: string) => void) => {
